@@ -1,3 +1,5 @@
+from os import error
+from exceptiongroup import catch
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.database import connect_to_mongo, close_mongo_connection
@@ -17,6 +19,12 @@ app.add_middleware(
     allow_headers=["*"],
 
 )
+
+try:
+    conn = connect_to_mongo()
+except:
+    print("Execption db connection unsuccessfull")
+
 
 # Events
 @app.on_event("startup")

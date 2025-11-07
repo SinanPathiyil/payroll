@@ -10,8 +10,12 @@ async def get_database():
     return db.client[settings.DATABASE_NAME]
 
 async def connect_to_mongo():
-    db.client = AsyncIOMotorClient(settings.MONGODB_URL)
-    print("Connected to MongoDB")
+    try:
+        db.client = AsyncIOMotorClient(settings.MONGODB_URL)
+        print("Connected to MongoDB")
+    except:
+        print("Connection Unsuccessfull")
+    
 
 async def close_mongo_connection():
     db.client.close()

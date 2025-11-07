@@ -1,0 +1,33 @@
+import pyautogui
+from PIL import Image
+import os
+from datetime import datetime
+
+class ScreenshotCapture:
+    def __init__(self, save_dir="screenshots"):
+        self.save_dir = save_dir
+        os.makedirs(save_dir, exist_ok=True)
+    
+    def capture(self, user_id):
+        """Capture screenshot and save to file"""
+        try:
+            # Capture screen
+            screenshot = pyautogui.screenshot()
+            
+            # Generate filename
+            timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+            filename = f"{user_id}_{timestamp}.jpg"
+            filepath = os.path.join(self.save_dir, filename)
+            
+            # Compress and save
+            screenshot = screenshot.resize(
+                (screenshot.width // 2, screenshot.height // 2),
+                Image.Resampling.LANCZOS
+            )
+            screenshot.save(filepath, "JPEG", quality=70)
+            
+            print(f"📸 Screenshot saved: {filename}")
+            return filepath
+        except Exception as e:
+            print(f"Failed to capture screenshot: {e}")
+            return None

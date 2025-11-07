@@ -1,0 +1,6 @@
+{
+    "api_url": "http://localhost:8000/api",
+    "screenshot_interval": 300,
+    "activity_check_interval": 60,
+    "send_data_interval": 300
+  }

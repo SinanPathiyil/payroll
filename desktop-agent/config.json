@@ -1,6 +1,10 @@
 {
-    "api_url": "http://localhost:8000/api",
-    "screenshot_interval": 300,
-    "activity_check_interval": 60,
-    "send_data_interval": 300
-  }
+  "api_url": "http://localhost:8000",
+  "employee_email": "employee@company.com",
+  "employee_password": "password123",
+  "activity_check_interval": 60,
+  "idle_threshold": 180,
+  "track_mouse": true,
+  "track_keyboard": true,
+  "track_applications": true
+}

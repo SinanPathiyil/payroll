@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
-import { X, TrendingUp, Clock, CheckCircle } from 'lucide-react';
+import { X, TrendingUp, Clock, CheckCircle, Monitor } from 'lucide-react';
 import { getEmployeeStats } from '../../services/api';
 import AttendanceTable from './AttendanceTable';
 import { formatHours } from '../../utils/helpers';
+import EmployeeActivityBreakdown from './EmployeeActivityBreakdown';
 
 export default function EmployeeStatsModal({ employee, onClose }) {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showActivityBreakdown, setShowActivityBreakdown] = useState(false);
 
   useEffect(() => {
     loadStats();
@@ -86,9 +88,18 @@ export default function EmployeeStatsModal({ employee, onClose }) {
             </div>
           </div>
 
-          {/* Activity Summary */}
+          {/* Activity Summary with Breakdown Button */}
           <div className="bg-gray-50 rounded-lg p-4">
-            <h3 className="text-lg font-semibold mb-4">Activity Summary (Last 7 Days)</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Activity Summary (Last 7 Days)</h3>
+              <button
+                onClick={() => setShowActivityBreakdown(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition"
+              >
+                <Monitor className="w-4 h-4" />
+                View Per-App Breakdown
+              </button>
+            </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
                 <p className="text-sm text-gray-600">Active Time</p>
@@ -121,6 +132,15 @@ export default function EmployeeStatsModal({ employee, onClose }) {
           <AttendanceTable records={stats?.attendance?.records || []} />
         </div>
       </div>
+
+      {/* Activity Breakdown Modal */}
+      {showActivityBreakdown && (
+        <EmployeeActivityBreakdown
+          employeeId={employee._id || employee.id}
+          employeeName={employee.full_name}
+          onClose={() => setShowActivityBreakdown(false)}
+        />
+      )}
     </div>
   );
 }

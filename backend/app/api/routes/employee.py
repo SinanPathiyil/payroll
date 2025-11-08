@@ -7,8 +7,10 @@ from datetime import datetime, timedelta
 from bson import ObjectId
 from typing import Optional
 import logging
+from datetime import datetime 
 
-# UNCOMMENT THIS LINE:
+
+# UNCOMMENT THIS LINE: if have a classifier
 from app.services.smart_classifier import smart_classifier
 
 router = APIRouter()
@@ -208,47 +210,33 @@ async def cleanup_stale_attendance(
 async def log_activity(
     activity_data: dict,
     current_user: dict = Depends(get_current_user),
-    db = Depends(get_database)
+    db = Depends(get_database)  # ✅ ADD THIS LINE
 ):
     """
-    Legacy activity logging (web-based)
-    For backward compatibility
+    Log detailed employee activity from desktop agent
+    Includes per-application breakdown
     """
-    # Calculate productivity score based on activity
-    mouse_events = activity_data.get("mouse_events", 0)
-    keyboard_events = activity_data.get("keyboard_events", 0)
-    active_time = activity_data.get("active_time", 0)
-    idle_time = activity_data.get("idle_time", 0)
+    try:
+        # Add metadata
+        activity_data["employee_email"] = current_user["email"]
+        activity_data["employee_name"] = current_user.get("full_name", "")
+        activity_data["recorded_at"] = datetime.utcnow()
+        
+        # Store in activities collection
+        result = await db.activities.insert_one(activity_data)  # ✅ FIXED
+        
+        print(f"✅ Activity logged for {current_user['email']}")
+        
+        # Return success
+        return {
+            "message": "Activity logged successfully",
+            "id": str(result.inserted_id),
+            "apps_tracked": len(activity_data.get("applications", []))
+        }
     
-    # Simple productivity algorithm
-    total_time = active_time + idle_time
-    if total_time > 0:
-        activity_ratio = active_time / total_time
-        event_score = min((mouse_events + keyboard_events) / 100, 1)
-        productivity_score = (activity_ratio * 0.7 + event_score * 0.3) * 100
-    else:
-        productivity_score = 0
-    
-    activity_record = {
-        "user_id": str(current_user["_id"]),
-        "session_id": activity_data.get("session_id"),
-        "mouse_events": mouse_events,
-        "keyboard_events": keyboard_events,
-        "idle_time": idle_time,
-        "active_time": active_time,
-        "productivity_score": round(productivity_score, 2),
-        "timestamp": datetime.utcnow(),
-        "source": "web",
-        "date": datetime.utcnow().strftime("%Y-%m-%d")
-    }
-    
-    await db.activities.insert_one(activity_record)
-    
-    return {
-        "message": "Activity logged",
-        "productivity_score": round(productivity_score, 2)
-    }
-
+    except Exception as e:
+        print(f"❌ Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/activity/smart")
 async def log_smart_activity(
@@ -514,6 +502,117 @@ async def get_activity_history(
         "total_activities": len(formatted_activities),
         "activities": formatted_activities
     }
+
+@router.get("/activity/breakdown/{employee_id}")
+async def get_employee_activity_breakdown(
+    employee_id: str,
+    date: Optional[str] = None,
+    current_user: dict = Depends(get_current_user),
+    db = Depends(get_database)
+):
+    """
+    Get per-application activity breakdown for an employee
+    HR ONLY - Shows detailed app usage, mouse/keyboard events per app
+    """
+    # Check HR permission
+    if current_user["role"] != "hr":
+        raise HTTPException(status_code=403, detail="HR access only")
+    
+    # Default to today if no date provided
+    if not date:
+        date = datetime.utcnow().strftime("%Y-%m-%d")
+    
+    try:
+        # Find employee
+        from bson import ObjectId
+        try:
+            employee = await db.users.find_one({"_id": ObjectId(employee_id)})
+        except:
+            raise HTTPException(status_code=400, detail="Invalid employee ID")
+        
+        if not employee:
+            raise HTTPException(status_code=404, detail="Employee not found")
+        
+        # Get all activities for the date
+        activities = await db.activities.find({
+            "employee_email": employee["email"],
+            "timestamp": {"$regex": f"^{date}"}
+        }).to_list(1000)
+        
+        if not activities:
+            return {
+                "employee": {
+                    "id": employee_id,
+                    "name": employee.get("full_name", "Unknown"),
+                    "email": employee["email"]
+                },
+                "date": date,
+                "total_time_minutes": 0,
+                "total_mouse_movements": 0,
+                "total_key_presses": 0,
+                "applications": []
+            }
+        
+        # Aggregate by application
+        app_stats = {}
+        total_mouse = 0
+        total_keys = 0
+        
+        for activity in activities:
+            total_mouse += activity.get("total_mouse_movements", 0)
+            total_keys += activity.get("total_key_presses", 0)
+            
+            # Process each application in the activity
+            for app in activity.get("applications", []):
+                app_name = app["application"]
+                
+                if app_name not in app_stats:
+                    app_stats[app_name] = {
+                        "application": app_name,
+                        "url": app.get("url", ""),
+                        "window_title": app.get("window_title", ""),
+                        "time_spent_seconds": 0,
+                        "mouse_movements": 0,
+                        "key_presses": 0
+                    }
+                
+                app_stats[app_name]["time_spent_seconds"] += app.get("time_spent_seconds", 0)
+                app_stats[app_name]["mouse_movements"] += app.get("mouse_movements", 0)
+                app_stats[app_name]["key_presses"] += app.get("key_presses", 0)
+                
+                # Update URL if it's more specific
+                if app.get("url") and len(app.get("url", "")) > len(app_stats[app_name]["url"]):
+                    app_stats[app_name]["url"] = app["url"]
+        
+        # Convert to list and sort by time
+        applications = list(app_stats.values())
+        applications.sort(key=lambda x: x["time_spent_seconds"], reverse=True)
+        
+        # Convert seconds to minutes
+        total_time_minutes = sum(app["time_spent_seconds"] for app in applications) // 60
+        
+        for app in applications:
+            app["time_minutes"] = app["time_spent_seconds"] // 60
+            del app["time_spent_seconds"]
+        
+        return {
+            "employee": {
+                "id": employee_id,
+                "name": employee.get("full_name", "Unknown"),
+                "email": employee["email"]
+            },
+            "date": date,
+            "total_time_minutes": total_time_minutes,
+            "total_mouse_movements": total_mouse,
+            "total_key_presses": total_keys,
+            "applications": applications
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting activity breakdown: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # Background task to check and train models

@@ -8,97 +8,106 @@
     "license": "MIT",
     "private": true,
     "scripts": {
-      "start": "react-scripts start",
-      "build": "react-scripts build",
-      "electron:dev": "concurrently \"BROWSER=none npm start\" \"wait-on http://localhost:3000 && electron .\"",
-      "electron:build": "npm run build && electron-builder",
-      "electron:build:win": "npm run build && electron-builder --win",
-      "electron:build:mac": "npm run build && electron-builder --mac",
-      "electron:build:linux": "npm run build && electron-builder --linux",
-      "pack": "electron-builder --dir",
-      "dist": "electron-builder"
+        "electron:dev": "wait-on http://localhost:3000 && electron .",
+        "start": "react-scripts start",
+        "build": "react-scripts build",
+        "electron:build": "npm run build && electron-builder",
+        "electron:build:win": "npm run build && electron-builder --win",
+        "electron:build:mac": "npm run build && electron-builder --mac",
+        "electron:build:linux": "npm run build && electron-builder --linux",
+        "pack": "electron-builder --dir",
+        "dist": "electron-builder"
     },
     "dependencies": {
-      "react": "^18.2.0",
-      "react-dom": "^18.2.0",
-      "react-router-dom": "^6.20.0",
-      "axios": "^1.6.2",
-      "recharts": "^2.10.3",
-      "lucide-react": "^0.294.0",
-      "electron-store": "^8.1.0",
-      "active-win": "^8.1.0",
-      "systeminformation": "^5.21.20"
+        "active-win": "^8.1.0",
+        "axios": "^1.13.2",
+        "electron-is-dev": "^2.0.0",
+        "electron-store": "^8.2.0",
+        "lucide-react": "^0.294.0",
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
+        "react-router-dom": "^6.20.0",
+        "recharts": "^2.10.3",
+        "systeminformation": "^5.21.20"
     },
     "devDependencies": {
-      "@types/react": "^18.2.43",
-      "@types/react-dom": "^18.2.17",
-      "@vitejs/plugin-react": "^4.2.1",
-      "autoprefixer": "^10.4.16",
-      "postcss": "^8.4.32",
-      "tailwindcss": "^3.3.6",
-      "react-scripts": "5.0.1",
-      "electron": "^28.0.0",
-      "electron-builder": "^24.9.1",
-      "concurrently": "^8.2.2",
-      "wait-on": "^7.2.0",
-      "cross-env": "^7.0.3"
+        "@types/react": "^18.2.43",
+        "@types/react-dom": "^18.2.17",
+        "@vitejs/plugin-react": "^4.2.1",
+        "autoprefixer": "^10.4.16",
+        "concurrently": "^8.2.2",
+        "cross-env": "^7.0.3",
+        "electron": "^28.0.0",
+        "electron-builder": "^24.9.1",
+        "postcss": "^8.4.32",
+        "react-scripts": "5.0.1",
+        "tailwindcss": "^3.3.6",
+        "wait-on": "^7.2.0"
     },
     "build": {
-      "appId": "com.yourcompany.productivity-tracker",
-      "productName": "Productivity Tracker",
-      "files": [
-        "build/**/*",
-        "electron/**/*",
-        "public/electron.js",
-        "node_modules/**/*"
-      ],
-      "directories": {
-        "buildResources": "public"
-      },
-      "win": {
-        "target": [
-          {
-            "target": "nsis",
-            "arch": ["x64"]
-          }
+        "appId": "com.yourcompany.productivity-tracker",
+        "productName": "Productivity Tracker",
+        "files": [
+            "build/**/*",
+            "electron/**/*",
+            "public/electron.js",
+            "node_modules/**/*"
         ],
-        "icon": "public/icons/icon.ico",
-        "publisherName": "Your Company"
-      },
-      "nsis": {
-        "oneClick": false,
-        "allowToChangeInstallationDirectory": true,
-        "createDesktopShortcut": true,
-        "createStartMenuShortcut": true,
-        "shortcutName": "Productivity Tracker"
-      },
-      "mac": {
-        "target": ["dmg", "zip"],
-        "icon": "public/icons/icon.icns",
-        "category": "public.app-category.productivity"
-      },
-      "linux": {
-        "target": ["AppImage", "deb"],
-        "icon": "public/icons/icon.png",
-        "category": "Office"
-      },
-      "publish": {
-        "provider": "github",
-        "owner": "your-username",
-        "repo": "productivity-tracker"
-      }
+        "directories": {
+            "buildResources": "public"
+        },
+        "win": {
+            "target": [
+                {
+                    "target": "nsis",
+                    "arch": [
+                        "x64"
+                    ]
+                }
+            ],
+            "icon": "public/icons/icon.ico",
+            "publisherName": "Your Company"
+        },
+        "nsis": {
+            "oneClick": false,
+            "allowToChangeInstallationDirectory": true,
+            "createDesktopShortcut": true,
+            "createStartMenuShortcut": true,
+            "shortcutName": "Productivity Tracker"
+        },
+        "mac": {
+            "target": [
+                "dmg",
+                "zip"
+            ],
+            "icon": "public/icons/icon.icns",
+            "category": "public.app-category.productivity"
+        },
+        "linux": {
+            "target": [
+                "AppImage",
+                "deb"
+            ],
+            "icon": "public/icons/icon.png",
+            "category": "Office"
+        },
+        "publish": {
+            "provider": "github",
+            "owner": "your-username",
+            "repo": "productivity-tracker"
+        }
     },
     "eslintConfig": {
-      "extends": [
-        "react-app"
-      ]
+        "extends": [
+            "react-app"
+        ]
     },
     "browserslist": {
-      "production": [
-        "last 1 electron version"
-      ],
-      "development": [
-        "last 1 electron version"
-      ]
+        "production": [
+            "last 1 electron version"
+        ],
+        "development": [
+            "last 1 electron version"
+        ]
     }
-  }
+}

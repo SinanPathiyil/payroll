@@ -13,15 +13,26 @@ export default function TimeTracker({ status, onStatusChange, activityStats }) {
     setLoading(true);
     setError('');
     try {
-      await employeeLogin();
+      const response = await employeeLogin();
       
-      // Notify Electron if running
+      // Notify Electron if running (with token and email)
       if (window.electron?.onClockIn) {
-        window.electron.onClockIn();
+        const token = localStorage.getItem('token');
+        const userStr = localStorage.getItem('user');
+        const user = userStr ? JSON.parse(userStr) : null;
+        
+        console.log('🔵 Calling Electron onClockIn with:', { 
+          token: token?.substring(0, 20) + '...', 
+          email: user?.email 
+        });
+        
+        await window.electron.onClockIn(token, user?.email);
+        console.log('✅ Electron agent started');
       }
       
       onStatusChange(); // Refresh status
     } catch (err) {
+      console.error('❌ Clock in error:', err);
       setError(err.response?.data?.detail || 'Failed to clock in');
     } finally {
       setLoading(false);
@@ -36,19 +47,19 @@ export default function TimeTracker({ status, onStatusChange, activityStats }) {
       
       // Notify Electron if running
       if (window.electron?.onClockOut) {
-        window.electron.onClockOut();
+        console.log('🔵 Calling Electron onClockOut');
+        await window.electron.onClockOut();
+        console.log('✅ Electron agent stopped');
       }
       
       onStatusChange(); // Refresh status
     } catch (err) {
+      console.error('❌ Clock out error:', err);
       setError(err.response?.data?.detail || 'Failed to clock out');
     } finally {
       setLoading(false);
     }
   };
-  console.log('TimeTracker status:', status); // Debug log
-  console.log('Is clocked in?', status?.is_clocked_in); // Debug log
-  console.log('Status type:', typeof status); // Debug log
 
   // Handle loading/null state
   if (!status) {
@@ -63,7 +74,6 @@ export default function TimeTracker({ status, onStatusChange, activityStats }) {
     );
   }
 
-  // Safely check if clocked in (handle both undefined and false)
   const isClockedIn = status.is_clocked_in === true;
   const currentHours = status.current_hours || 0;
   const loginTime = status.login_time;
@@ -71,7 +81,14 @@ export default function TimeTracker({ status, onStatusChange, activityStats }) {
   return (
     <div className="bg-white rounded-lg shadow">
       <div className="p-6 border-b">
-        <h2 className="text-xl font-semibold">Time Tracker</h2>
+        <h2 className="text-xl font-semibold flex items-center gap-2">
+          Time Tracker
+          {window.electron?.isElectron && (
+            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+              🖥️ Desktop Agent Active
+            </span>
+          )}
+        </h2>
       </div>
       <div className="p-6">
         {error && (
@@ -79,15 +96,6 @@ export default function TimeTracker({ status, onStatusChange, activityStats }) {
             {error}
           </div>
         )}
-
-        {/* Debug Info - Remove in production */}
-        <div className="bg-gray-100 border border-gray-300 rounded p-3 mb-4 text-xs">
-          <p className="font-bold mb-1">🐛 Debug Info:</p>
-          <p>status object: {JSON.stringify(status)}</p>
-          <p>isClockedIn: {String(isClockedIn)}</p>
-          <p>is_clocked_in value: {String(status.is_clocked_in)}</p>
-          <p>is_clocked_in type: {typeof status.is_clocked_in}</p>
-        </div>
 
         <div className="space-y-6">
           {/* Clock In/Out Status */}
@@ -160,7 +168,7 @@ export default function TimeTracker({ status, onStatusChange, activityStats }) {
                 </div>
               </div>
               <div className="mt-3 text-xs text-gray-500">
-                <p>✅ Tracking your activity... Data will be sent every 5 minutes.</p>
+                <p>✅ Desktop agent tracking your activity... Data sent every {window.electron?.isElectron ? '10' : '5'} seconds.</p>
               </div>
             </div>
           )}
@@ -191,11 +199,40 @@ export default function TimeTracker({ status, onStatusChange, activityStats }) {
           {/* Info */}
           <div className="text-xs text-gray-500 text-center">
             {isClockedIn ? (
-              <p>🟢 Your activity is being tracked. Stay active to maintain productivity score.</p>
+              <>
+                <p>🟢 Your activity is being tracked. Stay active to maintain productivity score.</p>
+                {window.electron?.isElectron && (
+                  <p className="mt-1 text-blue-600 font-medium">
+                    ✨ Desktop agent is running with detailed per-app tracking
+                  </p>
+                )}
+              </>
             ) : (
-              <p>Clock in to start your work day and track your time.</p>
+              <>
+                <p>Clock in to start your work day and track your time.</p>
+                {window.electron?.isElectron && (
+                  <p className="mt-1 text-gray-400">
+                    Desktop agent will start automatically when you clock in
+                  </p>
+                )}
+              </>
             )}
           </div>
+
+          {/* Electron Status Indicator */}
+          {window.electron?.isElectron && (
+            <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-3">
+              <div className="flex items-center gap-2 text-sm">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="font-medium text-gray-700">
+                  Desktop Agent: Ready
+                </span>
+              </div>
+              <p className="text-xs text-gray-600 mt-1 ml-4">
+                Per-app tracking, screenshots, and productivity monitoring enabled
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

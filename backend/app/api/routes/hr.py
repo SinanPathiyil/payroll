@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from app.core.database import get_database
 from app.api.deps import get_current_hr
 from app.core.security import get_password_hash
 from app.schemas.user import UserCreate, UserResponse
+from app.services.activity_tracker import ActivityTrackerService  # <<< ADD THIS IMPORT
 from bson import ObjectId
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date  # <<< ADD 'date' to imports
 
 router = APIRouter()
 
@@ -79,6 +80,7 @@ async def get_employees(
         })
     
     return employees
+
 @router.get("/employee/{employee_id}/stats")
 async def get_employee_stats(
     employee_id: str,
@@ -160,6 +162,53 @@ async def get_employee_stats(
             "pending": total_tasks - completed_tasks
         }
     }
+
+# <<<<<<< NEW ENDPOINT ADDED HERE >>>>>>>
+@router.get("/employee/{employee_id}/app-breakdown")
+async def get_employee_app_breakdown(
+    employee_id: str,
+    start_date: date = Query(..., description="Start date (YYYY-MM-DD)"),
+    end_date: date = Query(..., description="End date (YYYY-MM-DD)"),
+    current_user: dict = Depends(get_current_hr),
+    db = Depends(get_database)
+):
+    """
+    Get per-application activity breakdown for an employee.
+    Groups browser activities by site (e.g., Chrome - facebook.com).
+    """
+    
+    # Validate employee exists
+    employee = await db.users.find_one({"_id": ObjectId(employee_id)})
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    # Validate date range
+    if start_date > end_date:
+        raise HTTPException(status_code=400, detail="Start date must be before end date")
+    
+    # Get employee email for querying activities
+    employee_email = employee.get("email")
+    if not employee_email:
+        raise HTTPException(status_code=400, detail="Employee email not found")
+    
+    # Use the service to get breakdown
+    activity_service = ActivityTrackerService(db)
+    breakdown_data = await activity_service.get_app_activity_breakdown(
+        employee_email=employee_email,
+        start_date=start_date,
+        end_date=end_date
+    )
+    
+    return {
+        "employee_id": employee_id,
+        "employee_name": employee.get("full_name"),
+        "employee_email": employee_email,
+        "start_date": start_date.isoformat(),
+        "end_date": end_date.isoformat(),
+        "breakdown": breakdown_data,
+        "total_apps": len(breakdown_data)
+    }
+# <<<<<<< END OF NEW ENDPOINT >>>>>>>
 
 @router.put("/settings")
 async def update_settings(

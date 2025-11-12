@@ -1,5 +1,5 @@
 {
-  "api_url": "http://localhost:8000",
+  "api_url": "http://127.0.0.1:8000",
   "employee_email": "employee@company.com",
   "employee_password": "password123",
   "activity_check_interval": 60,

@@ -1,5 +1,6 @@
 import requests
 import time
+import os
 from datetime import datetime
 from activity_tracker import ActivityTracker
 from config import Config
@@ -9,20 +10,34 @@ class MonitoringAgent:
         self.config = Config()
         self.tracker = None
         self.token = None
-        self.employee_id = None
+        self.employee_email = None
         self.is_running = False
         
         print("=" * 80)
-        print("🖥️  EMPLOYEE MONITORING AGENT - ENHANCED")
+        print("[*] EMPLOYEE MONITORING AGENT - ENHANCED")
         print("=" * 80)
-        print("✨ Tracks activity by application and website")
+        print("[*] Tracks activity by application and website")
         print("=" * 80)
     
-    def login(self):
-        print(f"\n🔐 Logging in as: {self.config.EMPLOYEE_EMAIL}")
+    def authenticate(self):
+        """
+        Authenticate using token from environment (Electron) or credentials (standalone)
+        """
+        # Try to get token from environment (set by Electron)
+        env_token = os.getenv('EMPLOYEE_TOKEN')
+        env_email = os.getenv('EMPLOYEE_EMAIL')
+        
+        if env_token and env_email:
+            print(f"\n[*] Using token from Electron for: {env_email}")
+            self.token = env_token
+            self.employee_email = env_email
+            return True
+        
+        # Fallback: Login with credentials (standalone mode)
+        print(f"\n[*] Logging in as: {self.config.EMPLOYEE_EMAIL}")
         try:
             response = requests.post(
-                f"{self.config.API_URL}/api/auth/login",  # ✅ FIXED: Added /api/
+                f"{self.config.API_URL}/api/auth/login",
                 json={
                     "email": self.config.EMPLOYEE_EMAIL,
                     "password": self.config.EMPLOYEE_PASSWORD
@@ -30,20 +45,20 @@ class MonitoringAgent:
                 timeout=10
             )
             
-            print(f"Response status: {response.status_code}")  # Debug
+            print(f"Response status: {response.status_code}")
             
             if response.status_code == 200:
                 data = response.json()
                 self.token = data["access_token"]
-                self.employee_id = data["user"]["email"]
-                print(f"✅ Login successful!")
+                self.employee_email = data["user"]["email"]
+                print(f"[OK] Login successful!")
                 return True
             else:
-                print(f"❌ Login failed: {response.status_code}")
+                print(f"[ERROR] Login failed: {response.status_code}")
                 print(f"Response: {response.text}")
                 return False
         except Exception as e:
-            print(f"❌ Login error: {str(e)}")
+            print(f"[ERROR] Login error: {str(e)}")
             return False
     
     def send_activity_data(self, activity_data):
@@ -53,10 +68,10 @@ class MonitoringAgent:
                 "Content-Type": "application/json"
             }
             
-            activity_data["employee_email"] = self.employee_id
+            activity_data["employee_email"] = self.employee_email
             
             response = requests.post(
-                f"{self.config.API_URL}/api/employee/activity",  # ✅ FIXED: Added /api/
+                f"{self.config.API_URL}/api/employee/activity",
                 headers=headers,
                 json=activity_data,
                 timeout=10
@@ -66,15 +81,15 @@ class MonitoringAgent:
                 self.display_activity_summary(activity_data)
                 return True
             else:
-                print(f"⚠️ Failed: {response.status_code}")
+                print(f"[WARN] Failed: {response.status_code}")
                 print(f"Response: {response.text}")
                 return False
         except Exception as e:
-            print(f"❌ Error: {str(e)}")
+            print(f"[ERROR] Error: {str(e)}")
             return False
     
     def display_activity_summary(self, activity_data):
-        status = "💤 IDLE" if activity_data["is_idle"] else "✅ ACTIVE"
+        status = "[IDLE]" if activity_data["is_idle"] else "[ACTIVE]"
         current = activity_data.get("current_application", "Unknown")
         
         print(f"\n{status} | Currently: {current}")
@@ -82,28 +97,29 @@ class MonitoringAgent:
         
         apps = activity_data.get("applications", [])[:5]
         if apps:
-            print("📊 Top 5 Applications:")
+            print("[*] Top 5 Applications:")
             for i, app in enumerate(apps, 1):
                 mins = app['time_spent_seconds'] // 60
                 url = f" - {app['url']}" if app['url'] else ""
                 print(f"   {i}. {app['application']}{url}")
-                print(f"      ⏱️  {mins}m | 🖱️  {app['mouse_movements']} | ⌨️  {app['key_presses']}")
+                print(f"      Time: {mins}m | Mouse: {app['mouse_movements']} | Keys: {app['key_presses']}")
         print("-" * 80)
     
     def run(self):
-        if not self.login():
-            print("\n❌ Cannot start monitoring - login failed")
-            print("💡 Check:")
+        if not self.authenticate():
+            print("\n[ERROR] Cannot start monitoring - authentication failed")
+            print("[*] Check:")
             print("   1. Backend is running at", self.config.API_URL)
             print("   2. Employee credentials are correct")
-            print("   3. Employee is logged in via web")
+            print("   3. Token is valid")
             return
         
         self.tracker = ActivityTracker(self.config)
         
-        print(f"\n🚀 Monitoring started!")
-        print(f"📊 Updates every {self.config.ACTIVITY_CHECK_INTERVAL} seconds")
-        print(f"⏱️  Idle threshold: {self.config.IDLE_THRESHOLD} seconds")
+        print(f"\n[*] Monitoring started!")
+        print(f"[*] Employee: {self.employee_email}")
+        print(f"[*] Updates every {self.config.ACTIVITY_CHECK_INTERVAL} seconds")
+        print(f"[*] Idle threshold: {self.config.IDLE_THRESHOLD} seconds")
         print("\nPress Ctrl+C to stop\n")
         
         self.is_running = True
@@ -115,10 +131,10 @@ class MonitoringAgent:
                 self.tracker.reset_counters()
                 time.sleep(self.config.ACTIVITY_CHECK_INTERVAL)
         except KeyboardInterrupt:
-            print("\n\n⏹️  Stopping...")
+            print("\n\n[*] Stopping...")
             self.stop()
         except Exception as e:
-            print(f"\n❌ Unexpected error: {str(e)}")
+            print(f"\n[ERROR] Unexpected error: {str(e)}")
             import traceback
             traceback.print_exc()
             self.stop()
@@ -128,7 +144,7 @@ class MonitoringAgent:
         if self.tracker:
             self.tracker.stop()
             self.tracker.display_summary()
-        print("\n✅ Stopped!")
+        print("\n[OK] Stopped!")
 
 if __name__ == "__main__":
     agent = MonitoringAgent()

@@ -45,6 +45,15 @@ export const logout = () => api.post('/auth/logout');
 export const createUser = (userData) => api.post('/hr/create-user', userData);
 export const getEmployees = () => api.get('/hr/employees');
 export const getEmployeeStats = (employeeId) => api.get(`/hr/employee/${employeeId}/stats`);
+// <<< ADD THIS NEW FUNCTION >>>
+export const getEmployeeAppBreakdown = (employeeId, startDate, endDate) => 
+  api.get(`/hr/employee/${employeeId}/app-breakdown`, {
+    params: {
+      start_date: startDate,
+      end_date: endDate
+    }
+  });
+// <<< END OF NEW FUNCTION >>>
 export const updateSettings = (settings) => api.put('/hr/settings', settings);
 
 // Employee

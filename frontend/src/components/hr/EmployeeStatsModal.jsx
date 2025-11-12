@@ -134,24 +134,13 @@ export default function EmployeeStatsModal({ employee, onClose }) {
           <AttendanceTable records={stats?.attendance?.records || []} />
         </div>
       </div>
-
-
-      {/* Activity Breakdown Modal - TEST */}
       {showActivityBreakdown && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-8 max-w-md">
-            <h2 className="text-2xl font-bold mb-4">Test Modal</h2>
-            <p>Employee ID: {employee._id || employee.id}</p>
-            <p>Employee Name: {employee.full_name}</p>
-            <button
-              onClick={() => setShowActivityBreakdown(false)}
-              className="mt-4 bg-blue-600 text-white px-4 py-2 rounded"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
+        <EmployeeActivityBreakdown
+          employeeId={employee.id || employee._id}
+          employeeName={employee.full_name}
+          onClose={() => setShowActivityBreakdown(false)}
+        />
+      )}     
     </div>
   );
 }

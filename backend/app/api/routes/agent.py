@@ -27,7 +27,7 @@ async def log_agent_activity(
         "source": "desktop_agent"
     }
     
-    await db.agent_activities.insert_one(activity_record)
+    await db.activities.insert_one(activity_record)
     
     return {"message": "Activity logged", "timestamp": activity_record["timestamp"]}
 

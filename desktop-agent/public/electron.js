@@ -10,6 +10,13 @@ const ActivityTracker = require('../electron/tracker');
 const API = require('../electron/api');
 
 const store = new Store();
+
+// ✅ ADD THIS LINE - Force set API URL to IPv4
+if (!store.get('api_url')) {
+  store.set('api_url', 'http://127.0.0.1:8000');
+  console.log('✓ API URL set to http://127.0.0.1:8000');
+}
+
 let mainWindow = null;
 let tray = null;
 let tracker = null;
@@ -32,8 +39,11 @@ function createWindow() {
       preload: path.join(__dirname, '../electron/preload.js')
     }
   });
+  
+  const startUrl = isDev 
+  ? 'http://localhost:3000'  // ✅ Change to YOUR main frontend port
+  : `file://${path.join(__dirname, '../build/index.html')}`;
 
-  const startUrl = isDev ? 'http://localhost:3000' : `file://${path.join(__dirname, '../build/index.html')}`;
   mainWindow.loadURL(startUrl);
   if (isDev) mainWindow.webContents.openDevTools({ mode: 'detach' });
 
@@ -93,7 +103,9 @@ function createTray() {
 function startTracking() {
   const token = store.get('token');
   const user = store.get('user');
-  const apiUrl = store.get('api_url', process.env.REACT_APP_API_URL || 'http://localhost:8000');
+  // Around line 79 - CHANGE THIS:
+  const apiUrl = store.get('api_url', 'http://127.0.0.1:8000');
+
 
   if (!token || !user) { console.log('⚠️ No token/user found.'); return; }
   if (agentProcess) { console.log('⚠️ Agent already running.'); stopTracking(); }
@@ -207,7 +219,7 @@ function stopTracking() {
 
 async function checkClockStatus() {
   const token = store.get('token');
-  const apiUrl = store.get('api_url', process.env.REACT_APP_API_URL || 'http://localhost:8000');
+  const apiUrl = store.get('api_url', 'http://127.0.0.1:8000');
   if (!token) return;
 
   try {
@@ -227,10 +239,25 @@ async function checkClockStatus() {
   }
 }
 
-setInterval(() => {
-  const token = store.get('token');
-  if (token) checkClockStatus();
-}, 30000);
+//setInterval(() => {
+//  const token = store.get('token');
+//  if (token) checkClockStatus();
+//}, 30000);
+
+ipcMain.handle('store-credentials', async (event, { token, email }) => {
+  console.log('💾 Storing credentials for:', email);
+  
+  store.set('token', token);
+  store.set('user', { email: email });
+  
+  // Update API URL if needed
+  const apiUrl = store.get('api_url', 'http://127.0.0.1:8000');
+  store.set('api_url', apiUrl);
+  
+  console.log('   API URL:', apiUrl);
+  
+  return { success: true };
+});
 
 ipcMain.on('clock-status-changed', (event, isClockedIn) => {
   console.log('Clock status changed:', isClockedIn);
@@ -250,13 +277,13 @@ app.on('before-quit', () => { app.isQuitting = true; stopTracking(); });
 
 ipcMain.handle('login', async (event, credentials) => {
   try {
-    const apiUrl = store.get('api_url', process.env.REACT_APP_API_URL || 'http://localhost:8000/api');
+    const apiUrl = store.get('api_url', 'http://127.0.0.1:8000');
     const tempAPI = new API(apiUrl);
     const result = await tempAPI.login(credentials);
     store.set('token', result.access_token);
     store.set('user', result.user);
     console.log('✅ Login:', result.user.email);
-    setTimeout(() => checkClockStatus(), 2000);
+    //setTimeout(() => checkClockStatus(), 2000);
     return { success: true, user: result.user };
   } catch (error) {
     return { success: false, error: error.message };

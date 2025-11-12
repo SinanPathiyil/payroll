@@ -36,12 +36,12 @@ class ActivityTracker:
         if self.config.TRACK_MOUSE:
             self.mouse_listener = mouse.Listener(on_move=self.on_mouse_move)
             self.mouse_listener.start()
-            print("✅ Mouse tracking started (per-application)")
+            print("[OK] Mouse tracking started (per-application)")
         
         if self.config.TRACK_KEYBOARD:
             self.keyboard_listener = keyboard.Listener(on_press=self.on_key_press)
             self.keyboard_listener.start()
-            print("✅ Keyboard tracking started (per-application)")
+            print("[OK] Keyboard tracking started (per-application)")
     
     def get_active_window_info(self):
         try:
@@ -180,19 +180,19 @@ class ActivityTracker:
     
     def display_summary(self):
         print("\n" + "=" * 80)
-        print("📊 ACTIVITY BREAKDOWN BY APPLICATION")
+        print("[*] ACTIVITY BREAKDOWN BY APPLICATION")
         print("=" * 80)
         
         data = self.get_activity_data()
         
         for app in data['applications']:
             minutes = app['time_spent_seconds'] // 60
-            print(f"\n📱 {app['application']}")
+            print(f"\n[APP] {app['application']}")
             if app['url']:
-                print(f"   🌐 {app['url']}")
-            print(f"   ⏱️  Time: {minutes} minutes")
-            print(f"   🖱️  Mouse: {app['mouse_movements']} movements")
-            print(f"   ⌨️  Keyboard: {app['key_presses']} key presses")
+                print(f"   [WEB] {app['url']}")
+            print(f"   [TIME] Time: {minutes} minutes")
+            print(f"   [MOUSE] Mouse: {app['mouse_movements']} movements")
+            print(f"   [KEYBOARD] Keyboard: {app['key_presses']} key presses")
         
         print("\n" + "=" * 80)
         print(f"Total Session: {data['session_time_seconds'] // 60} minutes")
@@ -211,4 +211,4 @@ class ActivityTracker:
             self.mouse_listener.stop()
         if self.keyboard_listener:
             self.keyboard_listener.stop()
-        print("🛑 Activity tracking stopped")
+        print("[STOP] Activity tracking stopped")

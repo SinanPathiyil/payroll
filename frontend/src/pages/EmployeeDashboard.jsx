@@ -2,13 +2,12 @@
 
 import { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
-import { useActivityTracker } from '../hooks/useActivityTracker';
 import Navbar from '../components/common/Navbar';
 import Clock from '../components/common/Clock';
 import TaskList from '../components/employee/TaskList';
 import MessageBoard from '../components/employee/MessageBoard';
 import TimeTracker from '../components/employee/TimeTracker';
-import { getEmployeeStatus, getMyTasks, getMyMessages } from '../services/api';
+import { getEmployeeStatus, getMyTasks, getMyMessages, getActivityHistory } from '../services/api';
 import { Clock as ClockIcon, ListTodo, MessageSquare, Activity } from 'lucide-react';
 
 export default function EmployeeDashboard() {
@@ -21,14 +20,16 @@ export default function EmployeeDashboard() {
     login_time: null,
     date: null
   });
-  
   const [tasks, setTasks] = useState([]);
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  // Start activity tracking when clocked in
-  const activityStats = useActivityTracker(status.is_clocked_in);
+  const [activityStats, setActivityStats] = useState({
+    mouseEvents: 0,
+    keyboardEvents: 0,
+    activeTime: 0,
+    idleTime: 0
+  });
 
   useEffect(() => {
     loadData();
@@ -40,10 +41,11 @@ export default function EmployeeDashboard() {
     try {
       setError(null);
       
-      const [statusRes, tasksRes, messagesRes] = await Promise.all([
+      const [statusRes, tasksRes, messagesRes, activityRes] = await Promise.all([
         getEmployeeStatus(),
         getMyTasks(),
-        getMyMessages()
+        getMyMessages(),
+        getActivityHistory()
       ]);
       
       // Debug logging
@@ -67,6 +69,15 @@ export default function EmployeeDashboard() {
       
       setTasks(tasksRes.data || []);
       setMessages(messagesRes.data || []);
+
+      const activityData = activityRes.data || activityRes || {};
+      const summary = activityData.summary || {};
+      setActivityStats({
+        mouseEvents: summary.total_mouse_movements || 0,
+        keyboardEvents: summary.total_key_presses || 0,
+        activeTime: summary.total_active_time_seconds || 0,
+        idleTime: summary.total_idle_time_seconds || 0
+      });
       
     } catch (error) {
       console.error('❌ Failed to load data:', error);

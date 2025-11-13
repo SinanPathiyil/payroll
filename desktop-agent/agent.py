@@ -1,6 +1,8 @@
 import requests
 import time
 import os
+import signal
+import sys
 from datetime import datetime
 from activity_tracker import ActivityTracker
 from config import Config
@@ -13,11 +15,21 @@ class MonitoringAgent:
         self.employee_email = None
         self.is_running = False
         
+        # Setup signal handlers for graceful shutdown
+        signal.signal(signal.SIGTERM, self._signal_handler)
+        signal.signal(signal.SIGINT, self._signal_handler)
+        
         print("=" * 80)
         print("[*] EMPLOYEE MONITORING AGENT - ENHANCED")
         print("=" * 80)
         print("[*] Tracks activity by application and website")
         print("=" * 80)
+    
+    def _signal_handler(self, signum, frame):
+        """Handle shutdown signals gracefully"""
+        print(f"\n[*] Received signal {signum}, shutting down gracefully...")
+        self.stop()
+        sys.exit(0)
     
     def authenticate(self):
         """
@@ -70,22 +82,39 @@ class MonitoringAgent:
             
             activity_data["employee_email"] = self.employee_email
             
+            # Ensure API URL doesn't have double /api
+            api_url = self.config.API_URL.rstrip('/')
+            if not api_url.endswith('/api'):
+                endpoint = f"{api_url}/api/employee/activity"
+            else:
+                endpoint = f"{api_url}/employee/activity"
+            
+            print(f"[*] Sending to: {endpoint}")
+            print(f"[*] Payload keys: {list(activity_data.keys())}")
+            
             response = requests.post(
-                f"{self.config.API_URL}/api/employee/activity",
+                endpoint,
                 headers=headers,
                 json=activity_data,
                 timeout=10
             )
             
             if response.status_code == 200:
+                result = response.json()
+                print(f"[OK] Activity logged: {result.get('message', 'Success')}")
                 self.display_activity_summary(activity_data)
                 return True
             else:
-                print(f"[WARN] Failed: {response.status_code}")
-                print(f"Response: {response.text}")
+                print(f"[ERROR] Failed: {response.status_code}")
+                print(f"[ERROR] Response: {response.text}")
                 return False
+        except requests.exceptions.RequestException as e:
+            print(f"[ERROR] Network error: {str(e)}")
+            return False
         except Exception as e:
-            print(f"[ERROR] Error: {str(e)}")
+            print(f"[ERROR] Unexpected error: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return False
     
     def display_activity_summary(self, activity_data):
@@ -124,10 +153,19 @@ class MonitoringAgent:
         
         self.is_running = True
         
+        # Send initial activity data immediately (after a short warm-up)
+        print("[*] Waiting 5 seconds for initial activity collection...")
+        time.sleep(5)
+        
         try:
             while self.is_running:
                 activity_data = self.tracker.get_activity_data()
-                self.send_activity_data(activity_data)
+                print(f"\n[*] Sending activity data...")
+                success = self.send_activity_data(activity_data)
+                if success:
+                    print(f"[OK] Activity data sent successfully")
+                else:
+                    print(f"[WARN] Failed to send activity data")
                 self.tracker.reset_counters()
                 time.sleep(self.config.ACTIVITY_CHECK_INTERVAL)
         except KeyboardInterrupt:
@@ -142,6 +180,14 @@ class MonitoringAgent:
     def stop(self):
         self.is_running = False
         if self.tracker:
+            # Send final activity data before stopping
+            print("\n[*] Sending final activity data...")
+            try:
+                final_data = self.tracker.get_activity_data()
+                self.send_activity_data(final_data)
+            except Exception as e:
+                print(f"[WARN] Failed to send final data: {str(e)}")
+            
             self.tracker.stop()
             self.tracker.display_summary()
         print("\n[OK] Stopped!")

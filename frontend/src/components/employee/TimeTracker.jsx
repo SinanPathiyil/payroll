@@ -168,7 +168,7 @@ export default function TimeTracker({ status, onStatusChange, activityStats }) {
                 </div>
               </div>
               <div className="mt-3 text-xs text-gray-500">
-                <p>✅ Desktop agent tracking your activity... Data sent every {window.electron?.isElectron ? '10' : '5'} seconds.</p>
+                <p>✅ Desktop agent tracking your activity. Data syncs automatically from the monitoring service.</p>
               </div>
             </div>
           )}

@@ -61,6 +61,8 @@ export const employeeLogin = () => api.post('/employee/login');
 export const employeeLogout = () => api.post('/employee/logout');
 export const getEmployeeStatus = () => api.get('/employee/status');
 export const logActivity = (activityData) => api.post('/employee/activity', activityData);
+export const getActivityHistory = (params) =>
+  api.get('/employee/activity-history', { params });
 
 // Tasks
 export const createTask = (taskData) => api.post('/tasks/create', taskData);

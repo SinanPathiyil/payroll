@@ -217,11 +217,59 @@ async def log_activity(
     Includes per-application breakdown
     """
     try:
-        # Add metadata
+        # Normalize and enrich payload
+        timestamp = datetime.utcnow()
+        idle_seconds = int(activity_data.get("idle_time_seconds") or activity_data.get("idle_time") or 0)
+        session_seconds = int(activity_data.get("session_time_seconds") or 0)
+        active_seconds = max(session_seconds - idle_seconds, 0)
+        total_mouse = int(activity_data.get("total_mouse_movements") or activity_data.get("mouse_events") or 0)
+        total_keys = int(activity_data.get("total_key_presses") or activity_data.get("keyboard_events") or 0)
+
+        # Update root-level fields
         activity_data["employee_email"] = current_user["email"]
         activity_data["employee_name"] = current_user.get("full_name", "")
-        activity_data["recorded_at"] = datetime.utcnow()
+        activity_data["user_id"] = str(current_user["_id"])
+        activity_data["recorded_at"] = timestamp
+        activity_data["timestamp"] = activity_data.get("timestamp") or timestamp.isoformat()
+        activity_data["date"] = timestamp.strftime("%Y-%m-%d")
+        activity_data["source"] = activity_data.get("source") or "desktop_agent"
+
+         # Store with BOTH naming conventions for compatibility
+        activity_data["idle_time_seconds"] = idle_seconds
+        activity_data["session_time_seconds"] = session_seconds
+        activity_data["active_time_seconds"] = active_seconds
+        activity_data["total_mouse_movements"] = total_mouse
+        activity_data["total_key_presses"] = total_keys
+
+         # ADD THESE LINES - Store with HR expected field names
+        activity_data["idle_time"] = idle_seconds  # HR expects this
+        activity_data["active_time"] = active_seconds  # HR expects this
+        activity_data["mouse_events"] = total_mouse  # HR expects this
+        activity_data["keyboard_events"] = total_keys  # HR expects this
+        activity_data["productivity_score"] = min(100, (active_seconds / max(session_seconds, 1)) * 100)  # Add productivity score
         
+        activity_data["is_idle"] = bool(activity_data.get("is_idle", False))
+
+        # Normalize applications list (if provided)
+        applications = activity_data.get("applications", [])
+        normalized_apps = []
+        total_app_time = 0
+
+        for app in applications:
+            app_entry = {
+                "application": app.get("application") or "Unknown",
+                "window_title": app.get("window_title") or "",
+                "url": app.get("url") or "",
+                "mouse_movements": int(app.get("mouse_movements") or 0),
+                "key_presses": int(app.get("key_presses") or 0),
+                "time_spent_seconds": int(app.get("time_spent_seconds") or 0),
+            }
+            total_app_time += app_entry["time_spent_seconds"]
+            normalized_apps.append(app_entry)
+
+        activity_data["applications"] = normalized_apps
+        activity_data["applications_total_time_seconds"] = total_app_time
+
         # Store in activities collection
         result = await db.activities.insert_one(activity_data)  # ✅ FIXED
         
@@ -231,7 +279,9 @@ async def log_activity(
         return {
             "message": "Activity logged successfully",
             "id": str(result.inserted_id),
-            "apps_tracked": len(activity_data.get("applications", []))
+            "apps_tracked": len(normalized_apps),
+            "active_time_seconds": active_seconds,
+            "idle_time_seconds": idle_seconds
         }
     
     except Exception as e:
@@ -483,9 +533,27 @@ async def get_activity_history(
         "date": target_date
     }).sort("timestamp", -1).to_list(length=1000)
     
-    # Format activities
+    # Format activities and compute summary
     formatted_activities = []
+    total_mouse = 0
+    total_keys = 0
+    total_idle_seconds = 0
+    total_active_seconds = 0
+    total_session_seconds = 0
+
     for activity in activities:
+        mouse_count = int(activity.get("total_mouse_movements") or 0)
+        key_count = int(activity.get("total_key_presses") or 0)
+        idle_seconds = int(activity.get("idle_time_seconds") or 0)
+        active_seconds = int(activity.get("active_time_seconds") or 0)
+        session_seconds = int(activity.get("session_time_seconds") or (active_seconds + idle_seconds))
+
+        total_mouse += mouse_count
+        total_keys += key_count
+        total_idle_seconds += idle_seconds
+        total_active_seconds += active_seconds
+        total_session_seconds += session_seconds
+
         formatted_activities.append({
             "id": str(activity["_id"]),
             "application": activity.get("application"),
@@ -494,12 +562,27 @@ async def get_activity_history(
             "productivity_score": activity.get("productivity_score"),
             "category": activity.get("classification", {}).get("category"),
             "timestamp": activity.get("timestamp"),
-            "source": activity.get("source", "web")
+            "source": activity.get("source", "web"),
+            "idle_time_seconds": idle_seconds,
+            "active_time_seconds": active_seconds,
+            "session_time_seconds": session_seconds,
+            "total_mouse_movements": mouse_count,
+            "total_key_presses": key_count
         })
     
+    summary = {
+        "total_mouse_movements": total_mouse,
+        "total_key_presses": total_keys,
+        "total_idle_time_seconds": total_idle_seconds,
+        "total_active_time_seconds": total_active_seconds,
+        "total_session_time_seconds": total_session_seconds,
+        "activity_count": len(formatted_activities)
+    }
+
     return {
         "date": target_date,
         "total_activities": len(formatted_activities),
+        "summary": summary,
         "activities": formatted_activities
     }
 

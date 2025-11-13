@@ -126,7 +126,7 @@ function startTracking() {
     api_url: apiUrl,
     employee_email: user.email || 'employee@company.com',
     employee_password: 'password123',
-    activity_check_interval: 60,
+    activity_check_interval: 30, // Reduced to 30 seconds for faster updates
     idle_threshold: 180,
     track_mouse: true,
     track_keyboard: true,
@@ -140,23 +140,42 @@ function startTracking() {
     console.error('❌ Config update failed:', error);
   }
 
-  agentProcess = spawn('python', ['agent.py'], { cwd: agentDir, stdio: ['ignore', 'pipe', 'pipe'] });
+  const spawnEnv = {
+    ...process.env,
+    EMPLOYEE_TOKEN: token,
+    EMPLOYEE_EMAIL: user?.email || '',
+    API_URL: apiUrl
+  };
+
+  agentProcess = spawn('python', ['agent.py'], {
+    cwd: agentDir,
+    stdio: ['ignore', 'pipe', 'pipe'],
+    env: spawnEnv
+  });
   console.log('✅ Agent started (PID:', agentProcess.pid, ')');
 
   agentProcess.stdout.on('data', (data) => {
     const output = data.toString();
     console.log('🐍', output.trim());
-    if (output.includes('Login successful')) {
+    if (output.includes('Login successful') || output.includes('Using token from Electron')) {
       if (tray) tray.updateMenu('Tracking Active');
       if (mainWindow) mainWindow.webContents.send('tracking-started', { status: 'active' });
     }
-    if (output.includes('Top 5 Applications') || output.includes('ACTIVE')) {
+    if (output.includes('Activity logged') || output.includes('Activity data sent successfully')) {
+      if (mainWindow) mainWindow.webContents.send('productivity-update', { timestamp: new Date().toISOString() });
+    }
+    if (output.includes('Top 5 Applications') || output.includes('ACTIVE') || output.includes('IDLE')) {
       if (mainWindow) mainWindow.webContents.send('productivity-update', { timestamp: new Date().toISOString() });
     }
   });
 
   agentProcess.stderr.on('data', (data) => {
-    console.error('🐍 Error:', data.toString().trim());
+    const error = data.toString().trim();
+    console.error('🐍 Error:', error);
+    // Also send errors to renderer for debugging
+    if (mainWindow) {
+      mainWindow.webContents.send('agent-error', { error });
+    }
   });
 
   agentProcess.on('close', (code) => {

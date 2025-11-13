@@ -11,3 +11,8 @@ venv/
 
 # VS Code settings
 .vscode/
+
+
+# Node modules
+frontend/node_modules/
+desktop-agent/node_modules/

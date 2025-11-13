@@ -118,17 +118,27 @@ async def get_employee_stats(
     
     activity_cursor = db.activities.find({
         "user_id": employee_id,
-        "timestamp": {"$gte": seven_days_ago}
+        "recorded_at": {"$gte": seven_days_ago}  # ← CHANGED FROM "timestamp"
     })
+    # Debug: Let's also check without date filter first
+    print(f"Checking activities for user_id: {employee_id}")
+    test_count = await db.activities.count_documents({"user_id": employee_id})
+    print(f"Total activities for this user (no date filter): {test_count}")
     
     async for activity in activity_cursor:
+
+    # Debug print
+        print(f"Activity found: active_time={activity.get('active_time')}, mouse_events={activity.get('mouse_events')}")
+        
         total_active_time += activity.get("active_time", 0)
         total_idle_time += activity.get("idle_time", 0)
         total_mouse_events += activity.get("mouse_events", 0)
         total_keyboard_events += activity.get("keyboard_events", 0)
         avg_productivity += activity.get("productivity_score", 0)
         count += 1
-    
+        
+    print(f"Total activities processed: {count}")
+        
     if count > 0:
         avg_productivity = avg_productivity / count
     

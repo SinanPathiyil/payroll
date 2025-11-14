@@ -2,8 +2,8 @@
   "api_url": "http://127.0.0.1:8000",
   "employee_email": "employee@company.com",
   "employee_password": "password123",
-  "activity_check_interval": 30,
-  "idle_threshold": 180,
+  "activity_check_interval": 10,
+  "idle_threshold": 20,
   "track_mouse": true,
   "track_keyboard": true,
   "track_applications": true

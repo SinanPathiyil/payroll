@@ -122,24 +122,6 @@ function startTracking() {
     return;
   }
 
-  const config = {
-    api_url: apiUrl,
-    employee_email: user.email || 'employee@company.com',
-    employee_password: 'password123',
-    activity_check_interval: 30, // Reduced to 30 seconds for faster updates
-    idle_threshold: 180,
-    track_mouse: true,
-    track_keyboard: true,
-    track_applications: true
-  };
-
-  try {
-    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-    console.log('✅ Config updated');
-  } catch (error) {
-    console.error('❌ Config update failed:', error);
-  }
-
   const spawnEnv = {
     ...process.env,
     EMPLOYEE_TOKEN: token,

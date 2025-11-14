@@ -142,32 +142,41 @@ class MonitoringAgent:
             print("   2. Employee credentials are correct")
             print("   3. Token is valid")
             return
-        
+    
         self.tracker = ActivityTracker(self.config)
-        
+    
         print(f"\n[*] Monitoring started!")
         print(f"[*] Employee: {self.employee_email}")
         print(f"[*] Updates every {self.config.ACTIVITY_CHECK_INTERVAL} seconds")
         print(f"[*] Idle threshold: {self.config.IDLE_THRESHOLD} seconds")
         print("\nPress Ctrl+C to stop\n")
-        
+    
         self.is_running = True
-        
-        # Send initial activity data immediately (after a short warm-up)
-        print("[*] Waiting 5 seconds for initial activity collection...")
-        time.sleep(5)
-        
+    
+        # REMOVED: Initial 5-second wait and immediate send
+        # Now just start the regular interval loop
+    
         try:
             while self.is_running:
+                # Wait for the configured interval FIRST
+                print(f"\n[*] Collecting activity data for {self.config.ACTIVITY_CHECK_INTERVAL} seconds...")
+                time.sleep(self.config.ACTIVITY_CHECK_INTERVAL)
+            
+                # Then get and send the data
                 activity_data = self.tracker.get_activity_data()
                 print(f"\n[*] Sending activity data...")
                 success = self.send_activity_data(activity_data)
                 if success:
                     print(f"[OK] Activity data sent successfully")
+                    # Show idle/active time in summary
+                    idle_time = activity_data.get('idle_time_seconds', 0)
+                    active_time = activity_data.get('active_time_seconds', 0)
+                    print(f"[INFO] Active: {active_time}s, Idle: {idle_time}s")
                 else:
                     print(f"[WARN] Failed to send activity data")
+            
                 self.tracker.reset_counters()
-                time.sleep(self.config.ACTIVITY_CHECK_INTERVAL)
+            
         except KeyboardInterrupt:
             print("\n\n[*] Stopping...")
             self.stop()

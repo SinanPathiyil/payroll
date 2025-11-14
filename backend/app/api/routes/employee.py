@@ -26,7 +26,7 @@ async def employee_login(
     if current_user["role"] != "employee":
         raise HTTPException(status_code=403, detail="Only employees can clock in")
     
-    today = datetime.utcnow().strftime("%Y-%m-%d")
+    today = datetime.now().strftime("%Y-%m-%d")
     
     # First, clean up any stale active records from previous days
     await db.attendance.update_many(
@@ -38,7 +38,7 @@ async def employee_login(
         {
             "$set": {
                 "status": "completed",
-                "logout_time": datetime.utcnow()
+                "logout_time": datetime.now()
             }
         }
     )
@@ -56,7 +56,7 @@ async def employee_login(
     # Create new attendance record
     attendance = {
         "user_id": str(current_user["_id"]),
-        "login_time": datetime.utcnow(),
+        "login_time": datetime.now(),
         "logout_time": None,
         "total_hours": None,
         "date": today,
@@ -84,7 +84,7 @@ async def employee_logout(
     if current_user["role"] != "employee":
         raise HTTPException(status_code=403, detail="Only employees can clock out")
     
-    today = datetime.utcnow().strftime("%Y-%m-%d")
+    today = datetime.now().strftime("%Y-%m-%d")
     
     # Find active attendance for TODAY
     attendance = await db.attendance.find_one({
@@ -96,7 +96,7 @@ async def employee_logout(
     if not attendance:
         raise HTTPException(status_code=400, detail="No active clock-in found for today")
     
-    logout_time = datetime.utcnow()
+    logout_time = datetime.now()
     login_time = attendance.get("login_time")
     
     if not login_time:
@@ -139,7 +139,7 @@ async def get_status(
     db = Depends(get_database)
 ):
     """Get current clock-in status"""
-    today = datetime.utcnow().strftime("%Y-%m-%d")
+    today = datetime.now().strftime("%Y-%m-%d")
     
     # Check for active attendance TODAY (not just any active record)
     attendance = await db.attendance.find_one({
@@ -154,7 +154,7 @@ async def get_status(
     login_time = None
     
     if is_clocked_in and attendance.get("login_time"):
-        time_diff = datetime.utcnow() - attendance["login_time"]
+        time_diff = datetime.now() - attendance["login_time"]
         current_hours = time_diff.total_seconds() / 3600
         login_time = attendance["login_time"]
     
@@ -172,7 +172,7 @@ async def cleanup_stale_attendance(
     db = Depends(get_database)
 ):
     """Clean up any stale active attendance records (not from today)"""
-    today = datetime.utcnow().strftime("%Y-%m-%d")
+    today = datetime.now().strftime("%Y-%m-%d")
     
     # Find any active records that are NOT from today
     stale_records = await db.attendance.find({
@@ -185,7 +185,7 @@ async def cleanup_stale_attendance(
         # Auto-clock out stale records
         for record in stale_records:
             if record.get("login_time"):
-                logout_time = datetime.utcnow()
+                logout_time = datetime.now()
                 time_diff = logout_time - record["login_time"]
                 total_hours = time_diff.total_seconds() / 3600
                 
@@ -218,7 +218,7 @@ async def log_activity(
     """
     try:
         # Normalize and enrich payload
-        timestamp = datetime.utcnow()
+        timestamp = datetime.now()
         idle_seconds = int(activity_data.get("idle_time_seconds") or activity_data.get("idle_time") or 0)
         session_seconds = int(activity_data.get("session_time_seconds") or 0)
         active_seconds = max(session_seconds - idle_seconds, 0)
@@ -357,8 +357,8 @@ async def log_smart_activity(
         
         activity_record = {
             "user_id": str(current_user["_id"]),
-            "timestamp": datetime.utcnow(),
-            "date": datetime.utcnow().strftime("%Y-%m-%d"),
+            "timestamp": datetime.now(),
+            "date": datetime.now().strftime("%Y-%m-%d"),
             "application": app_name,
             "window_title": window_title,
             "url": url,
@@ -405,7 +405,7 @@ async def get_productivity_insights(
     """
     
     # Get data for specified days
-    start_date = datetime.utcnow() - timedelta(days=days)
+    start_date = datetime.now() - timedelta(days=days)
     
     activities = await db.activities.find({
         "user_id": str(current_user["_id"]),
@@ -526,7 +526,7 @@ async def get_activity_history(
     if date:
         target_date = date
     else:
-        target_date = datetime.utcnow().strftime("%Y-%m-%d")
+        target_date = datetime.now().strftime("%Y-%m-%d")
     
     activities = await db.activities.find({
         "user_id": str(current_user["_id"]),
@@ -603,7 +603,7 @@ async def get_employee_activity_breakdown(
     
     # Default to today if no date provided
     if not date:
-        date = datetime.utcnow().strftime("%Y-%m-%d")
+        date = datetime.now().strftime("%Y-%m-%d")
     
     try:
         # Find employee

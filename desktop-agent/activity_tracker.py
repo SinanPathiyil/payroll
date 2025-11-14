@@ -14,6 +14,11 @@ class ActivityTracker:
         self.current_app = None
         self.current_window_title = None
         
+        # ADD THESE FOR IDLE TRACKING
+        self.total_idle_time = 0  # Cumulative idle time
+        self.idle_start_time = None  # When idle period started
+        self.last_idle_check = time.time()
+        
         # Track activity per app/website
         self.app_activities = defaultdict(lambda: {
             'mouse_movements': 0,
@@ -114,8 +119,35 @@ class ActivityTracker:
         if url:
             self.app_activities[app_key]['url'] = url
     
+    def check_idle_status(self):
+        """Check and update idle status"""
+        current_time = time.time()
+        time_since_activity = current_time - self.last_activity_time
+        
+        # User is idle if no activity for more than threshold
+        is_currently_idle = time_since_activity > self.config.IDLE_THRESHOLD
+        
+        if is_currently_idle:
+            # If just became idle, record the start time
+            if self.idle_start_time is None:
+                self.idle_start_time = self.last_activity_time + self.config.IDLE_THRESHOLD
+                print(f"[IDLE] User became idle at {datetime.fromtimestamp(self.idle_start_time).strftime('%H:%M:%S')}")
+        else:
+            # If was idle but now active, add the idle period to total
+            if self.idle_start_time is not None:
+                idle_duration = self.last_activity_time - self.idle_start_time
+                self.total_idle_time += idle_duration
+                print(f"[ACTIVE] User became active. Was idle for {idle_duration:.0f} seconds")
+                self.idle_start_time = None
+        
+        return is_currently_idle
+    
     def on_mouse_move(self, x, y):
         current_time = time.time()
+        
+        # Check idle status before updating
+        self.check_idle_status()
+        
         if current_time - self.last_app_check > 1:
             self.update_current_app()
             self.last_app_check = current_time
@@ -128,6 +160,10 @@ class ActivityTracker:
     
     def on_key_press(self, key):
         current_time = time.time()
+        
+        # Check idle status before updating
+        self.check_idle_status()
+        
         if current_time - self.last_app_check > 1:
             self.update_current_app()
             self.last_app_check = current_time
@@ -142,12 +178,27 @@ class ActivityTracker:
         return (time.time() - self.last_activity_time) > self.config.IDLE_THRESHOLD
     
     def get_idle_time(self):
-        return int(time.time() - self.last_activity_time)
+        """Get total idle time for this reporting period"""
+        # Check current idle status
+        self.check_idle_status()
+        
+        # Calculate total idle time
+        total_idle = self.total_idle_time
+        
+        # If currently idle, add the current idle period
+        if self.idle_start_time is not None:
+            current_idle_duration = time.time() - self.idle_start_time
+            total_idle += current_idle_duration
+        
+        return int(total_idle)
     
     def get_session_time(self):
         return int(time.time() - self.session_start_time)
     
     def get_activity_data(self):
+        # Update idle status
+        self.check_idle_status()
+        
         if self.current_app:
             time_spent = time.time() - self.app_activities[self.current_app]['last_active']
             self.app_activities[self.current_app]['time_spent'] += time_spent
@@ -167,11 +218,17 @@ class ActivityTracker:
         
         app_breakdown.sort(key=lambda x: x['time_spent_seconds'], reverse=True)
         
+        # Calculate totals
+        total_idle_seconds = self.get_idle_time()
+        session_seconds = self.get_session_time()
+        active_seconds = max(0, session_seconds - total_idle_seconds)
+        
         return {
             "timestamp": datetime.utcnow().isoformat(),
             "is_idle": self.is_idle(),
-            "idle_time_seconds": self.get_idle_time() if self.is_idle() else 0,
-            "session_time_seconds": self.get_session_time(),
+            "idle_time_seconds": total_idle_seconds,  # Now returns cumulative idle time
+            "active_time_seconds": active_seconds,  # Added active time
+            "session_time_seconds": session_seconds,
             "total_mouse_movements": self.total_mouse_movements,
             "total_key_presses": self.total_key_presses,
             "current_application": self.current_app or "Unknown",
@@ -194,17 +251,29 @@ class ActivityTracker:
             print(f"   [MOUSE] Mouse: {app['mouse_movements']} movements")
             print(f"   [KEYBOARD] Keyboard: {app['key_presses']} key presses")
         
+        # ADD IDLE TIME TO SUMMARY
+        idle_mins = data['idle_time_seconds'] // 60
+        active_mins = data['active_time_seconds'] // 60
+        
         print("\n" + "=" * 80)
         print(f"Total Session: {data['session_time_seconds'] // 60} minutes")
+        print(f"Active Time: {active_mins} minutes")
+        print(f"Idle Time: {idle_mins} minutes")
         print(f"Total Mouse: {data['total_mouse_movements']}")
         print(f"Total Keys: {data['total_key_presses']}")
         print("=" * 80)
     
     def reset_counters(self):
+        """Reset counters for next reporting period"""
+        # Reset per-app counters
         for app_key in self.app_activities:
             self.app_activities[app_key]['mouse_movements'] = 0
             self.app_activities[app_key]['key_presses'] = 0
             self.app_activities[app_key]['time_spent'] = 0
+        
+        # Reset idle tracking for the period
+        self.total_idle_time = 0
+        # Keep idle_start_time if currently idle
     
     def stop(self):
         if self.mouse_listener:

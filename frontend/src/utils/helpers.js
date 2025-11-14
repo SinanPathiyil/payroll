@@ -6,8 +6,15 @@ export const formatDate = (date, formatStr = 'MMM dd, yyyy') => {
 };
 
 export const formatTime = (date) => {
-  if (!date) return '';
-  return format(new Date(date), 'hh:mm a');
+  if (!date) return '--:--';
+  
+  // Use native JavaScript to handle IST timezone
+  return new Date(date).toLocaleTimeString('en-IN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+    timeZone: 'Asia/Kolkata'
+  });
 };
 
 export const formatDateTime = (date) => {

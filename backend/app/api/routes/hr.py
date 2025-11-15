@@ -27,7 +27,7 @@ async def create_user(
         "hashed_password": get_password_hash(user_data.password),
         "is_active": True,
         "created_by": str(current_user["_id"]),
-        "created_at": datetime.utcnow(),
+        "created_at": datetime.now(),
         "office_hours": {"start": "09:00", "end": "18:00"},
         "required_hours": user_data.required_hours
     }
@@ -55,7 +55,7 @@ async def get_employees(
     
     async for employee in cursor:
         # Get today's attendance
-        today = datetime.utcnow().strftime("%Y-%m-%d")
+        today = datetime.now().strftime("%Y-%m-%d")
         attendance = await db.attendance.find_one({
             "user_id": str(employee["_id"]),
             "date": today
@@ -88,7 +88,7 @@ async def get_employee_stats(
     db = Depends(get_database)
 ):
     # Last 7 days attendance
-    seven_days_ago = datetime.utcnow() - timedelta(days=7)
+    seven_days_ago = datetime.now() - timedelta(days=7)
     
     attendance_records = []
     cursor = db.attendance.find({
@@ -108,39 +108,44 @@ async def get_employee_stats(
             "status": record["status"]
         })
     
-    # Activity summary
-    total_active_time = 0
-    total_idle_time = 0
-    total_mouse_events = 0
-    total_keyboard_events = 0
-    avg_productivity = 0
-    count = 0
+    # Get ALL activities for the last 7 days to calculate ACTUAL active/idle time
+    total_active_seconds = 0
+    total_idle_seconds = 0
+    productivity_scores = []
     
     activity_cursor = db.activities.find({
         "user_id": employee_id,
-        "recorded_at": {"$gte": seven_days_ago}  # ← CHANGED FROM "timestamp"
+        "recorded_at": {"$gte": seven_days_ago}
     })
-    # Debug: Let's also check without date filter first
-    print(f"Checking activities for user_id: {employee_id}")
-    test_count = await db.activities.count_documents({"user_id": employee_id})
-    print(f"Total activities for this user (no date filter): {test_count}")
     
+    # Get the LATEST record for cumulative counts
+    latest_activity = await db.activities.find_one(
+        {"user_id": employee_id},
+        sort=[("recorded_at", -1)]
+    )
+    
+    # Process each interval
     async for activity in activity_cursor:
-
-    # Debug print
-        print(f"Activity found: active_time={activity.get('active_time')}, mouse_events={activity.get('mouse_events')}")
+        # These are PER INTERVAL (30 seconds each)
+        total_active_seconds = activity.get("active_time", 0) or activity.get("active_time_seconds", 0)
+        total_idle_seconds = activity.get("idle_time", 0) or activity.get("idle_time_seconds", 0)
         
-        total_active_time += activity.get("active_time", 0)
-        total_idle_time += activity.get("idle_time", 0)
-        total_mouse_events += activity.get("mouse_events", 0)
-        total_keyboard_events += activity.get("keyboard_events", 0)
-        avg_productivity += activity.get("productivity_score", 0)
-        count += 1
         
-    print(f"Total activities processed: {count}")
-        
-    if count > 0:
-        avg_productivity = avg_productivity / count
+        score = activity.get("productivity_score", 0)
+        if score > 0:
+            productivity_scores.append(score)
+    
+    # Get cumulative mouse/keyboard from LATEST record only
+    total_mouse_events = 0
+    total_keyboard_events = 0
+    if latest_activity:
+        total_mouse_events = latest_activity.get("mouse_events", 0) or latest_activity.get("total_mouse_movements", 0)
+        total_keyboard_events = latest_activity.get("keyboard_events", 0) or latest_activity.get("total_key_presses", 0)
+    
+    # Calculate average productivity
+    avg_productivity = 0
+    if productivity_scores:
+        avg_productivity = sum(productivity_scores) / len(productivity_scores)
     
     # Tasks stats
     total_tasks = await db.tasks.count_documents({"assigned_to": employee_id})
@@ -160,10 +165,10 @@ async def get_employee_stats(
             "total_days": len(attendance_records)
         },
         "activity_summary": {
-            "total_active_time": round(total_active_time / 3600, 2),
-            "total_idle_time": round(total_idle_time / 3600, 2),
-            "total_mouse_events": total_mouse_events,
-            "total_keyboard_events": total_keyboard_events,
+            "total_active_time": round(total_active_seconds / 3600, 2),  
+            "total_idle_time": round(total_idle_seconds / 3600, 2),      
+            "total_mouse_events": total_mouse_events,      # Latest cumulative value
+            "total_keyboard_events": total_keyboard_events, # Latest cumulative value
             "avg_productivity_score": round(avg_productivity, 2)
         },
         "tasks_summary": {

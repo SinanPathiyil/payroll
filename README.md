@@ -51,6 +51,7 @@ payroll
 │  ├─ electron
 │  │  ├─ api.js
 │  │  ├─ main.js
+│  │  ├─ newFile.js
 │  │  ├─ preload.js
 │  │  ├─ tracker.js
 │  │  └─ tray.js
@@ -59,14 +60,16 @@ payroll
 │  ├─ package.json
 │  ├─ public
 │  │  ├─ electron.js
-│  │  └─ icons
-│  │     ├─ icon.icns
-│  │     ├─ icon.ico
-│  │     └─ icon.png
+│  │  ├─ icons
+│  │  │  ├─ icon.icns
+│  │  │  ├─ icon.ico
+│  │  │  └─ icon.png
+│  │  └─ index.html
 │  ├─ README.md
 │  ├─ requirements.txt
 │  ├─ screenshot.txt
 │  └─ src
+│     └─ index.js
 ├─ docker-compose.yml
 ├─ frontend
 │  ├─ index.html

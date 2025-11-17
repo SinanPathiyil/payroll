@@ -3,6 +3,7 @@ import time
 import os
 import signal
 import sys
+import atexit  # ADD THIS LINE
 from datetime import datetime
 from activity_tracker import ActivityTracker
 from config import Config
@@ -14,10 +15,13 @@ class MonitoringAgent:
         self.token = None
         self.employee_email = None
         self.is_running = False
+        self.session_number = None
+        self.cleanup_completed = False  # ADD THIS LINE
         
-        # Setup signal handlers for graceful shutdown
+        # Setup signal handlers AND atexit handler
         signal.signal(signal.SIGTERM, self._signal_handler)
         signal.signal(signal.SIGINT, self._signal_handler)
+        atexit.register(self._cleanup_handler)  # ADD THIS LINE - Fallback cleanup
         
         print("=" * 80)
         print("[*] EMPLOYEE MONITORING AGENT - ENHANCED")
@@ -26,10 +30,48 @@ class MonitoringAgent:
         print("=" * 80)
     
     def _signal_handler(self, signum, frame):
-        """Handle shutdown signals gracefully"""
-        print(f"\n[*] Received signal {signum}, shutting down gracefully...")
-        self.stop()
+        """Handle shutdown signals gracefully (includes clock-out)"""
+        print(f"\n[*] Received signal {signum} (Clock-out detected), shutting down gracefully...")
+        self._handle_clock_out()
+        self.is_running = False
         sys.exit(0)
+    
+    def _cleanup_handler(self):
+        """Atexit cleanup handler - runs even if signal handler fails"""
+        if not self.cleanup_completed:
+            print("\n[CLEANUP] Final cleanup via atexit handler...")
+            self._handle_clock_out()
+    
+    def _handle_clock_out(self):
+        """Handle clock-out event - update lifetime totals and reset session"""
+        if not self.tracker or self.cleanup_completed:
+            return
+            
+        self.cleanup_completed = True  # Prevent double cleanup
+            
+        try:
+            print("[CLOCK-OUT] Saving final session data...")
+            
+            # Get final activity data
+            final_data = self.tracker.get_activity_data()
+            
+            # Send final activity data with session completion marker
+            final_data["session_completed"] = True
+            final_data["session_number"] = self.session_number
+            
+            success = self.send_activity_data(final_data)
+            if success:
+                print("[OK] Final session data saved")
+            else:
+                print("[WARN] Failed to save final session data")
+                
+            # IMPORTANT: Reset session data for next time
+            self.tracker.reset_session_data()
+            
+        except Exception as e:
+            print(f"[ERROR] Clock-out handling error: {str(e)}")
+    
+    # ... rest of the methods stay the same ...
     
     def authenticate(self):
         """
@@ -73,6 +115,38 @@ class MonitoringAgent:
             print(f"[ERROR] Login error: {str(e)}")
             return False
     
+    def get_session_number(self):
+        """Get session number by counting attendance records for this employee"""
+        try:
+            headers = {
+                "Authorization": f"Bearer {self.token}",
+                "Content-Type": "application/json"
+            }
+            
+            # Clean API URL
+            api_url = self.config.API_URL.rstrip('/')
+            if not api_url.endswith('/api'):
+                endpoint = f"{api_url}/api/employee/session-count"
+            else:
+                endpoint = f"{api_url}/employee/session-count"
+            
+            print(f"[*] Getting session number from: {endpoint}")
+            
+            response = requests.get(endpoint, headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                session_count = data.get('session_count', 1)
+                print(f"[OK] Current session number: {session_count}")
+                return session_count
+            else:
+                print(f"[WARN] Could not get session number: {response.status_code}, defaulting to 1")
+                return 1
+                
+        except Exception as e:
+            print(f"[WARN] Session number error: {str(e)}, defaulting to 1")
+            return 1
+
     def send_activity_data(self, activity_data):
         try:
             headers = {
@@ -82,6 +156,13 @@ class MonitoringAgent:
             
             activity_data["employee_email"] = self.employee_email
             
+            # Add session number instead of session_time_seconds
+            activity_data["session_number"] = self.session_number
+            
+            # Remove session_time_seconds if present
+            if "session_time_seconds" in activity_data:
+                del activity_data["session_time_seconds"]
+            
             # Ensure API URL doesn't have double /api
             api_url = self.config.API_URL.rstrip('/')
             if not api_url.endswith('/api'):
@@ -90,7 +171,7 @@ class MonitoringAgent:
                 endpoint = f"{api_url}/employee/activity"
             
             print(f"[*] Sending to: {endpoint}")
-            print(f"[*] Payload keys: {list(activity_data.keys())}")
+            print(f"[*] Session: {self.session_number}")
             
             response = requests.post(
                 endpoint,
@@ -121,12 +202,21 @@ class MonitoringAgent:
         status = "[IDLE]" if activity_data["is_idle"] else "[ACTIVE]"
         current = activity_data.get("current_application", "Unknown")
         
-        print(f"\n{status} | Currently: {current}")
+        print(f"\n{status} | Session #{self.session_number} | Currently: {current}")
         print("-" * 80)
+        
+        # Show session vs lifetime data
+        session_mouse = activity_data.get("mouse_events", 0)
+        session_keys = activity_data.get("keyboard_events", 0)
+        lifetime_mouse = activity_data.get("total_mouse_movements", 0)
+        lifetime_keys = activity_data.get("total_key_presses", 0)
+        
+        print(f"[SESSION] Mouse: {session_mouse:,} | Keys: {session_keys:,}")
+        print(f"[LIFETIME] Mouse: {lifetime_mouse:,} | Keys: {lifetime_keys:,}")
         
         apps = activity_data.get("applications", [])[:5]
         if apps:
-            print("[*] Top 5 Applications:")
+            print("[*] Top 5 Applications (This Interval):")
             for i, app in enumerate(apps, 1):
                 mins = app['time_spent_seconds'] // 60
                 url = f" - {app['url']}" if app['url'] else ""
@@ -134,51 +224,90 @@ class MonitoringAgent:
                 print(f"      Time: {mins}m | Mouse: {app['mouse_movements']} | Keys: {app['key_presses']}")
         print("-" * 80)
     
+    def check_clock_status(self):
+        """Check if employee is still clocked in"""
+        try:
+            headers = {
+                "Authorization": f"Bearer {self.token}",
+                "Content-Type": "application/json"
+            }
+            
+            api_url = self.config.API_URL.rstrip('/')
+            if not api_url.endswith('/api'):
+                endpoint = f"{api_url}/api/employee/status"
+            else:
+                endpoint = f"{api_url}/employee/status"
+            
+            response = requests.get(endpoint, headers=headers, timeout=5)
+            
+            if response.status_code == 200:
+                data = response.json()
+                return data.get("is_clocked_in", False)
+            else:
+                print(f"[WARN] Status check failed: {response.status_code}")
+                return True  # Assume still clocked in on error
+                
+        except Exception as e:
+            print(f"[WARN] Status check error: {str(e)}")
+            return True  # Assume still clocked in on error
+
     def run(self):
         if not self.authenticate():
             print("\n[ERROR] Cannot start monitoring - authentication failed")
-            print("[*] Check:")
-            print("   1. Backend is running at", self.config.API_URL)
-            print("   2. Employee credentials are correct")
-            print("   3. Token is valid")
             return
-    
-        self.tracker = ActivityTracker(self.config)
+        
+        # Get session number
+        self.session_number = self.get_session_number()
+            
+        # Fetch lifetime totals before starting tracker
+        lifetime_totals = self.get_lifetime_totals()
+
+        # Initialize tracker with lifetime totals
+        self.tracker = ActivityTracker(self.config, lifetime_totals, self.employee_email)
     
         print(f"\n[*] Monitoring started!")
         print(f"[*] Employee: {self.employee_email}")
+        print(f"[*] Session Number: {self.session_number}")
         print(f"[*] Updates every {self.config.ACTIVITY_CHECK_INTERVAL} seconds")
         print(f"[*] Idle threshold: {self.config.IDLE_THRESHOLD} seconds")
-        print("\nPress Ctrl+C to stop\n")
+        print("\nPress Ctrl+C to stop\n")   
     
         self.is_running = True
-    
-        # REMOVED: Initial 5-second wait and immediate send
-        # Now just start the regular interval loop
+        last_status_check = time.time()
     
         try:
             while self.is_running:
                 # Wait for the configured interval FIRST
                 print(f"\n[*] Collecting activity data for {self.config.ACTIVITY_CHECK_INTERVAL} seconds...")
                 time.sleep(self.config.ACTIVITY_CHECK_INTERVAL)
+                
+                # Check clock status every 30 seconds
+                current_time = time.time()
+                if current_time - last_status_check > 30:
+                    if not self.check_clock_status():
+                        print("[CLOCK-OUT] Detected remote clock-out")
+                        self._handle_clock_out()
+                        break
+                    last_status_check = current_time
             
-                # Then get and send the data
+                # Get and send the data
                 activity_data = self.tracker.get_activity_data()
                 print(f"\n[*] Sending activity data...")
                 success = self.send_activity_data(activity_data)
                 if success:
                     print(f"[OK] Activity data sent successfully")
-                    # Show idle/active time in summary
-                    idle_time = activity_data.get('idle_time_seconds', 0)
-                    active_time = activity_data.get('active_time_seconds', 0)
-                    print(f"[INFO] Active: {active_time}s, Idle: {idle_time}s")
+                    # Show session summary
+                    idle_time = activity_data.get('idle_time', 0)
+                    active_time = activity_data.get('active_time', 0)
+                    print(f"[INFO] Session Active: {active_time}s, Session Idle: {idle_time}s")
                 else:
                     print(f"[WARN] Failed to send activity data")
             
-                self.tracker.reset_counters()
+                # Reset only per-app interval data (for applications breakdown)
+                self.tracker.reset_app_interval_data()
             
         except KeyboardInterrupt:
-            print("\n\n[*] Stopping...")
+            print("\n\n[*] Manual stop detected...")
             self.stop()
         except Exception as e:
             print(f"\n[ERROR] Unexpected error: {str(e)}")
@@ -189,17 +318,44 @@ class MonitoringAgent:
     def stop(self):
         self.is_running = False
         if self.tracker:
-            # Send final activity data before stopping
-            print("\n[*] Sending final activity data...")
-            try:
-                final_data = self.tracker.get_activity_data()
-                self.send_activity_data(final_data)
-            except Exception as e:
-                print(f"[WARN] Failed to send final data: {str(e)}")
-            
+            self._handle_clock_out()
             self.tracker.stop()
             self.tracker.display_summary()
-        print("\n[OK] Stopped!")
+        print("\n[OK] Agent stopped!")
+
+    def get_lifetime_totals(self):
+        """Fetch lifetime cumulative totals for this user"""
+        try:
+            headers = {
+                "Authorization": f"Bearer {self.token}",
+                "Content-Type": "application/json"
+            }
+        
+            api_url = self.config.API_URL.rstrip('/')
+            if not api_url.endswith('/api'):
+                endpoint = f"{api_url}/api/employee/last-lifetime-totals"
+            else:
+                endpoint = f"{api_url}/employee/last-lifetime-totals"
+        
+            print(f"[*] Fetching lifetime totals...")
+        
+            response = requests.get(endpoint, headers=headers, timeout=10)
+        
+            if response.status_code == 200:
+                data = response.json()
+                if data.get('found'):
+                    print(f"[OK] Found lifetime totals: Mouse={data.get('lifetime_mouse', 0)}, Active={data.get('lifetime_active_seconds', 0)}s")
+                    return data
+                else:
+                    print(f"[*] No previous activity found, starting fresh")
+                    return None
+            else:
+                print(f"[WARN] Could not fetch lifetime totals: {response.status_code}")
+                return None
+            
+        except Exception as e:
+            print(f"[WARN] Error fetching lifetime totals: {str(e)}")
+            return None
 
 if __name__ == "__main__":
     agent = MonitoringAgent()

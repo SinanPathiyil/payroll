@@ -210,59 +210,62 @@ async def cleanup_stale_attendance(
 async def log_activity(
     activity_data: dict,
     current_user: dict = Depends(get_current_user),
-    db = Depends(get_database)  # ✅ ADD THIS LINE
+    db = Depends(get_database)
 ):
     """
     Log detailed employee activity from desktop agent
     Includes per-application breakdown
     """
     try:
-        # Normalize and enrich payload
         timestamp = datetime.now()
-        idle_seconds = int(activity_data.get("idle_time_seconds") or activity_data.get("idle_time") or 0)
-        session_seconds = int(activity_data.get("session_time_seconds") or 0)
-        active_seconds = max(session_seconds - idle_seconds, 0)
-        total_mouse = int(activity_data.get("total_mouse_movements") or activity_data.get("mouse_events") or 0)
-        total_keys = int(activity_data.get("total_key_presses") or activity_data.get("keyboard_events") or 0)
-
-        # Update root-level fields
+        
+        # ===============================
+        # ADD EMPLOYEE INFO
+        # ===============================
         activity_data["employee_email"] = current_user["email"]
         activity_data["employee_name"] = current_user.get("full_name", "")
         activity_data["user_id"] = str(current_user["_id"])
         activity_data["recorded_at"] = timestamp
-        activity_data["timestamp"] = activity_data.get("timestamp") or timestamp.isoformat()
         activity_data["date"] = timestamp.strftime("%Y-%m-%d")
-        activity_data["source"] = activity_data.get("source") or "desktop_agent"
-
-         # Store with BOTH naming conventions for compatibility
-        activity_data["idle_time_seconds"] = idle_seconds
-        activity_data["session_time_seconds"] = session_seconds
-        activity_data["active_time_seconds"] = active_seconds
-        activity_data["total_mouse_movements"] = total_mouse
-        activity_data["total_key_presses"] = total_keys
-
-         # ADD THESE LINES - Store with HR expected field names
-        activity_data["idle_time"] = idle_seconds  # HR expects this
-        activity_data["active_time"] = active_seconds  # HR expects this
-        activity_data["mouse_events"] = total_mouse  # HR expects this
-        activity_data["keyboard_events"] = total_keys  # HR expects this
-        activity_data["productivity_score"] = min(100, (active_seconds / max(session_seconds, 1)) * 100)  # Add productivity score
+        activity_data["source"] = activity_data.get("source", "desktop_agent")
         
+        # Ensure timestamp exists
+        if "timestamp" not in activity_data:
+            activity_data["timestamp"] = timestamp.isoformat()
+        
+        # ===============================
+        # CALCULATE PRODUCTIVITY SCORE
+        # ===============================
+        session_active = int(activity_data.get("active_time", 0))
+        session_idle = int(activity_data.get("idle_time", 0))
+        session_total = session_active + session_idle
+        
+        if session_total > 0:
+            activity_data["productivity_score"] = min(100, int((session_active / session_total) * 100))
+        else:
+            activity_data["productivity_score"] = 0
+        
+        # Add session_time_seconds for backward compatibility
+        activity_data["session_time_seconds"] = session_total
+        
+        # Ensure is_idle is boolean
         activity_data["is_idle"] = bool(activity_data.get("is_idle", False))
 
-        # Normalize applications list (if provided)
+        # ===============================
+        # NORMALIZE APPLICATIONS LIST
+        # ===============================
         applications = activity_data.get("applications", [])
         normalized_apps = []
         total_app_time = 0
 
         for app in applications:
             app_entry = {
-                "application": app.get("application") or "Unknown",
-                "window_title": app.get("window_title") or "",
-                "url": app.get("url") or "",
-                "mouse_movements": int(app.get("mouse_movements") or 0),
-                "key_presses": int(app.get("key_presses") or 0),
-                "time_spent_seconds": int(app.get("time_spent_seconds") or 0),
+                "application": app.get("application", "Unknown"),
+                "window_title": app.get("window_title", ""),
+                "url": app.get("url", ""),
+                "mouse_movements": int(app.get("mouse_movements", 0)),
+                "key_presses": int(app.get("key_presses", 0)),
+                "time_spent_seconds": int(app.get("time_spent_seconds", 0)),
             }
             total_app_time += app_entry["time_spent_seconds"]
             normalized_apps.append(app_entry)
@@ -270,22 +273,30 @@ async def log_activity(
         activity_data["applications"] = normalized_apps
         activity_data["applications_total_time_seconds"] = total_app_time
 
-        # Store in activities collection
-        result = await db.activities.insert_one(activity_data)  # ✅ FIXED
+        # ===============================
+        # STORE IN DATABASE
+        # ===============================
+        result = await db.activities.insert_one(activity_data)
         
         print(f"✅ Activity logged for {current_user['email']}")
         
-        # Return success
+        # ===============================
+        # RETURN SUCCESS
+        # ===============================
         return {
             "message": "Activity logged successfully",
             "id": str(result.inserted_id),
             "apps_tracked": len(normalized_apps),
-            "active_time_seconds": active_seconds,
-            "idle_time_seconds": idle_seconds
+            "active_time": session_active,
+            "idle_time": session_idle,
+            "active_time_seconds": activity_data.get("active_time_seconds", 0),
+            "idle_time_seconds": activity_data.get("idle_time_seconds", 0)
         }
     
     except Exception as e:
-        print(f"❌ Error: {str(e)}")
+        print(f"❌ Error logging activity: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/activity/smart")
@@ -311,7 +322,7 @@ async def log_smart_activity(
             status_code=400,
             detail=f"Missing required fields: {required_fields}"
         )
-    
+          
     # Extract activity data
     app_name = activity_data.get("application", "Unknown")
     window_title = activity_data.get("window_title", "")
@@ -697,6 +708,98 @@ async def get_employee_activity_breakdown(
         logger.error(f"Error getting activity breakdown: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/last-lifetime-totals")
+async def get_last_lifetime_totals(
+    current_user: dict = Depends(get_current_user),
+    db = Depends(get_database)
+):
+    """Get lifetime cumulative totals from the user's last completed session"""
+    
+    # Find the most recent COMPLETED attendance session for this user
+    last_session = await db.attendance.find_one(
+        {
+            "user_id": str(current_user["_id"]),
+            "status": "completed"  # Only completed sessions
+        },
+        sort=[("logout_time", -1)]
+    )
+    
+    if not last_session:
+        print(f"[DEBUG] No previous completed session found for user {current_user['email']}")
+        return {
+            "found": False,
+            "lifetime_mouse": 0,
+            "lifetime_keys": 0,
+            "lifetime_active_seconds": 0,
+            "lifetime_idle_seconds": 0
+        }
+    
+    print(f"[DEBUG] Found last session: {last_session['date']}")
+    
+    # Get the LAST activity record from that session (highest values)
+    last_activity = await db.activities.find_one(
+        {
+            "user_id": str(current_user["_id"]),
+            "date": last_session["date"]  # From that specific session date
+        },
+        sort=[("recorded_at", -1)]
+    )
+    
+    if last_activity:
+        totals = {
+            "found": True,
+            "lifetime_mouse": last_activity.get("total_mouse_movements", 0),
+            "lifetime_keys": last_activity.get("total_key_presses", 0),
+            "lifetime_active_seconds": last_activity.get("active_time_seconds", 0),
+            "lifetime_idle_seconds": last_activity.get("idle_time_seconds", 0),
+            "last_session_date": last_session["date"]
+        }
+        print(f"[DEBUG] Returning totals: mouse={totals['lifetime_mouse']}, active={totals['lifetime_active_seconds']}")
+        return totals
+    else:
+        print(f"[DEBUG] No activity found for session {last_session['date']}")
+        return {
+            "found": False,
+            "lifetime_mouse": 0,
+            "lifetime_keys": 0,
+            "lifetime_active_seconds": 0,
+            "lifetime_idle_seconds": 0
+        }
+        
+@router.get("/session-count")
+async def get_session_count(
+    current_user: dict = Depends(get_current_user),
+    db = Depends(get_database)
+):
+    """Get current session number (count of attendance records for this employee)"""
+    try:
+        # Count total attendance records for this employee (including active)
+        total_sessions = await db.attendance.count_documents({
+            "user_id": str(current_user["_id"])
+        })
+        
+        # Current session number is total + 1 if currently clocked in
+        today = datetime.now().strftime("%Y-%m-%d")
+        active_session = await db.attendance.find_one({
+            "user_id": str(current_user["_id"]),
+            "date": today,
+            "status": "active"
+        })
+        
+        if active_session:
+            session_number = total_sessions
+        else:
+            session_number = total_sessions + 1
+        
+        return {
+            "session_count": session_number,
+            "total_sessions": total_sessions,
+            "has_active_session": bool(active_session)
+        }
+        
+    except Exception as e:
+        print(f"[ERROR] Session count error: {str(e)}")
+        return {"session_count": 1, "total_sessions": 0, "has_active_session": False}
 
 # Background task to check and train models
 async def check_and_train(db):

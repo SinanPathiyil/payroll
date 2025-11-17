@@ -109,8 +109,6 @@ async def get_employee_stats(
         })
     
     # Get ALL activities for the last 7 days to calculate ACTUAL active/idle time
-    total_active_seconds = 0
-    total_idle_seconds = 0
     productivity_scores = []
     
     activity_cursor = db.activities.find({
@@ -126,11 +124,6 @@ async def get_employee_stats(
     
     # Process each interval
     async for activity in activity_cursor:
-        # These are PER INTERVAL (30 seconds each)
-        total_active_seconds = activity.get("active_time", 0) or activity.get("active_time_seconds", 0)
-        total_idle_seconds = activity.get("idle_time", 0) or activity.get("idle_time_seconds", 0)
-        
-        
         score = activity.get("productivity_score", 0)
         if score > 0:
             productivity_scores.append(score)
@@ -138,9 +131,13 @@ async def get_employee_stats(
     # Get cumulative mouse/keyboard from LATEST record only
     total_mouse_events = 0
     total_keyboard_events = 0
+    total_active_seconds = 0
+    total_idle_seconds = 0
     if latest_activity:
-        total_mouse_events = latest_activity.get("mouse_events", 0) or latest_activity.get("total_mouse_movements", 0)
-        total_keyboard_events = latest_activity.get("keyboard_events", 0) or latest_activity.get("total_key_presses", 0)
+        total_mouse_events = latest_activity.get("total_mouse_movements", 0)
+        total_keyboard_events = latest_activity.get("total_key_presses", 0)
+        total_active_seconds = latest_activity.get("active_time_seconds", 0)
+        total_idle_seconds = latest_activity.get("idle_time_seconds", 0)
     
     # Calculate average productivity
     avg_productivity = 0

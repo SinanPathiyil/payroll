@@ -116,7 +116,7 @@ async def employee_logout(
         {"_id": attendance["_id"]},
         {"$set": {
             "logout_time": logout_time,
-            "total_hours": round(total_hours, 3),
+            "total_hours": round(total_hours, 4),
             "status": "completed"
         }}
     )

@@ -53,33 +53,97 @@ async def get_employees(
     employees = []
     cursor = db.users.find({"role": "employee"})
     
+    today = datetime.now().strftime("%Y-%m-%d")
+    week_ago = datetime.now() - timedelta(days=7)
+    
     async for employee in cursor:
-        # Get today's attendance
-        today = datetime.now().strftime("%Y-%m-%d")
-        attendance = await db.attendance.find_one({
-            "user_id": str(employee["_id"]),
+        employee_id = str(employee["_id"])
+        
+        # ========================================
+        # TODAY'S ATTENDANCE - GET ALL SESSIONS
+        # ========================================
+        today_attendance_cursor = db.attendance.find({
+            "user_id": employee_id,
             "date": today
         })
         
-        # Get activity stats
-        activity_stats = await db.activities.find_one(
-            {"user_id": str(employee["_id"])},
-            sort=[("timestamp", -1)]
+        today_sessions = await today_attendance_cursor.to_list(length=None)
+        
+        # Calculate total hours from ALL sessions today
+        is_active = False
+        today_hours = 0.0
+        active_login_time = None
+        
+        for session in today_sessions:
+            login_time = session.get("login_time")
+            logout_time = session.get("logout_time")
+            attendance_status = session.get("status")
+            
+            # Check if THIS session is active
+            if attendance_status == "active" and logout_time is None:
+                # Currently clocked in (active session)
+                is_active = True
+                active_login_time = login_time
+                
+                if login_time:
+                    # Calculate current hours for active session
+                    if isinstance(login_time, str):
+                        from dateutil import parser
+                        login_time = parser.parse(login_time)
+                    time_diff = datetime.now() - login_time
+                    today_hours += time_diff.total_seconds() / 3600
+            else:
+                # Completed session - add its hours
+                session_hours = session.get("total_hours", 0) or 0
+                today_hours += session_hours
+        
+        # ========================================
+        # WEEK HOURS (Last 7 days completed)
+        # ========================================
+        week_cursor = db.attendance.find({
+            "user_id": employee_id,
+            "login_time": {"$gte": week_ago},
+            "status": "completed"
+        })
+        
+        week_hours = 0.0
+        async for record in week_cursor:
+            hours = record.get("total_hours", 0) or 0
+            week_hours += hours
+        
+        # Add today's hours to week total
+        week_hours += today_hours
+        
+        # ========================================
+        # PRODUCTIVITY SCORE (Latest)
+        # ========================================
+        latest_activity = await db.activities.find_one(
+            {"user_id": employee_id},
+            sort=[("recorded_at", -1)]
         )
         
+        productivity_score = 0
+        if latest_activity:
+            productivity_score = latest_activity.get("productivity_score", 0)
+        
+        # ========================================
+        # BUILD EMPLOYEE OBJECT
+        # ========================================
         employees.append({
-            "id": str(employee["_id"]),
+            "id": employee_id,
             "email": employee["email"],
             "full_name": employee["full_name"],
             "is_active": employee["is_active"],
-            "today_status": "active" if attendance and not attendance.get("logout_time") else "inactive",
-            "login_time": attendance.get("login_time") if attendance else None,
-            "logout_time": attendance.get("logout_time") if attendance else None,
-            "total_hours": attendance.get("total_hours", 0) if attendance else 0,
-            "productivity_score": activity_stats.get("productivity_score", 0) if activity_stats else 0
+            "today_status": "active" if is_active else "inactive",
+            "today_hours": round(today_hours, 2),
+            "week_hours": round(week_hours, 2),
+            "login_time": active_login_time if is_active else None,
+            "logout_time": None if is_active else None,
+            "productivity_score": productivity_score
         })
     
     return employees
+
 
 @router.get("/employee/{employee_id}/stats")
 async def get_employee_stats(

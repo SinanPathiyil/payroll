@@ -131,16 +131,49 @@ function startAgent(token, employeeEmail) {
 }
 
 // Stop Python agent
+// Stop Python agent
+// Stop Python agent with graceful shutdown
 function stopAgent() {
   if (agentProcess) {
-    console.log('⏹️ Stopping agent...');
-    agentProcess.kill('SIGTERM');
-    agentProcess = null;
-    isAgentRunning = false;
-    updateTrayMenu();
+    console.log('⏹️ Stopping agent gracefully...');
     
-    if (mainWindow) {
-      mainWindow.webContents.send('agent-stopped');
+    try {
+      // Send SIGTERM (polite shutdown request)
+      agentProcess.kill('SIGTERM');
+      console.log('📤 SIGTERM sent to Python agent (PID: ' + agentProcess.pid + ')');
+      
+      // Set 5-second grace period
+      const killTimer = setTimeout(() => {
+        if (agentProcess) {
+          console.log('⚠️ Agent still running after 5s, forcing kill...');
+          try {
+            agentProcess.kill('SIGKILL');
+          } catch (err) {
+            console.error('Force kill error:', err);
+          }
+          // Cleanup
+          agentProcess = null;
+          isAgentRunning = false;
+          updateTrayMenu();
+          if (mainWindow) mainWindow.webContents.send('agent-stopped');
+        }
+      }, 5000);
+      
+      // Handle natural exit
+      agentProcess.once('close', (code) => {
+        clearTimeout(killTimer);
+        console.log(`✅ Agent exited gracefully (code: ${code})`);
+        agentProcess = null;
+        isAgentRunning = false;
+        updateTrayMenu();
+        if (mainWindow) mainWindow.webContents.send('agent-stopped');
+      });
+      
+    } catch (error) {
+      console.error('❌ Error stopping agent:', error);
+      agentProcess = null;
+      isAgentRunning = false;
+      updateTrayMenu();
     }
   }
 }

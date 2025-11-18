@@ -199,23 +199,42 @@ function startSimpleTracking() {
 function stopTracking() {
   if (agentProcess) {
     console.log('🛑 Stopping agent...');
+    
+    // Step 1: Create clock-out signal file
+    const fs = require('fs');
+    const path = require('path');
+    const signalFile = path.join(__dirname, '..', '.clockout_signal');
+    
     try {
-      agentProcess.kill('SIGTERM');
-      setTimeout(() => { if (agentProcess) agentProcess.kill('SIGKILL'); }, 5000);
-    } catch (error) {
-      console.error('Kill error:', error);
+      fs.writeFileSync(signalFile, 'clockout', 'utf8');
+      console.log('✅ Clock-out signal created');
+    } catch (err) {
+      console.error('❌ Failed to create signal:', err);
     }
-    agentProcess = null;
+    
+    // Step 2: Wait 3 seconds for agent to send data and exit
+    setTimeout(() => {
+      if (agentProcess) {
+        console.log('⏹️ Killing agent process...');
+        try {
+          agentProcess.kill('SIGTERM');
+        } catch (err) {
+          console.error('Kill error:', err);
+        }
+        agentProcess = null;
+        isAgentRunning = false;
+      }
+      
+      if (tray) tray.updateMenu('Not Tracking');
+      if (mainWindow) mainWindow.webContents.send('tracking-stopped', { status: 'stopped' });
+      console.log('✓ Tracking stopped');
+    }, 3000); // 3 seconds grace period
   }
 
   if (tracker) {
     tracker.stop();
     tracker = null;
   }
-
-  if (tray) tray.updateMenu('Not Tracking');
-  if (mainWindow) mainWindow.webContents.send('tracking-stopped', { status: 'stopped' });
-  console.log('✓ Tracking stopped');
 }
 
 async function checkClockStatus() {

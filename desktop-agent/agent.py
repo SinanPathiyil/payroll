@@ -46,32 +46,32 @@ class MonitoringAgent:
         """Handle clock-out event - update lifetime totals and reset session"""
         if not self.tracker or self.cleanup_completed:
             return
-            
-        self.cleanup_completed = True  # Prevent double cleanup
-            
+        
+        self.cleanup_completed = True
+        
         try:
             print("[CLOCK-OUT] Saving final session data...")
-            
-            # Get final activity data
+        
+            # Get final activity data (includes partial interval)
             final_data = self.tracker.get_activity_data()
-            
+        
             # Send final activity data with session completion marker
             final_data["session_completed"] = True
             final_data["session_number"] = self.session_number
-            
+
             success = self.send_activity_data(final_data)
             if success:
                 print("[OK] Final session data saved")
             else:
                 print("[WARN] Failed to save final session data")
-                
-            # IMPORTANT: Reset session data for next time
-            self.tracker.reset_session_data()
             
+            # Reset session data for next time
+            self.tracker.reset_session_data()
+        
         except Exception as e:
             print(f"[ERROR] Clock-out handling error: {str(e)}")
     
-    # ... rest of the methods stay the same ...
+        # ... rest of the methods stay the same ...
     
     def authenticate(self):
         """
@@ -277,34 +277,36 @@ class MonitoringAgent:
     
         try:
             while self.is_running:
-                # Wait for the configured interval FIRST
+                # Wait for interval, but check every second for clock-out signal
                 print(f"\n[*] Collecting activity data for {self.config.ACTIVITY_CHECK_INTERVAL} seconds...")
-                time.sleep(self.config.ACTIVITY_CHECK_INTERVAL)
-                
-                # Check clock status every 30 seconds
-                current_time = time.time()
-                if current_time - last_status_check > 30:
-                    if not self.check_clock_status():
-                        print("[CLOCK-OUT] Detected remote clock-out")
-                        self._handle_clock_out()
-                        break
-                    last_status_check = current_time
+        
+                # Check every second instead of sleeping for full 10 seconds
+                for i in range(self.config.ACTIVITY_CHECK_INTERVAL):
+                    # Check if clock-out signal file exists
+                    signal_file = os.path.join(os.path.dirname(__file__), '.clockout_signal')
+                    if os.path.exists(signal_file):
+                        print("\n[CLOCK-OUT SIGNAL] Detected! Sending data immediately...")
+                        os.remove(signal_file)
+    
+                        # Mark cleanup as completed BEFORE sending (prevents double-send)
+                        self.cleanup_completed = True
+    
+                        # Send data immediately
+                        activity_data = self.tracker.get_activity_data()
+                        activity_data["session_completed"] = True
+                        activity_data["session_number"] = self.session_number
+                        self.send_activity_data(activity_data)
+    
+                        # Reset session data for next time
+                        self.tracker.reset_session_data()
+                        print("[OK] Clock-out data sent, exiting...")
+    
+                        # Stop tracker and exit
+                        if self.tracker:
+                            self.tracker.stop()
+                        return  # Exit cleanly
             
-                # Get and send the data
-                activity_data = self.tracker.get_activity_data()
-                print(f"\n[*] Sending activity data...")
-                success = self.send_activity_data(activity_data)
-                if success:
-                    print(f"[OK] Activity data sent successfully")
-                    # Show session summary
-                    idle_time = activity_data.get('idle_time', 0)
-                    active_time = activity_data.get('active_time', 0)
-                    print(f"[INFO] Session Active: {active_time}s, Session Idle: {idle_time}s")
-                else:
-                    print(f"[WARN] Failed to send activity data")
-            
-                # Reset only per-app interval data (for applications breakdown)
-                self.tracker.reset_app_interval_data()
+                    time.sleep(1)  # Sleep 1 second at a time
             
         except KeyboardInterrupt:
             print("\n\n[*] Manual stop detected...")

@@ -108,14 +108,15 @@ async def employee_logout(
         login_time = parser.parse(login_time)
     
     time_diff = logout_time - login_time
-    total_hours = time_diff.total_seconds() / 3600
+    total_seconds = int(time_diff.total_seconds())
+    total_hours = total_seconds / 3600 
     
     # Update attendance
     result = await db.attendance.update_one(
         {"_id": attendance["_id"]},
         {"$set": {
             "logout_time": logout_time,
-            "total_hours": round(total_hours, 2),
+            "total_hours": round(total_hours, 3),
             "status": "completed"
         }}
     )

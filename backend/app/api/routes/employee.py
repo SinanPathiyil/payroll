@@ -214,29 +214,35 @@ async def log_activity(
     db = Depends(get_database)
 ):
     """
-    Log detailed employee activity from desktop agent
-    Includes per-application breakdown
+    Log/Update employee activity from desktop agent
+    Updates existing record and merges new applications
     """
     try:
         timestamp = datetime.now()
+        today = timestamp.strftime("%Y-%m-%d")
         
-        # ===============================
-        # ADD EMPLOYEE INFO
-        # ===============================
+        # Get session number from activity data
+        session_number = activity_data.get("session_number", 0)
+        
+        # Find existing activity record for this session TODAY
+        existing_activity = await db.activities.find_one({
+            "user_id": str(current_user["_id"]),
+            "date": today,
+            "session_number": session_number
+        })
+        
+        # Add employee info
         activity_data["employee_email"] = current_user["email"]
         activity_data["employee_name"] = current_user.get("full_name", "")
         activity_data["user_id"] = str(current_user["_id"])
         activity_data["recorded_at"] = timestamp
-        activity_data["date"] = timestamp.strftime("%Y-%m-%d")
+        activity_data["date"] = today
         activity_data["source"] = activity_data.get("source", "desktop_agent")
         
-        # Ensure timestamp exists
         if "timestamp" not in activity_data:
             activity_data["timestamp"] = timestamp.isoformat()
         
-        # ===============================
-        # CALCULATE PRODUCTIVITY SCORE
-        # ===============================
+        # Calculate productivity score
         session_active = int(activity_data.get("active_time", 0))
         session_idle = int(activity_data.get("idle_time", 0))
         session_total = session_active + session_idle
@@ -246,20 +252,15 @@ async def log_activity(
         else:
             activity_data["productivity_score"] = 0
         
-        # Add session_time_seconds for backward compatibility
         activity_data["session_time_seconds"] = session_total
-        
-        # Ensure is_idle is boolean
         activity_data["is_idle"] = bool(activity_data.get("is_idle", False))
 
-        # ===============================
-        # NORMALIZE APPLICATIONS LIST
-        # ===============================
-        applications = activity_data.get("applications", [])
-        normalized_apps = []
+        # Normalize NEW applications from this interval
+        new_applications = activity_data.get("applications", [])
+        normalized_new_apps = []
         total_app_time = 0
 
-        for app in applications:
+        for app in new_applications:
             app_entry = {
                 "application": app.get("application", "Unknown"),
                 "window_title": app.get("window_title", ""),
@@ -269,25 +270,59 @@ async def log_activity(
                 "time_spent_seconds": int(app.get("time_spent_seconds", 0)),
             }
             total_app_time += app_entry["time_spent_seconds"]
-            normalized_apps.append(app_entry)
+            normalized_new_apps.append(app_entry)
 
-        activity_data["applications"] = normalized_apps
-        activity_data["applications_total_time_seconds"] = total_app_time
+        # ✅ MERGE applications if updating existing record
+        if existing_activity:
+            existing_apps = existing_activity.get("applications", [])
+            
+            # Create a dict for easy lookup
+            app_dict = {app["application"]: app for app in existing_apps}
+            
+            # Merge or add new apps
+            for new_app in normalized_new_apps:
+                app_name = new_app["application"]
+                if app_name in app_dict:
+                    # Add to existing app's totals
+                    app_dict[app_name]["mouse_movements"] += new_app["mouse_movements"]
+                    app_dict[app_name]["key_presses"] += new_app["key_presses"]
+                    app_dict[app_name]["time_spent_seconds"] += new_app["time_spent_seconds"]
+                    # Update window title/url to latest
+                    app_dict[app_name]["window_title"] = new_app["window_title"]
+                    app_dict[app_name]["url"] = new_app["url"]
+                else:
+                    # New app - add it
+                    app_dict[app_name] = new_app
+            
+            # Convert back to list
+            merged_apps = list(app_dict.values())
+            activity_data["applications"] = merged_apps
+            activity_data["applications_total_time_seconds"] = sum(app["time_spent_seconds"] for app in merged_apps)
+        else:
+            # First time - use as is
+            activity_data["applications"] = normalized_new_apps
+            activity_data["applications_total_time_seconds"] = total_app_time
 
-        # ===============================
-        # STORE IN DATABASE
-        # ===============================
-        result = await db.activities.insert_one(activity_data)
+        # ✅ UPDATE or CREATE
+        if existing_activity:
+            result = await db.activities.update_one(
+                {"_id": existing_activity["_id"]},
+                {"$set": activity_data}
+            )
+            print(f"✅ Activity UPDATED for {current_user['email']} (Session {session_number})")
+            activity_id = str(existing_activity["_id"])
+            is_update = True
+        else:
+            result = await db.activities.insert_one(activity_data)
+            print(f"✅ Activity CREATED for {current_user['email']} (Session {session_number})")
+            activity_id = str(result.inserted_id)
+            is_update = False
         
-        print(f"✅ Activity logged for {current_user['email']}")
-        
-        # ===============================
-        # RETURN SUCCESS
-        # ===============================
         return {
             "message": "Activity logged successfully",
-            "id": str(result.inserted_id),
-            "apps_tracked": len(normalized_apps),
+            "id": activity_id,
+            "updated": is_update,
+            "apps_tracked": len(activity_data["applications"]),
             "active_time": session_active,
             "idle_time": session_idle,
             "active_time_seconds": activity_data.get("active_time_seconds", 0),

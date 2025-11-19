@@ -255,59 +255,82 @@ class MonitoringAgent:
         if not self.authenticate():
             print("\n[ERROR] Cannot start monitoring - authentication failed")
             return
-        
+    
         # Get session number
         self.session_number = self.get_session_number()
-            
+        
         # Fetch lifetime totals before starting tracker
         lifetime_totals = self.get_lifetime_totals()
 
         # Initialize tracker with lifetime totals
         self.tracker = ActivityTracker(self.config, lifetime_totals, self.employee_email)
-    
+
         print(f"\n[*] Monitoring started!")
         print(f"[*] Employee: {self.employee_email}")
         print(f"[*] Session Number: {self.session_number}")
         print(f"[*] Updates every {self.config.ACTIVITY_CHECK_INTERVAL} seconds")
         print(f"[*] Idle threshold: {self.config.IDLE_THRESHOLD} seconds")
         print("\nPress Ctrl+C to stop\n")   
-    
+
         self.is_running = True
         last_status_check = time.time()
-    
+
         try:
             while self.is_running:
                 # Wait for interval, but check every second for clock-out signal
                 print(f"\n[*] Collecting activity data for {self.config.ACTIVITY_CHECK_INTERVAL} seconds...")
-        
-                # Check every second instead of sleeping for full 10 seconds
+    
+                # Check every second instead of sleeping for full interval
                 for i in range(self.config.ACTIVITY_CHECK_INTERVAL):
                     # Check if clock-out signal file exists
                     signal_file = os.path.join(os.path.dirname(__file__), '.clockout_signal')
                     if os.path.exists(signal_file):
                         print("\n[CLOCK-OUT SIGNAL] Detected! Sending data immediately...")
                         os.remove(signal_file)
-    
+
                         # Mark cleanup as completed BEFORE sending (prevents double-send)
                         self.cleanup_completed = True
-    
+
                         # Send data immediately
                         activity_data = self.tracker.get_activity_data()
                         activity_data["session_completed"] = True
                         activity_data["session_number"] = self.session_number
                         self.send_activity_data(activity_data)
-    
+
                         # Reset session data for next time
                         self.tracker.reset_session_data()
                         print("[OK] Clock-out data sent, exiting...")
-    
+
                         # Stop tracker and exit
                         if self.tracker:
                             self.tracker.stop()
                         return  # Exit cleanly
-            
+        
                     time.sleep(1)  # Sleep 1 second at a time
             
+                # ✅ SEND DATA AFTER INTERVAL COMPLETES
+                print(f"[*] Interval complete, sending activity data...")
+                activity_data = self.tracker.get_activity_data()
+                activity_data["session_completed"] = False  # Not final
+                activity_data["session_number"] = self.session_number
+            
+                success = self.send_activity_data(activity_data)
+            
+                if success:
+                    # ✅ Reset interval data (but keep session totals)
+                    self.tracker.reset_app_interval_data()
+                    print(f"[OK] Data sent, continuing monitoring...")
+                else:
+                    print(f"[WARN] Failed to send data, will retry next interval")
+            
+                # Check clock status every 5 intervals
+                current_time = time.time()
+                if current_time - last_status_check > (self.config.ACTIVITY_CHECK_INTERVAL * 5):
+                    if not self.check_clock_status():
+                        print("\n[*] Clock-out detected via status check")
+                        break
+                    last_status_check = current_time
+    
         except KeyboardInterrupt:
             print("\n\n[*] Manual stop detected...")
             self.stop()

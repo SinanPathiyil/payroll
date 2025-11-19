@@ -532,54 +532,63 @@ async def get_activity_history(
     db = Depends(get_database)
 ):
     """
-    Get activity history for a specific date
-    If no date provided, returns today's activities
+    Get activity history for TODAY
+    Returns cumulative totals from the LATEST session (which contains all day's data)
     """
+    # Use today's date if not provided
     if date:
         target_date = date
     else:
         target_date = datetime.now().strftime("%Y-%m-%d")
     
+    # Get all activities for today
     activities = await db.activities.find({
         "user_id": str(current_user["_id"]),
         "date": target_date
-    }).sort("timestamp", -1).to_list(length=1000)
+    }).sort("recorded_at", -1).to_list(length=1000)
     
-    # Format activities and compute summary
+    if not activities:
+        return {
+            "date": target_date,
+            "total_activities": 0,
+            "summary": {
+                "total_mouse_movements": 0,
+                "total_key_presses": 0,
+                "total_idle_time_seconds": 0,
+                "total_active_time_seconds": 0,
+                "total_session_time_seconds": 0,
+                "activity_count": 0
+            },
+            "activities": []
+        }
+    
+    # ✅ Get the LATEST record (first in the sorted list)
+    # This record contains cumulative totals for the entire day
+    latest_activity = activities[0]
+    
+    # Extract cumulative totals from the LATEST record ONLY
+    total_mouse = int(latest_activity.get("total_mouse_movements", 0))
+    total_keys = int(latest_activity.get("total_key_presses", 0))
+    total_idle_seconds = int(latest_activity.get("idle_time_seconds", 0))
+    total_active_seconds = int(latest_activity.get("active_time_seconds", 0))
+    total_session_seconds = int(latest_activity.get("session_time_seconds", 0))
+    
+    # Format all activities for history view
     formatted_activities = []
-    total_mouse = 0
-    total_keys = 0
-    total_idle_seconds = 0
-    total_active_seconds = 0
-    total_session_seconds = 0
-
     for activity in activities:
-        mouse_count = int(activity.get("total_mouse_movements") or 0)
-        key_count = int(activity.get("total_key_presses") or 0)
-        idle_seconds = int(activity.get("idle_time_seconds") or 0)
-        active_seconds = int(activity.get("active_time_seconds") or 0)
-        session_seconds = int(activity.get("session_time_seconds") or (active_seconds + idle_seconds))
-
-        total_mouse += mouse_count
-        total_keys += key_count
-        total_idle_seconds += idle_seconds
-        total_active_seconds += active_seconds
-        total_session_seconds += session_seconds
-
         formatted_activities.append({
             "id": str(activity["_id"]),
-            "application": activity.get("application"),
-            "window_title": activity.get("window_title"),
-            "duration": activity.get("duration"),
+            "session_number": activity.get("session_number"),
+            "application": activity.get("current_application"),
             "productivity_score": activity.get("productivity_score"),
-            "category": activity.get("classification", {}).get("category"),
             "timestamp": activity.get("timestamp"),
-            "source": activity.get("source", "web"),
-            "idle_time_seconds": idle_seconds,
-            "active_time_seconds": active_seconds,
-            "session_time_seconds": session_seconds,
-            "total_mouse_movements": mouse_count,
-            "total_key_presses": key_count
+            "recorded_at": activity.get("recorded_at"),
+            "source": activity.get("source", "desktop_agent"),
+            "idle_time_seconds": int(activity.get("idle_time_seconds", 0)),
+            "active_time_seconds": int(activity.get("active_time_seconds", 0)),
+            "session_time_seconds": int(activity.get("session_time_seconds", 0)),
+            "total_mouse_movements": int(activity.get("total_mouse_movements", 0)),
+            "total_key_presses": int(activity.get("total_key_presses", 0))
         })
     
     summary = {

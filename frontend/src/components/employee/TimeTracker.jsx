@@ -1,6 +1,4 @@
-// frontend/src/components/employee/TimeTracker.jsx
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { employeeLogin, employeeLogout } from '../../services/api';
 import { Clock, LogIn, LogOut, Activity } from 'lucide-react';
 import { formatTime, formatHours } from '../../utils/helpers';
@@ -8,6 +6,94 @@ import { formatTime, formatHours } from '../../utils/helpers';
 export default function TimeTracker({ status, onStatusChange, activityStats }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  
+  // Live display values (starts FROM agent data, then increments)
+  const [liveStats, setLiveStats] = useState({
+    mouseEvents: 0,
+    keyboardEvents: 0,
+    activeTime: 0,
+    idleTime: 0,
+    startTime: null
+  });
+
+  // Initialize live stats FROM agent data when clock in
+  useEffect(() => {
+    if (activityStats && status.is_clocked_in) {
+      console.log('🔄 Syncing with agent data:', activityStats);
+      
+      // Update live stats with agent data (replaces current values)
+      setLiveStats({
+        mouseEvents: activityStats.mouseEvents || 0,
+        keyboardEvents: activityStats.keyboardEvents || 0,
+        activeTime: activityStats.activeTime || 0,
+        idleTime: activityStats.idleTime || 0,
+        startTime: Date.now() // Reset timer for active time calculation
+      });
+      
+      console.log('✅ Live stats synced to:', {
+        mouse: activityStats.mouseEvents,
+        keyboard: activityStats.keyboardEvents,
+        active: activityStats.activeTime
+      });
+    }
+  }, [activityStats]); // Updates every time agent sends data (every 30s)
+
+  // Live tracking listeners (only for visual feedback)
+  useEffect(() => {
+    if (!status.is_clocked_in) {
+      // Reset on clock out
+      setLiveStats({
+        mouseEvents: 0,
+        keyboardEvents: 0,
+        activeTime: 0,
+        idleTime: 0,
+        startTime: null
+      });
+      return;
+    }
+
+    const handleMouseMove = () => {
+      setLiveStats(prev => ({
+        ...prev,
+        mouseEvents: prev.mouseEvents + 1 // Increment from current value
+      }));
+    };
+
+    const handleKeyPress = () => {
+      setLiveStats(prev => ({
+        ...prev,
+        keyboardEvents: prev.keyboardEvents + 1 // Increment from current value
+      }));
+    };
+
+    // Track only in Electron window (browser tab)
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('keydown', handleKeyPress);
+
+    console.log('🔴 Live tracking started');
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('keydown', handleKeyPress);
+      console.log('⚪ Live tracking stopped');
+    };
+  }, [status.is_clocked_in]);
+
+  // Live active time counter (increments every second)
+  useEffect(() => {
+    if (!status.is_clocked_in || !liveStats.startTime) {
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setLiveStats(prev => ({
+        ...prev,
+        activeTime: prev.activeTime + 1 // Add 1 second
+      }));
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [status.is_clocked_in, liveStats.startTime]);
 
   const handleClockIn = async () => {
     setLoading(true);
@@ -15,22 +101,19 @@ export default function TimeTracker({ status, onStatusChange, activityStats }) {
     try {
       const response = await employeeLogin();
       
-      // Notify Electron if running (with token and email)
+      // Notify Electron
       if (window.electron?.onClockIn) {
         const token = localStorage.getItem('token');
         const userStr = localStorage.getItem('user');
         const user = userStr ? JSON.parse(userStr) : null;
         
-        console.log('🔵 Calling Electron onClockIn with:', { 
-          token: token?.substring(0, 20) + '...', 
-          email: user?.email 
-        });
-        
+        console.log('🔵 Calling Electron onClockIn');
         await window.electron.onClockIn(token, user?.email);
         console.log('✅ Electron agent started');
       }
       
-      onStatusChange(); // Refresh status
+      // This will fetch agent data and initialize live stats
+      onStatusChange();
     } catch (err) {
       console.error('❌ Clock in error:', err);
       setError(err.response?.data?.detail || 'Failed to clock in');
@@ -45,14 +128,13 @@ export default function TimeTracker({ status, onStatusChange, activityStats }) {
     try {
       await employeeLogout();
       
-      // Notify Electron if running
       if (window.electron?.onClockOut) {
         console.log('🔵 Calling Electron onClockOut');
         await window.electron.onClockOut();
         console.log('✅ Electron agent stopped');
       }
       
-      onStatusChange(); // Refresh status
+      onStatusChange();
     } catch (err) {
       console.error('❌ Clock out error:', err);
       setError(err.response?.data?.detail || 'Failed to clock out');
@@ -61,7 +143,6 @@ export default function TimeTracker({ status, onStatusChange, activityStats }) {
     }
   };
 
-  // Handle loading/null state
   if (!status) {
     return (
       <div className="bg-white rounded-lg shadow">
@@ -83,9 +164,9 @@ export default function TimeTracker({ status, onStatusChange, activityStats }) {
       <div className="p-6 border-b">
         <h2 className="text-xl font-semibold flex items-center gap-2">
           Time Tracker
-          {window.electron?.isElectron && (
-            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
-              🖥️ Desktop Agent Active
+          {window.electron?.isElectron && isClockedIn && (
+            <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded animate-pulse">
+              🔴 LIVE
             </span>
           )}
         </h2>
@@ -134,41 +215,52 @@ export default function TimeTracker({ status, onStatusChange, activityStats }) {
             </div>
           </div>
 
-          {/* Activity Stats (when clocked in) */}
-          {isClockedIn && activityStats && (
-            <div className="bg-gray-50 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <Activity className="w-5 h-5 text-purple-600" />
-                <h3 className="font-semibold">Activity Tracking (Live)</h3>
+          {/* Live Activity Stats */}
+          {isClockedIn && liveStats.startTime && (
+            <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-4 border-2 border-purple-200">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Activity className="w-5 h-5 text-purple-600" />
+                  <h3 className="font-semibold">Activity Tracking</h3>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs bg-red-500 text-white px-2 py-1 rounded-full animate-pulse flex items-center gap-1">
+                    <span className="w-2 h-2 bg-white rounded-full"></span>
+                    LIVE
+                  </span>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs text-gray-600">Mouse Events</p>
-                  <p className="text-lg font-semibold text-gray-800">
-                    {activityStats.mouseEvents?.toLocaleString() || 0}
+                  <p className="text-lg font-semibold text-purple-700">
+                    {liveStats.mouseEvents.toLocaleString()}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-600">Keyboard Events</p>
-                  <p className="text-lg font-semibold text-gray-800">
-                    {activityStats.keyboardEvents?.toLocaleString() || 0}
+                  <p className="text-lg font-semibold text-purple-700">
+                    {liveStats.keyboardEvents.toLocaleString()}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-600">Active Time</p>
                   <p className="text-lg font-semibold text-green-600">
-                    {Math.floor((activityStats.activeTime || 0) / 60)} min
+                    {Math.floor(liveStats.activeTime / 60)} min {liveStats.activeTime % 60} sec
                   </p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-600">Idle Time</p>
                   <p className="text-lg font-semibold text-orange-600">
-                    {Math.floor((activityStats.idleTime || 0) / 60)} min
+                    {Math.floor(liveStats.idleTime / 60)} min
                   </p>
                 </div>
               </div>
-              <div className="mt-3 text-xs text-gray-500">
-                <p>✅ Desktop agent tracking your activity. Data syncs automatically from the monitoring service.</p>
+              <div className="mt-3 pt-3 border-t border-purple-200 text-xs text-gray-600">
+                <div className="flex items-center justify-between">
+                  <span>🖥️ Agent syncs every 30s • Visual updates instantly</span>
+                  <span className="text-green-600 font-medium">● Live</span>
+                </div>
               </div>
             </div>
           )}
@@ -200,39 +292,15 @@ export default function TimeTracker({ status, onStatusChange, activityStats }) {
           <div className="text-xs text-gray-500 text-center">
             {isClockedIn ? (
               <>
-                <p>🟢 Your activity is being tracked. Stay active to maintain productivity score.</p>
-                {window.electron?.isElectron && (
-                  <p className="mt-1 text-blue-600 font-medium">
-                    ✨ Desktop agent is running with detailed per-app tracking
-                  </p>
-                )}
+                <p>🟢 Live visual feedback • Desktop agent tracks all applications</p>
+                <p className="mt-1 text-purple-600 font-medium">
+                  ✨ Syncs with accurate agent data every 30 seconds
+                </p>
               </>
             ) : (
-              <>
-                <p>Clock in to start your work day and track your time.</p>
-                {window.electron?.isElectron && (
-                  <p className="mt-1 text-gray-400">
-                    Desktop agent will start automatically when you clock in
-                  </p>
-                )}
-              </>
+              <p>Clock in to start live activity tracking</p>
             )}
           </div>
-
-          {/* Electron Status Indicator */}
-          {window.electron?.isElectron && (
-            <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-3">
-              <div className="flex items-center gap-2 text-sm">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="font-medium text-gray-700">
-                  Desktop Agent: Ready
-                </span>
-              </div>
-              <p className="text-xs text-gray-600 mt-1 ml-4">
-                Per-app tracking, screenshots, and productivity monitoring enabled
-              </p>
-            </div>
-          )}
         </div>
       </div>
     </div>

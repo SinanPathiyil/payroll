@@ -263,21 +263,22 @@ class ActivityTracker:
         """Check and update idle status"""
         current_time = time.time()
         time_since_activity = current_time - self.last_activity_time
-        
+    
         # User is idle if no activity for more than threshold
         is_currently_idle = time_since_activity > self.config.IDLE_THRESHOLD
-        
+    
         if is_currently_idle:
             # If just became idle, record the start time
             if self.idle_start_time is None:
                 self.idle_start_time = self.last_activity_time + self.config.IDLE_THRESHOLD
         else:
-            # If was idle but now active, add the idle period to total
+            # ✅ If was idle but now active, add the idle period to total
             if self.idle_start_time is not None:
-                idle_duration = self.last_activity_time - self.idle_start_time
+                idle_duration = current_time - self.idle_start_time  # Use current_time, not last_activity_time
                 self.total_idle_time += idle_duration
+                print(f"[DEBUG] User became active. Added {idle_duration:.1f}s idle time. Total idle: {self.total_idle_time:.1f}s")
                 self.idle_start_time = None
-        
+    
         return is_currently_idle
     
     def is_idle(self):
@@ -388,7 +389,7 @@ class ActivityTracker:
     def reset_app_interval_data(self):
         """Reset per-app counters for next interval (called after sending data)"""
         current_time = time.time()
-    
+
         # Reset per-app interval counters only (for applications breakdown)
         for app_key in self.app_activities:
             self.app_activities[app_key]['mouse_movements'] = 0
@@ -396,10 +397,14 @@ class ActivityTracker:
             self.app_activities[app_key]['time_spent'] = 0
             # Reset last_active to current time for next interval
             self.app_activities[app_key]['last_active'] = current_time
+
+        # ✅ DON'T reset total_idle_time - it needs to accumulate!
+        # ✅ DON'T reset idle_start_time - it's managed by check_idle_status()
     
-        # Reset interval idle tracking
-        self.total_idle_time = 0
-        # Keep idle_start_time if currently idle
+        # Just reset the interval tracking time
+        self.last_interval_time = current_time
+    
+        print(f"[DEBUG] Interval data reset. Idle continues tracking if still idle.")
     
     def display_summary(self):
         print("\n" + "=" * 80)

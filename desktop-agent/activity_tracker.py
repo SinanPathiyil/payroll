@@ -222,38 +222,55 @@ class ActivityTracker:
         return ""
     
     def get_app_key(self, process_name, window_title):
+        """Generate unique app key with special handling"""
+        process_lower = process_name.lower()
+    
+        # ✅ Windows Store apps / UWP apps
+        if process_lower in ["applicationframehost.exe", "wwahost.exe", "RuntimeBroker.exe", "electron.exe"]:
+        #if process_lower.endswith(".exe"):
+            if window_title and window_title not in ["", "Unknown"]:
+                app_name = window_title.split(' - ')[0].strip()
+                return app_name
+            return "Windows Store App"
+    
+        # Handle browser URLs
         url = self.extract_url_from_title(window_title, process_name)
         if url:
             return f"{process_name} ({url})"
+    
         return process_name
     
     def update_current_app(self):
         process_name, window_title = self.get_active_window_info()
         app_key = self.get_app_key(process_name, window_title)
-    
+
         current_time = time.time()
-    
+
         if self.current_app and self.current_app != app_key:
             # Calculate time spent on previous app
             time_spent = current_time - self.app_activities[self.current_app]['last_active']
             self.app_activities[self.current_app]['time_spent'] += time_spent
-        
+    
             # Add to session total
             self.session_app_activities[self.current_app]['total_time'] += time_spent
-            
+        
             # Set new app's start time
             self.app_activities[app_key]['last_active'] = current_time
         elif self.current_app is None:
             # First time tracking - set start time
             self.app_activities[app_key]['last_active'] = current_time
-    
+
         self.current_app = app_key
         self.current_window_title = window_title
-    
-        # Update metadata (but not last_active)
+
+        # ✅ Store the CLEANED app name, but keep original window_title for reference
         self.app_activities[app_key]['window_title'] = window_title
         self.session_app_activities[app_key]['window_title'] = window_title
     
+        # ✅ Store the original process name for debugging
+        self.app_activities[app_key]['process_name'] = process_name
+        self.session_app_activities[app_key]['process_name'] = process_name
+
         url = self.extract_url_from_title(window_title, process_name)
         if url:
             self.app_activities[app_key]['url'] = url
@@ -329,7 +346,7 @@ class ActivityTracker:
             if data['mouse_movements'] > 0 or data['key_presses'] > 0 or data['time_spent'] > 0:
                 app_breakdown.append({
                     'application': app_key,
-                'window_title': data['window_title'],
+                    'window_title': data['window_title'],
                     'url': data['url'],
                     'mouse_movements': data['mouse_movements'],
                     'key_presses': data['key_presses'],

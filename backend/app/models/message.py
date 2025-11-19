@@ -6,4 +6,4 @@ class Message(BaseModel):
     to_user: str  # user_id
     content: str
     is_read: bool = False
-    created_at: datetime = datetime.utcnow()
+    created_at: datetime = datetime.now()

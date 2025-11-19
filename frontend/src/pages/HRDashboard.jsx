@@ -3,15 +3,18 @@ import { AuthContext } from '../context/AuthContext';
 import Navbar from '../components/common/Navbar';
 import Clock from '../components/common/Clock';
 import CreateUserModal from '../components/hr/CreateUserModal';
+import CreateTaskModal from '../components/hr/CreateTaskModal';
 import EmployeeStatsModal from '../components/hr/EmployeeStatsModal';
 import { getEmployees, getAllTasks } from '../services/api';
-import { Users, UserPlus, Clock as ClockIcon, CheckCircle, XCircle } from 'lucide-react';
+import { Users, UserPlus, Clock as ClockIcon, CheckCircle, XCircle, ListTodo, Plus } from 'lucide-react';
+import { formatDateTime } from '../utils/helpers';
 
 export default function HRDashboard() {
   const { user } = useContext(AuthContext);
   const [employees, setEmployees] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showTaskModal, setShowTaskModal] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -39,6 +42,17 @@ export default function HRDashboard() {
     activeToday: employees.filter(e => e.today_status === 'active').length,
     totalTasks: tasks.length,
     completedTasks: tasks.filter(t => t.status === 'completed').length,
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'completed':
+        return 'bg-green-100 text-green-800';
+      case 'in_progress':
+        return 'bg-blue-100 text-blue-800';
+      default:
+        return 'bg-orange-100 text-orange-800';
+    }
   };
 
   if (loading) {
@@ -104,7 +118,8 @@ export default function HRDashboard() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Employee List */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 space-y-6">
+            {/* Employees Table */}
             <div className="bg-white rounded-lg shadow">
               <div className="p-6 border-b flex justify-between items-center">
                 <h2 className="text-xl font-semibold">Employees</h2>
@@ -162,6 +177,59 @@ export default function HRDashboard() {
                 </table>
               </div>
             </div>
+
+            {/* Tasks List */}
+            <div className="bg-white rounded-lg shadow">
+              <div className="p-6 border-b flex justify-between items-center">
+                <h2 className="text-xl font-semibold flex items-center gap-2">
+                  <ListTodo className="w-5 h-5" />
+                  All Tasks
+                </h2>
+                <button
+                  onClick={() => setShowTaskModal(true)}
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Assign Task
+                </button>
+              </div>
+              <div className="p-6">
+                {tasks.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <ListTodo className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                    <p>No tasks assigned yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {tasks.map((task) => (
+                      <div
+                        key={task.id}
+                        className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-semibold text-gray-900">{task.title}</h3>
+                              <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(task.status)}`}>
+                                {task.status.replace('_', ' ')}
+                              </span>
+                            </div>
+                            <p className="text-gray-600 text-sm mb-2">{task.description}</p>
+                            <div className="flex items-center gap-4 text-xs text-gray-500">
+                              <span>👤 {task.employee_name}</span>
+                              <span>📅 {formatDateTime(task.created_at)}</span>
+                              {task.due_date && (
+                                <span>⏰ Due: {formatDateTime(task.due_date)}</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Clock Widget */}
@@ -177,6 +245,17 @@ export default function HRDashboard() {
           onClose={() => setShowCreateModal(false)}
           onSuccess={() => {
             setShowCreateModal(false);
+            loadData();
+          }}
+        />
+      )}
+
+      {showTaskModal && (
+        <CreateTaskModal
+          employees={employees}
+          onClose={() => setShowTaskModal(false)}
+          onSuccess={() => {
+            setShowTaskModal(false);
             loadData();
           }}
         />

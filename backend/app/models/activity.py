@@ -8,5 +8,5 @@ class Activity(BaseModel):
     keyboard_events: int = 0
     idle_time: float = 0  # in seconds
     active_time: float = 0  # in seconds
-    timestamp: datetime = datetime.utcnow()
+    timestamp: datetime = datetime.now()
     productivity_score: float = 0  # 0-100

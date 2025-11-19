@@ -9,5 +9,5 @@ class Task(BaseModel):
     assigned_by: str  # hr user_id
     status: str = "pending"  # pending, in_progress, completed
     due_date: Optional[datetime] = None
-    created_at: datetime = datetime.utcnow()
+    created_at: datetime = datetime.now()
     completed_at: Optional[datetime] = None

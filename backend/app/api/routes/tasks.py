@@ -20,7 +20,7 @@ async def create_task(
         "assigned_by": str(current_user["_id"]),
         "status": "pending",
         "due_date": task_data.due_date,
-        "created_at": datetime.utcnow(),
+        "created_at": datetime.now(),
         "completed_at": None
     }
     
@@ -33,7 +33,7 @@ async def create_task(
         "to_user": task_data.assigned_to,
         "content": f"New task assigned: {task_data.title}",
         "is_read": False,
-        "created_at": datetime.utcnow()
+        "created_at": datetime.now()
     }
     await db.messages.insert_one(notification)
     
@@ -85,7 +85,7 @@ async def update_task(
     update_data = {"status": task_update.status}
     
     if task_update.status == "completed":
-        update_data["completed_at"] = datetime.utcnow()
+        update_data["completed_at"] = datetime.now()
         
         # Notify HR
         notification = {
@@ -93,7 +93,7 @@ async def update_task(
             "to_user": task["assigned_by"],
             "content": f"Task completed: {task['title']}",
             "is_read": False,
-            "created_at": datetime.utcnow()
+            "created_at": datetime.now()
         }
         await db.messages.insert_one(notification)
     

@@ -12,25 +12,53 @@ async def get_my_messages(
     current_user: dict = Depends(get_current_user),
     db = Depends(get_database)
 ):
-    """Get all messages for current user"""
+    """Get all messages for current user (both received and sent)"""
     messages = []
-    cursor = db.messages.find({
+    
+    # Get received messages
+    received_cursor = db.messages.find({
         "to_user": str(current_user["_id"])
     }).sort("created_at", -1)
     
-    async for message in cursor:
+    async for message in received_cursor:
         # Get sender info
         sender = await db.users.find_one({"_id": ObjectId(message["from_user"])})
         
         messages.append({
             "id": str(message["_id"]),
             "from_user": message["from_user"],
+            "to_user": message["to_user"],
             "from_name": sender.get("full_name", "Unknown") if sender else "Unknown",
             "content": message["content"],
             "is_read": message["is_read"],
             "created_at": message["created_at"],
-            "task_id": message.get("task_id")
+            "task_id": message.get("task_id"),
+            "direction": "received"  # <<< THIS IS NEW
         })
+    
+    # Get sent messages
+    sent_cursor = db.messages.find({
+        "from_user": str(current_user["_id"])
+    }).sort("created_at", -1)
+    
+    async for message in sent_cursor:
+        # Get recipient info
+        recipient = await db.users.find_one({"_id": ObjectId(message["to_user"])})
+        
+        messages.append({
+            "id": str(message["_id"]),
+            "from_user": message["from_user"],
+            "to_user": message["to_user"],
+            "to_name": recipient.get("full_name", "Unknown") if recipient else "Unknown",
+            "content": message["content"],
+            "is_read": message["is_read"],
+            "created_at": message["created_at"],
+            "task_id": message.get("task_id"),
+            "direction": "sent"  # <<< THIS IS NEW
+        })
+    
+    # Sort all messages by date (most recent first)
+    messages.sort(key=lambda x: x["created_at"], reverse=True)
     
     return messages
 

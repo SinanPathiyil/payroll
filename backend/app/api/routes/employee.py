@@ -764,7 +764,7 @@ async def get_last_lifetime_totals(
     last_session = await db.attendance.find_one(
         {
             "user_id": str(current_user["_id"]),
-            "status": "completed"  # Only completed sessions
+            "status": "completed"
         },
         sort=[("logout_time", -1)]
     )
@@ -779,13 +779,30 @@ async def get_last_lifetime_totals(
             "lifetime_idle_seconds": 0
         }
     
-    print(f"[DEBUG] Found last session: {last_session['date']}")
+    last_session_date = last_session["date"]  # ✅ Get the date
+    today = datetime.now().strftime("%Y-%m-%d")
+    
+    print(f"[DEBUG] Last session date: {last_session_date}, Today: {today}")
+    
+    # ✅ Only return totals if last session was TODAY
+    if last_session_date != today:
+        print(f"[DEBUG] Last session was on {last_session_date}, not today. Starting fresh.")
+        return {
+            "found": False,
+            "lifetime_mouse": 0,
+            "lifetime_keys": 0,
+            "lifetime_active_seconds": 0,
+            "lifetime_idle_seconds": 0,
+            "last_session_date": last_session_date
+        }
+    
+    print(f"[DEBUG] Found last session from today: {last_session_date}")
     
     # Get the LAST activity record from that session (highest values)
     last_activity = await db.activities.find_one(
         {
             "user_id": str(current_user["_id"]),
-            "date": last_session["date"]  # From that specific session date
+            "date": last_session_date
         },
         sort=[("recorded_at", -1)]
     )
@@ -797,18 +814,19 @@ async def get_last_lifetime_totals(
             "lifetime_keys": last_activity.get("total_key_presses", 0),
             "lifetime_active_seconds": last_activity.get("active_time_seconds", 0),
             "lifetime_idle_seconds": last_activity.get("idle_time_seconds", 0),
-            "last_session_date": last_session["date"]
+            "last_session_date": last_session_date
         }
         print(f"[DEBUG] Returning totals: mouse={totals['lifetime_mouse']}, active={totals['lifetime_active_seconds']}")
         return totals
     else:
-        print(f"[DEBUG] No activity found for session {last_session['date']}")
+        print(f"[DEBUG] No activity found for session {last_session_date}")
         return {
             "found": False,
             "lifetime_mouse": 0,
             "lifetime_keys": 0,
             "lifetime_active_seconds": 0,
-            "lifetime_idle_seconds": 0
+            "lifetime_idle_seconds": 0,
+            "last_session_date": last_session_date
         }
         
 @router.get("/session-count")

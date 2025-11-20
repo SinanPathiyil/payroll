@@ -349,35 +349,45 @@ class MonitoringAgent:
         print("\n[OK] Agent stopped!")
 
     def get_lifetime_totals(self):
-        """Fetch lifetime cumulative totals for this user"""
+        """Fetch lifetime cumulative totals for this user (only for TODAY)"""
         try:
             headers = {
                 "Authorization": f"Bearer {self.token}",
                 "Content-Type": "application/json"
             }
-        
+    
             api_url = self.config.API_URL.rstrip('/')
             if not api_url.endswith('/api'):
                 endpoint = f"{api_url}/api/employee/last-lifetime-totals"
             else:
                 endpoint = f"{api_url}/employee/last-lifetime-totals"
-        
-            print(f"[*] Fetching lifetime totals...")
-        
+    
+            print(f"[*] Fetching lifetime totals for TODAY...")
+    
             response = requests.get(endpoint, headers=headers, timeout=10)
-        
+    
             if response.status_code == 200:
                 data = response.json()
-                if data.get('found'):
-                    print(f"[OK] Found lifetime totals: Mouse={data.get('lifetime_mouse', 0)}, Active={data.get('lifetime_active_seconds', 0)}s")
+            
+                # ✅ CHECK IF DATA IS FROM TODAY
+                last_session_date = data.get('last_session_date')
+                today = datetime.now().strftime("%Y-%m-%d")
+            
+                if data.get('found') and last_session_date == today:
+                    # Same day - use previous totals
+                    print(f"[OK] Found lifetime totals from today ({today}): Mouse={data.get('lifetime_mouse', 0)}, Active={data.get('lifetime_active_seconds', 0)}s")
                     return data
                 else:
-                    print(f"[*] No previous activity found, starting fresh")
+                    # Different day or no data - start fresh
+                    if last_session_date:
+                        print(f"[*] New day! Previous session was on {last_session_date}, starting fresh for {today}")
+                    else:
+                        print(f"[*] No previous activity found, starting fresh")
                     return None
             else:
                 print(f"[WARN] Could not fetch lifetime totals: {response.status_code}")
                 return None
-            
+        
         except Exception as e:
             print(f"[WARN] Error fetching lifetime totals: {str(e)}")
             return None

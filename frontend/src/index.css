@@ -17,19 +17,3 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
-
-/* Task highlight animation */
-@keyframes highlightPulse {
-  0%, 100% {
-    background-color: white;
-    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
-  }
-  50% {
-    background-color: #fef3c7;
-    box-shadow: 0 0 0 4px #fbbf24, 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  }
-}
-
-.highlight-task {
-  animation: highlightPulse 1s ease-in-out 3;
-}

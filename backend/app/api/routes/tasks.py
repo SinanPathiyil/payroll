@@ -94,6 +94,7 @@ async def update_task(
             "from_user": str(current_user["_id"]),
             "to_user": task["assigned_by"],
             "content": f"Task completed: {task['title']}",
+            "task_id": task_id,
             "is_read": False,
             "created_at": datetime.now()
         }

@@ -32,10 +32,12 @@ async def create_task(
         "from_user": str(current_user["_id"]),
         "to_user": task_data.assigned_to,
         "content": f"New task assigned: {task_data.title}",
+        "task_id": str(result.inserted_id),  # <<< ADD THIS LINE
         "is_read": False,
         "created_at": datetime.now()
     }
     await db.messages.insert_one(notification)
+    
     
     return {
         "id": str(task_dict["_id"]),

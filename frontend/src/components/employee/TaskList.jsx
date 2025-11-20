@@ -1,10 +1,38 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { updateTask } from '../../services/api';
-import { CheckCircle, Clock, AlertCircle, Plus } from 'lucide-react';
+import { CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import { formatDateTime, getStatusColor } from '../../utils/helpers';
 
-export default function TaskList({ tasks, onTaskUpdate }) {
+export default function TaskList({ tasks, onTaskUpdate, highlightTaskId }) {
   const [updatingTask, setUpdatingTask] = useState(null);
+  const taskRefs = useRef({});
+
+  // Scroll to and highlight task when highlightTaskId changes
+  useEffect(() => {
+    console.log('🔍 TaskList - highlightTaskId changed:', highlightTaskId);
+    console.log('🔍 Available task refs:', Object.keys(taskRefs.current));
+    console.log('🔍 All tasks:', tasks.map(t => t.id));
+    
+    if (highlightTaskId && taskRefs.current[highlightTaskId]) {
+      console.log('✅ Found task ref, scrolling to:', highlightTaskId);
+      
+      // Scroll to the task
+      taskRefs.current[highlightTaskId].scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      });
+
+      // Add highlight animation
+      taskRefs.current[highlightTaskId].classList.add('highlight-task');
+      
+      // Remove highlight after animation
+      setTimeout(() => {
+        taskRefs.current[highlightTaskId]?.classList.remove('highlight-task');
+      }, 3000);
+    } else {
+      console.log('❌ Task ref not found for:', highlightTaskId);
+    }
+  }, [highlightTaskId, tasks]);
 
   const handleStatusChange = async (taskId, newStatus) => {
     setUpdatingTask(taskId);
@@ -45,7 +73,8 @@ export default function TaskList({ tasks, onTaskUpdate }) {
             {tasks.map((task) => (
               <div
                 key={task.id}
-                className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition"
+                ref={(el) => (taskRefs.current[task.id] = el)}
+                className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition task-item"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">

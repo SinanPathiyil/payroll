@@ -28,7 +28,8 @@ async def get_my_messages(
             "from_name": sender.get("full_name", "Unknown") if sender else "Unknown",
             "content": message["content"],
             "is_read": message["is_read"],
-            "created_at": message["created_at"]
+            "created_at": message["created_at"],
+            "task_id": message.get("task_id")
         })
     
     return messages

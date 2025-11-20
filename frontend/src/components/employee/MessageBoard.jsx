@@ -1,14 +1,34 @@
 import { markAsRead } from '../../services/api';
-import { Mail, MailOpen } from 'lucide-react';
+import { Mail, MailOpen, ListTodo } from 'lucide-react';
 import { formatDateTime } from '../../utils/helpers';
 
-export default function MessageBoard({ messages, onMessageRead }) {
-  const handleMarkRead = async (messageId) => {
-    try {
-      await markAsRead(messageId);
-      onMessageRead();
-    } catch (error) {
-      console.error('Failed to mark message as read:', error);
+export default function MessageBoard({ messages, onMessageRead, onTaskMessageClick }) {
+  
+  // Helper function to check if message is task-related
+  const isTaskMessage = (message) => {
+    return message.task_id || message.content.toLowerCase().includes('task assigned');
+  };
+
+  const handleMessageClick = async (message) => {
+    console.log('📧 Message clicked:', message);
+    console.log('📋 Task ID:', message.task_id);
+    
+    // Mark as read if unread
+    if (!message.is_read) {
+      try {
+        await markAsRead(message.id);
+        onMessageRead();
+      } catch (error) {
+        console.error('Failed to mark message as read:', error);
+      }
+    }
+
+    // If message has a task_id, trigger scroll to task
+    if (message.task_id && onTaskMessageClick) {
+      console.log('🎯 Triggering scroll to task:', message.task_id);
+      onTaskMessageClick(message.task_id);
+    } else {
+      console.log('⚠️ No task_id found or no callback');
     }
   };
 
@@ -28,15 +48,18 @@ export default function MessageBoard({ messages, onMessageRead }) {
             {messages.map((message) => (
               <div
                 key={message.id}
-                className={`border rounded-lg p-4 cursor-pointer transition ${
+                className={`border rounded-lg p-4 cursor-pointer transition hover:shadow-md ${
                   message.is_read 
                     ? 'border-gray-200 bg-white' 
                     : 'border-blue-200 bg-blue-50'
-                }`}
-                onClick={() => !message.is_read && handleMarkRead(message.id)}
+                } ${isTaskMessage(message) ? 'hover:border-green-300' : ''}`}
+                onClick={() => handleMessageClick(message)}
               >
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center gap-2">
+                    {isTaskMessage(message) && (
+                      <ListTodo className="w-4 h-4 text-green-600" />
+                    )}
                     {message.is_read ? (
                       <MailOpen className="w-4 h-4 text-gray-400" />
                     ) : (

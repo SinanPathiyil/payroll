@@ -20,6 +20,8 @@ export default function EmployeeDashboard() {
     login_time: null,
     date: null
   });
+  
+  const [highlightTaskId, setHighlightTaskId] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -190,7 +192,7 @@ export default function EmployeeDashboard() {
             />
 
             {/* Tasks */}
-            <TaskList tasks={tasks} onTaskUpdate={loadData} />
+            <TaskList tasks={tasks} onTaskUpdate={loadData} highlightTaskId={highlightTaskId} />
           </div>
 
           {/* Sidebar */}
@@ -199,7 +201,7 @@ export default function EmployeeDashboard() {
             <Clock />
 
             {/* Messages */}
-            <MessageBoard messages={messages} onMessageRead={loadData} />
+            <MessageBoard messages={messages} onMessageRead={loadData} onTaskMessageClick={setHighlightTaskId }/>
           </div>
         </div>
       </div>

@@ -36,7 +36,7 @@ def create_hr_user():
                 "role": "hr",
                 "hashed_password": pwd_context.hash("password123"),
                 "is_active": True,
-                "created_at": datetime.utcnow(),
+                "created_at": datetime.now(),
                 "office_hours": {"start": "09:00", "end": "18:00"},
                 "required_hours": 8.0
             }
@@ -57,7 +57,7 @@ def create_hr_user():
                 "hashed_password": pwd_context.hash("password123"),
                 "is_active": True,
                 "created_by": None,
-                "created_at": datetime.utcnow(),
+                "created_at": datetime.now(),
                 "office_hours": {"start": "09:00", "end": "18:00"},
                 "required_hours": 8.0
             }

@@ -23,7 +23,7 @@ async def log_agent_activity(
         "running_apps": activity_data.get("running_apps", {}),
         "is_idle": activity_data.get("is_idle", False),
         "idle_time": activity_data.get("idle_time", 0),
-        "timestamp": datetime.utcnow(),
+        "timestamp": datetime.now(),
         "source": "desktop_agent"
     }
     
@@ -44,7 +44,7 @@ async def upload_agent_screenshot(
     os.makedirs(screenshots_dir, exist_ok=True)
     
     # Save file
-    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"{current_user['_id']}_{timestamp}.jpg"
     filepath = os.path.join(screenshots_dir, filename)
     
@@ -57,7 +57,7 @@ async def upload_agent_screenshot(
         "user_id": str(current_user["_id"]),
         "filename": filename,
         "filepath": filepath,
-        "timestamp": datetime.utcnow(),
+        "timestamp": datetime.now(),
         "source": "desktop_agent"
     }
     

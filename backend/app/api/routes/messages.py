@@ -70,7 +70,7 @@ async def send_message(
         "to_user": message_data.to_user,
         "content": message_data.content,
         "is_read": False,
-        "created_at": datetime.utcnow()
+        "created_at": datetime.now()
     }
     
     result = await db.messages.insert_one(message)

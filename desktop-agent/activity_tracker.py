@@ -382,7 +382,7 @@ class ActivityTracker:
         print(f"[DEBUG] Session totals: Active={self.session_active_seconds}s | Idle={self.session_idle_seconds}s")
 
         return {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now().isoformat(),
             "is_idle": self.is_idle(),
 
             # LIFETIME CUMULATIVE (across all sessions for this employee)

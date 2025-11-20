@@ -15,7 +15,7 @@ class ScreenshotCapture:
             screenshot = pyautogui.screenshot()
             
             # Generate filename
-            timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"{user_id}_{timestamp}.jpg"
             filepath = os.path.join(self.save_dir, filename)
             

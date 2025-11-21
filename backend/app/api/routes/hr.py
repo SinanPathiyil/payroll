@@ -7,6 +7,49 @@ from app.services.activity_tracker import ActivityTrackerService  # <<< ADD THIS
 from bson import ObjectId
 from datetime import datetime, timedelta, date  # <<< ADD 'date' to imports
 
+# ============================================
+# TIERED SALARY CALCULATION SYSTEM
+# ============================================
+def calculate_tiered_salary(base_salary: float, avg_productivity: float) -> dict:
+    """
+    Calculate salary based on tiered productivity system.
+    
+    Tiers:
+    - 90-100% → 100% of base salary
+    - 80-89%  → 95% of base salary
+    - 70-79%  → 90% of base salary
+    - 60-69%  → 85% of base salary
+    - Below 60% → 80% of base salary
+    """
+    
+    if avg_productivity >= 90:
+        multiplier = 1.0
+        tier = "Excellent (90-100%)"
+    elif avg_productivity >= 80:
+        multiplier = 0.95
+        tier = "Good (80-89%)"
+    elif avg_productivity >= 70:
+        multiplier = 0.90
+        tier = "Average (70-79%)"
+    elif avg_productivity >= 60:
+        multiplier = 0.85
+        tier = "Below Average (60-69%)"
+    else:
+        multiplier = 0.80
+        tier = "Needs Improvement (<60%)"
+    
+    actual_salary = base_salary * multiplier
+    deduction = base_salary - actual_salary
+    
+    return {
+        "base_salary": round(base_salary, 2),
+        "avg_productivity": round(avg_productivity, 2),
+        "tier": tier,
+        "multiplier": multiplier,
+        "actual_salary": round(actual_salary, 2),
+        "deduction": round(deduction, 2)
+    }
+
 router = APIRouter()
 
 @router.post("/create-user", response_model=UserResponse)
@@ -29,7 +72,8 @@ async def create_user(
         "created_by": str(current_user["_id"]),
         "created_at": datetime.now(),
         "office_hours": {"start": "09:00", "end": "18:00"},
-        "required_hours": user_data.required_hours
+        "required_hours": user_data.required_hours,
+        "base_salary": user_data.base_salary  # ✅ ADDED
     }
     
     result = await db.users.insert_one(user_dict)
@@ -42,7 +86,8 @@ async def create_user(
         "role": user_dict["role"],
         "is_active": user_dict["is_active"],
         "office_hours": user_dict["office_hours"],
-        "required_hours": user_dict["required_hours"]
+        "required_hours": user_dict["required_hours"],
+        "base_salary": user_dict["base_salary"]  # ✅ ADDED
     }
 
 @router.get("/employees")
@@ -220,6 +265,15 @@ async def get_employee_stats(
     # Calculate averages
     avg_hours = total_hours / len(attendance_records) if attendance_records else 0
     
+    
+        # ========================================
+    # SALARY CALCULATION (TIERED SYSTEM)
+    # ========================================
+    employee = await db.users.find_one({"_id": ObjectId(employee_id)})
+    base_salary = employee.get("base_salary", 0.0)
+    
+    salary_info = calculate_tiered_salary(base_salary, avg_productivity)
+    
     return {
         "attendance": {
             "records": attendance_records,
@@ -233,13 +287,14 @@ async def get_employee_stats(
             "total_mouse_events": total_mouse_events,
             "total_keyboard_events": total_keyboard_events,
             "avg_productivity_score": round(avg_productivity, 2),
-            "days_tracked": len(daily_activities)  # Added this for debugging
+            "days_tracked": len(daily_activities)
         },
         "tasks_summary": {
             "total": total_tasks,
             "completed": completed_tasks,
             "pending": total_tasks - completed_tasks
-        }
+        },
+        "salary_info": salary_info  # ✅ NEW FIELD ADDED
     }
 
 # <<<<<<< NEW ENDPOINT ADDED HERE >>>>>>>

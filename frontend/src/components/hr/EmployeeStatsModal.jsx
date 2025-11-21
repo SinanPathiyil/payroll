@@ -1,7 +1,5 @@
-// Temporary test - remove after debugging
-
 import { useState, useEffect } from 'react';
-import { X, TrendingUp, Clock, CheckCircle, Monitor } from 'lucide-react';
+import { X, TrendingUp, Clock, CheckCircle, Monitor, DollarSign, TrendingDown } from 'lucide-react';
 import { getEmployeeStats } from '../../services/api';
 import AttendanceTable from './AttendanceTable';
 import { formatHours } from '../../utils/helpers';
@@ -129,6 +127,91 @@ export default function EmployeeStatsModal({ employee, onClose }) {
               </div>
             </div>
           </div>
+
+          {/* ✅ NEW: SALARY INFORMATION SECTION */}
+          {stats?.salary_info && (
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-6 border-2 border-green-200">
+              <div className="flex items-center gap-2 mb-4">
+                <DollarSign className="w-6 h-6 text-green-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Salary Calculation</h3>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Left Column */}
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Base Salary:</span>
+                    <span className="text-lg font-semibold text-gray-900">
+                      ${stats.salary_info.base_salary.toLocaleString()}
+                    </span>
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Avg Productivity:</span>
+                    <span className="text-lg font-semibold text-purple-600">
+                      {stats.salary_info.avg_productivity}%
+                    </span>
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Productivity Tier:</span>
+                    <span className={`text-sm font-semibold px-3 py-1 rounded-full ${
+                      stats.salary_info.multiplier === 1.0 ? 'bg-green-100 text-green-700' :
+                      stats.salary_info.multiplier >= 0.95 ? 'bg-blue-100 text-blue-700' :
+                      stats.salary_info.multiplier >= 0.90 ? 'bg-yellow-100 text-yellow-700' :
+                      stats.salary_info.multiplier >= 0.85 ? 'bg-orange-100 text-orange-700' :
+                      'bg-red-100 text-red-700'
+                    }`}>
+                      {stats.salary_info.tier}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Right Column */}
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Multiplier:</span>
+                    <span className="text-lg font-semibold text-blue-600">
+                      {(stats.salary_info.multiplier * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                  
+                  {stats.salary_info.deduction > 0 && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600 flex items-center gap-1">
+                        <TrendingDown className="w-4 h-4 text-red-500" />
+                        Deduction:
+                      </span>
+                      <span className="text-lg font-semibold text-red-600">
+                        -${stats.salary_info.deduction.toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+                  
+                  <div className="pt-3 border-t-2 border-green-300">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-700 font-medium">Actual Salary:</span>
+                      <span className="text-2xl font-bold text-green-600">
+                        ${stats.salary_info.actual_salary.toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Productivity Tier Legend */}
+              <div className="mt-4 pt-4 border-t border-green-200">
+                <p className="text-xs text-gray-500 mb-2">Productivity Tiers:</p>
+                <div className="flex flex-wrap gap-2 text-xs">
+                  <span className="bg-green-100 text-green-700 px-2 py-1 rounded">90-100% = 100%</span>
+                  <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded">80-89% = 95%</span>
+                  <span className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded">70-79% = 90%</span>
+                  <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded">60-69% = 85%</span>
+                  <span className="bg-red-100 text-red-700 px-2 py-1 rounded">&lt;60% = 80%</span>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Attendance Table */}
           <AttendanceTable records={stats?.attendance?.records || []} />

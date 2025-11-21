@@ -8,7 +8,8 @@ export default function CreateUserModal({ onClose, onSuccess }) {
     full_name: '',
     password: '',
     role: 'employee',
-    required_hours: 8.0
+    required_hours: 8.0,
+    base_salary: 0.0  // ✅ NEW FIELD ADDED
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -95,6 +96,23 @@ export default function CreateUserModal({ onClose, onSuccess }) {
               value={formData.required_hours}
               onChange={(e) => setFormData({ ...formData, required_hours: parseFloat(e.target.value) })}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          {/* ✅ NEW SALARY FIELD */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Base Salary ($)
+            </label>
+            <input
+              type="number"
+              step="100"
+              min="0"
+              required
+              value={formData.base_salary}
+              onChange={(e) => setFormData({ ...formData, base_salary: parseFloat(e.target.value) })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="e.g., 3000"
             />
           </div>
 

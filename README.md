@@ -96,10 +96,13 @@ payroll
 │  │  │  │  └─ Widgets.jsx
 │  │  │  ├─ hr
 │  │  │  │  ├─ AttendanceTable.jsx
+│  │  │  │  ├─ CreateTaskModal.jsx
 │  │  │  │  ├─ CreateUserModal.jsx
 │  │  │  │  ├─ EmployeeActivityBreakdown.jsx
 │  │  │  │  ├─ EmployeeList.jsx
 │  │  │  │  ├─ EmployeeStatsModal.jsx
+│  │  │  │  ├─ HRMessageBoard.jsx
+│  │  │  │  ├─ SendMessageModal.jsx
 │  │  │  │  └─ SettingsPanel.jsx
 │  │  │  └─ ProtectedRoute.jsx
 │  │  ├─ context

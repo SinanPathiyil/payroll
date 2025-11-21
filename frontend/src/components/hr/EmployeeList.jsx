@@ -1,71 +1,72 @@
 import { UserPlus } from 'lucide-react';
-import { getStatusColor, formatHours } from '../../utils/helpers';
+import { formatHours } from '../../utils/helpers';
 
 export default function EmployeeList({ employees, onViewStats, onAddEmployee }) {
   return (
-    <div className="bg-white rounded-lg shadow">
-      <div className="p-6 border-b flex justify-between items-center">
-        <h2 className="text-xl font-semibold">Employees</h2>
+    <div className="dashboard-card">
+      <div className="dashboard-card-header">
+        <h2 className="dashboard-card-title">Employees</h2>
         <button
           onClick={onAddEmployee}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded flex items-center gap-2"
+          className="btn btn-primary"
         >
           <UserPlus className="w-4 h-4" />
-          Add Employee
+          <span>Add Employee</span>
         </button>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gray-50">
+      <div className="dashboard-table-wrapper">
+        <table className="dashboard-table">
+          <thead>
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hours Today</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Week Hours</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Productivity</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Status</th>
+              <th>Hours Today</th>
+              <th>Week Hours</th>
+              <th>Productivity</th>
+              <th>Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody>
             {employees.length === 0 ? (
               <tr>
-                <td colSpan="7" className="px-6 py-8 text-center text-gray-500">
+                <td colSpan="7" className="dashboard-table-empty">
                   No employees found. Add your first employee!
                 </td>
               </tr>
             ) : (
               employees.map((employee) => (
-                <tr key={employee.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="font-medium text-gray-900">{employee.full_name}</div>
+                <tr key={employee.id}>
+                  <td>
+                    <div className="employee-name">{employee.full_name}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {employee.email}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(employee.today_status)}`}>
+                  <td className="employee-email">{employee.email}</td>
+                  <td>
+                    <span className={`status-chip ${
+                      employee.today_status === 'active' ? 'active' : 'inactive'
+                    }`}>
                       {employee.today_status === 'active' ? 'Active' : 'Offline'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="employee-hours">
                     {formatHours(employee.today_hours)} hrs
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="employee-hours">
                     {formatHours(employee.week_hours)} hrs
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <span className={`font-semibold ${
-                      employee.productivity_score >= 70 ? 'text-green-600' :
-                      employee.productivity_score >= 50 ? 'text-yellow-600' : 'text-red-600'
+                  <td>
+                    <span className={`employee-productivity ${
+                      employee.productivity_score >= 70 ? 'employee-productivity-high' :
+                      employee.productivity_score >= 50 ? 'employee-productivity-medium' :
+                      'employee-productivity-low'
                     }`}>
                       {employee.productivity_score?.toFixed(0) || 0}%
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <td>
                     <button
                       onClick={() => onViewStats(employee)}
-                      className="text-blue-600 hover:text-blue-800"
+                      className="btn-link"
                     >
                       View Stats
                     </button>

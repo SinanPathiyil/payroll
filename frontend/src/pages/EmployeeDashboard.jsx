@@ -1,5 +1,3 @@
-// frontend/src/pages/EmployeeDashboard.jsx
-
 import { useState, useEffect, useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 import Navbar from "../components/common/Navbar";
@@ -18,16 +16,16 @@ import {
   ListTodo,
   MessageSquare,
   Activity,
+  CheckCircle,
 } from "lucide-react";
 
 export default function EmployeeDashboard() {
   const { user } = useContext(AuthContext);
 
-  // Initialize with default structure to prevent undefined errors
   const [status, setStatus] = useState({
     is_clocked_in: false,
-    today_total_hours: 0, // From attendance (all completed sessions)
-    current_active_hours: 0, // From activity tracking (current session)
+    today_total_hours: 0,
+    current_active_hours: 0,
     login_time: null,
     date: null,
   });
@@ -47,14 +45,12 @@ export default function EmployeeDashboard() {
   useEffect(() => {
     loadData();
 
-    // Auto-refresh every 30 seconds (always - for real-time updates)
     const interval = setInterval(() => {
-      console.log("🔄 Auto-refreshing status...");
       loadData();
-    }, 30000); // 30 seconds
+    }, 30000);
 
     return () => clearInterval(interval);
-  }, []); // Removed dependency - always runs
+  }, []);
 
   const loadData = async () => {
     try {
@@ -69,21 +65,8 @@ export default function EmployeeDashboard() {
         ]
       );
 
-      // Debug logging
-      console.log("═══════════════════════════════════");
-      console.log("📦 Full status response:", statusRes);
-      console.log("📊 Status data:", statusRes.data);
-      console.log("🔍 is_clocked_in value:", statusRes.data?.is_clocked_in);
-      console.log(
-        "🔍 is_clocked_in type:",
-        typeof statusRes.data?.is_clocked_in
-      );
-      console.log("═══════════════════════════════════");
-
-      // Ensure we have valid data structure
       const statusData = statusRes.data || statusRes;
 
-      // Validate and set status with defaults
       setStatus({
         is_clocked_in: statusData.is_clocked_in === true,
         today_total_hours: statusData.today_total_hours || 0,
@@ -105,7 +88,6 @@ export default function EmployeeDashboard() {
       });
     } catch (error) {
       console.error("❌ Failed to load data:", error);
-      console.error("❌ Error response:", error.response?.data);
       setError(error.response?.data?.detail || "Failed to load dashboard data");
     } finally {
       setLoading(false);
@@ -121,27 +103,22 @@ export default function EmployeeDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        <p className="ml-3 text-xl">Loading dashboard...</p>
+      <div className="dashboard-loading">
+        <div className="spinner spinner-lg"></div>
+        <p className="dashboard-loading-text">Loading Dashboard...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-100">
+      <div className="dashboard-container">
         <Navbar />
-        <div className="container mx-auto px-4 py-8">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-            <h2 className="text-red-800 text-xl font-bold mb-2">
-              Error Loading Dashboard
-            </h2>
-            <p className="text-red-600">{error}</p>
-            <button
-              onClick={loadData}
-              className="mt-4 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
-            >
+        <div className="dashboard-content">
+          <div className="error-card">
+            <h2 className="error-card-title">Error Loading Dashboard</h2>
+            <p className="error-card-text">{error}</p>
+            <button onClick={loadData} className="btn btn-danger">
               Retry
             </button>
           </div>
@@ -151,76 +128,87 @@ export default function EmployeeDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="dashboard-container">
       <Navbar />
 
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">
-            Employee Dashboard
-          </h1>
-          <p className="text-gray-600">Welcome back, {user?.full_name}</p>
+      <div className="dashboard-content">
+        {/* Header */}
+        <div className="dashboard-header">
+          <div>
+            <h1 className="dashboard-title">Employee Dashboard</h1>
+            <p className="dashboard-subtitle">
+              Welcome back, <strong>{user?.full_name}</strong>
+            </p>
+          </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm">Today's Hours</p>
-                <p className="text-3xl font-bold text-blue-600">
-                  {status.today_total_hours?.toFixed(2) || "0.00"} hrs
+        <div className="stats-grid stats-grid-4">
+          <div className="stat-card stat-card-primary">
+            <div className="stat-card-content">
+              <div className="stat-card-info">
+                <p className="stat-card-label">Today's Hours</p>
+                <p className="stat-card-value stat-card-value-primary">
+                  {status.today_total_hours?.toFixed(2) || "0.00"}
                 </p>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="stat-card-hint">
                   {status.is_clocked_in
-                    ? "Real-time (includes current session)"
-                    : "All sessions completed"}
+                    ? "Real-time tracking"
+                    : ""}
                 </p>
               </div>
-              <ClockIcon className="w-12 h-12 text-blue-500" />
+              <div className="stat-card-icon stat-card-icon-blue">
+                <ClockIcon className="w-7 h-7" />
+              </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm">Pending Tasks</p>
-                <p className="text-3xl font-bold text-orange-600">
+          <div className="stat-card stat-card-warning">
+            <div className="stat-card-content">
+              <div className="stat-card-info">
+                <p className="stat-card-label">Pending Tasks</p>
+                <p className="stat-card-value stat-card-value-warning">
                   {stats.pendingTasks}
                 </p>
               </div>
-              <ListTodo className="w-12 h-12 text-orange-500" />
+              <div className="stat-card-icon stat-card-icon-orange">
+                <ListTodo className="w-7 h-7" />
+              </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm">Completed Tasks</p>
-                <p className="text-3xl font-bold text-green-600">
+          <div className="stat-card stat-card-success">
+            <div className="stat-card-content">
+              <div className="stat-card-info">
+                <p className="stat-card-label">Completed Tasks</p>
+                <p className="stat-card-value stat-card-value-success">
                   {stats.completedTasks}
                 </p>
               </div>
-              <Activity className="w-12 h-12 text-green-500" />
+              <div className="stat-card-icon stat-card-icon-green">
+                <CheckCircle className="w-7 h-7" />
+              </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm">New Messages</p>
-                <p className="text-3xl font-bold text-purple-600">
+          <div className="stat-card stat-card-info">
+            <div className="stat-card-content">
+              <div className="stat-card-info">
+                <p className="stat-card-label">New Messages</p>
+                <p className="stat-card-value stat-card-value-info">
                   {stats.unreadMessages}
                 </p>
               </div>
-              <MessageSquare className="w-12 h-12 text-purple-500" />
+              <div className="stat-card-icon stat-card-icon-purple">
+                <MessageSquare className="w-7 h-7" />
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="dashboard-grid">
           {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="dashboard-main">
             {/* Time Tracker */}
             <TimeTracker
               status={status}
@@ -237,11 +225,8 @@ export default function EmployeeDashboard() {
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Clock */}
+          <div className="dashboard-sidebar">
             <Clock />
-
-            {/* Messages */}
             <MessageBoard
               messages={messages}
               onMessageRead={loadData}

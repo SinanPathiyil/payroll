@@ -1,49 +1,43 @@
-import { useState } from 'react';
-import { markAsRead } from '../../services/api';
-import { Mail, MailOpen, CheckCircle, Send, ArrowRight } from 'lucide-react';
-import { formatDateTime } from '../../utils/helpers';
-import SendMessageModal from './SendMessageModal';
+import { useState } from "react";
+import { markAsRead } from "../../services/api";
+import { Mail, MailOpen, CheckCircle, Send } from "lucide-react";
+import { formatDateTime } from "../../utils/helpers";
+import SendMessageModal from "./SendMessageModal";
 
-export default function HRMessageBoard({ messages, onMessageRead, onTaskMessageClick }) {
+export default function HRMessageBoard({
+  messages,
+  onMessageRead,
+  onTaskMessageClick,
+}) {
   const [showSendModal, setShowSendModal] = useState(false);
-  
-  // Helper function to check if message is task completed
+
   const isTaskCompletedMessage = (message) => {
-    return message.task_id && message.content.toLowerCase().includes('task completed');
+    return (
+      message.task_id &&
+      message.content.toLowerCase().includes("task completed")
+    );
   };
 
-  // Filter messages: Only show task completed and sent messages (exclude task assigned)
-  const filteredMessages = messages.filter(message => {
-    // Include sent messages
-    if (message.direction === 'sent') return true;
-    
-    // Include only task completed messages (exclude task assigned)
-    if (message.direction === 'received') {
+  const filteredMessages = messages.filter((message) => {
+    if (message.direction === "sent") return true;
+    if (message.direction === "received") {
       return isTaskCompletedMessage(message);
     }
-    
     return false;
   });
 
   const handleMessageClick = async (message) => {
-    // Only process received task completed messages
-    if (message.direction === 'received' && isTaskCompletedMessage(message)) {
-      console.log('📧 HR Message clicked:', message);
-      console.log('📋 Task ID:', message.task_id);
-      
-      // Mark as read if unread
+    if (message.direction === "received" && isTaskCompletedMessage(message)) {
       if (!message.is_read) {
         try {
           await markAsRead(message.id);
           onMessageRead();
         } catch (error) {
-          console.error('Failed to mark message as read:', error);
+          console.error("Failed to mark message as read:", error);
         }
       }
 
-      // Trigger scroll to task
       if (message.task_id && onTaskMessageClick) {
-        console.log('🎯 Triggering scroll to task:', message.task_id);
         onTaskMessageClick(message.task_id);
       }
     }
@@ -51,87 +45,82 @@ export default function HRMessageBoard({ messages, onMessageRead, onTaskMessageC
 
   return (
     <>
-      <div className="bg-white rounded-lg shadow">
-        <div className="p-6 border-b flex items-center justify-between">
-          <h2 className="text-xl font-semibold">Notifications</h2>
+      <div className="message-board">
+        <div className="message-board-header">
+          <h2 className="message-board-title">Notifications</h2>
           <button
             onClick={() => setShowSendModal(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded flex items-center gap-2 text-sm"
+            className="btn btn-primary btn-sm"
           >
             <Send className="w-4 h-4" />
-            Send Message
+            <span>Send</span>
           </button>
         </div>
-        <div className="p-6">
+        <div className="message-board-body">
           {filteredMessages.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <Mail className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-              <p>No notifications</p>
+            <div className="message-empty">
+              <Mail className="message-empty-icon" />
+              <p className="message-empty-text">No notifications</p>
             </div>
           ) : (
-            <div className="space-y-3 max-h-96 overflow-y-auto">
+            <div className="message-list">
               {filteredMessages.map((message) => {
-                const isSent = message.direction === 'sent';
-                const isReceived = message.direction === 'received';
-                
+                const isSent = message.direction === "sent";
+                const isReceived = message.direction === "received";
+
                 return (
                   <div
                     key={message.id}
-                    className={`border rounded-lg p-4 transition hover:shadow-md ${
-                      isSent 
-                        ? 'border-green-200 bg-green-50' 
-                        : message.is_read 
-                          ? 'border-gray-200 bg-white' 
-                          : 'border-blue-200 bg-blue-50'
-                    } ${isReceived ? 'cursor-pointer hover:border-green-300' : ''}`}
+                    className={`message-item ${
+                      isSent
+                        ? "message-sent"
+                        : message.is_read
+                          ? "message-read"
+                          : "message-unread"
+                    }`}
                     onClick={() => handleMessageClick(message)}
                   >
-                    {/* Task Completed Message (Received) - Original Layout */}
                     {isReceived && (
                       <>
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <CheckCircle className="w-4 h-4 text-green-600" />
+                        <div className="message-header">
+                          <div className="message-meta">
+                            <CheckCircle className="w-4 h-4 message-icon-success" />
                             {message.is_read ? (
-                              <MailOpen className="w-4 h-4 text-gray-400" />
+                              <MailOpen className="w-4 h-4 message-icon-read" />
                             ) : (
-                              <Mail className="w-4 h-4 text-blue-600" />
+                              <Mail className="w-4 h-4 message-icon-unread" />
                             )}
-                            <span className="text-sm font-medium text-gray-700">
-                              {message.from_name || 'Employee'}
+                            <span className="message-from">
+                              {message.from_name || "Employee"}
                             </span>
                           </div>
-                          <span className="text-xs text-gray-500">
+                          <span className="message-time">
                             {formatDateTime(message.created_at)}
                           </span>
                         </div>
-                        <p className="text-sm text-gray-600">{message.content}</p>
-                        <p className="text-xs text-green-600 mt-2 font-medium">
-                          💡 Click to view task
-                        </p>
+                        <p className="message-content">{message.content}</p>
+                        <p className="message-hint">💡 Click to view task</p>
                       </>
                     )}
 
-                    {/* Sent Message - OPPOSITE Layout (Date LEFT, Name RIGHT) */}
                     {isSent && (
                       <>
-                        <div className="flex items-start justify-between mb-2">
-                          <span className="text-xs text-gray-600">
+                        <div className="message-header message-header-sent">
+                          <span className="message-time">
                             {formatDateTime(message.created_at)}
                           </span>
-                          <div className="flex items-center gap-2">
-                            {/* <ArrowRight className="w-4 h-4 text-green-600" /> */}
-                            <Send className="w-4 h-4 text-green-600" />
-                            <span className="text-sm font-medium text-gray-700">
-                              To: {message.to_name || 'Employee'}
+                          <div className="message-meta">
+                            <Send className="w-4 h-4 message-icon-sent" />
+                            <span className="message-to">
+                              To: {message.to_name || "Employee"}
                             </span>
                           </div>
                         </div>
-                        <p className="text-sm text-gray-700 text-right">{message.content}</p>
-                        <div className="flex justify-end mt-2">
-                          <span className="text-xs text-green-700 font-medium">
-                            ✓ Sent by you
-                          </span>
+                        <p className="message-content message-content-sent">
+                          {message.content}
+                        </p>
+                        <div className="message-footer-sent">
+                          <span className="message-status">✓ Sent by you</span>
                         </div>
                       </>
                     )}
@@ -143,14 +132,12 @@ export default function HRMessageBoard({ messages, onMessageRead, onTaskMessageC
         </div>
       </div>
 
-      {/* Send Message Modal */}
       {showSendModal && (
         <SendMessageModal
-          position="right"  /* Options: "left", "center", "right" */
           onClose={() => setShowSendModal(false)}
           onSuccess={() => {
             setShowSendModal(false);
-            onMessageRead(); // Refresh messages
+            onMessageRead();
           }}
         />
       )}

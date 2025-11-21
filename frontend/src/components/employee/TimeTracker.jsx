@@ -1,13 +1,12 @@
 import { useState, useEffect } from "react";
 import { employeeLogin, employeeLogout } from "../../services/api";
-import { Clock, LogIn, LogOut, Activity } from "lucide-react";
-import { formatTime, formatHours } from "../../utils/helpers";
+import { Clock, LogIn, LogOut, Activity, MousePointer, Keyboard, Timer } from "lucide-react";
+import { formatTime } from "../../utils/helpers";
 
 export default function TimeTracker({ status, onStatusChange, activityStats }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Live display values (starts FROM agent data, then increments)
   const [liveStats, setLiveStats] = useState({
     mouseEvents: 0,
     keyboardEvents: 0,
@@ -16,32 +15,20 @@ export default function TimeTracker({ status, onStatusChange, activityStats }) {
     startTime: null,
   });
 
-  // Initialize live stats FROM agent data when clock in
   useEffect(() => {
     if (activityStats && status.is_clocked_in) {
-      console.log("🔄 Syncing with agent data:", activityStats);
-
-      // Update live stats with agent data (replaces current values)
       setLiveStats({
         mouseEvents: activityStats.mouseEvents || 0,
         keyboardEvents: activityStats.keyboardEvents || 0,
         activeTime: activityStats.activeTime || 0,
         idleTime: activityStats.idleTime || 0,
-        startTime: Date.now(), // Reset timer for active time calculation
-      });
-
-      console.log("✅ Live stats synced to:", {
-        mouse: activityStats.mouseEvents,
-        keyboard: activityStats.keyboardEvents,
-        active: activityStats.activeTime,
+        startTime: Date.now(),
       });
     }
-  }, [activityStats]); // Updates every time agent sends data (every 30s)
+  }, [activityStats]);
 
-  // Live tracking listeners (only for visual feedback)
   useEffect(() => {
     if (!status.is_clocked_in) {
-      // Reset on clock out
       setLiveStats({
         mouseEvents: 0,
         keyboardEvents: 0,
@@ -53,43 +40,27 @@ export default function TimeTracker({ status, onStatusChange, activityStats }) {
     }
 
     const handleMouseMove = () => {
-      setLiveStats((prev) => ({
-        ...prev,
-        mouseEvents: prev.mouseEvents + 1, // Increment from current value
-      }));
+      setLiveStats((prev) => ({ ...prev, mouseEvents: prev.mouseEvents + 1 }));
     };
 
     const handleKeyPress = () => {
-      setLiveStats((prev) => ({
-        ...prev,
-        keyboardEvents: prev.keyboardEvents + 1, // Increment from current value
-      }));
+      setLiveStats((prev) => ({ ...prev, keyboardEvents: prev.keyboardEvents + 1 }));
     };
 
-    // Track only in Electron window (browser tab)
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("keydown", handleKeyPress);
-
-    console.log("🔴 Live tracking started");
 
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("keydown", handleKeyPress);
-      console.log("⚪ Live tracking stopped");
     };
   }, [status.is_clocked_in]);
 
-  // Live active time counter (increments every second)
   useEffect(() => {
-    if (!status.is_clocked_in || !liveStats.startTime) {
-      return;
-    }
+    if (!status.is_clocked_in || !liveStats.startTime) return;
 
     const timer = setInterval(() => {
-      setLiveStats((prev) => ({
-        ...prev,
-        activeTime: prev.activeTime + 1, // Add 1 second
-      }));
+      setLiveStats((prev) => ({ ...prev, activeTime: prev.activeTime + 1 }));
     }, 1000);
 
     return () => clearInterval(timer);
@@ -99,23 +70,17 @@ export default function TimeTracker({ status, onStatusChange, activityStats }) {
     setLoading(true);
     setError("");
     try {
-      const response = await employeeLogin();
+      await employeeLogin();
 
-      // Notify Electron
       if (window.electron?.onClockIn) {
         const token = localStorage.getItem("token");
         const userStr = localStorage.getItem("user");
         const user = userStr ? JSON.parse(userStr) : null;
-
-        console.log("🔵 Calling Electron onClockIn");
         await window.electron.onClockIn(token, user?.email);
-        console.log("✅ Electron agent started");
       }
 
-      // This will fetch agent data and initialize live stats
       onStatusChange();
     } catch (err) {
-      console.error("❌ Clock in error:", err);
       setError(err.response?.data?.detail || "Failed to clock in");
     } finally {
       setLoading(false);
@@ -129,14 +94,11 @@ export default function TimeTracker({ status, onStatusChange, activityStats }) {
       await employeeLogout();
 
       if (window.electron?.onClockOut) {
-        console.log("🔵 Calling Electron onClockOut");
         await window.electron.onClockOut();
-        console.log("✅ Electron agent stopped");
       }
 
       onStatusChange();
     } catch (err) {
-      console.error("❌ Clock out error:", err);
       setError(err.response?.data?.detail || "Failed to clock out");
     } finally {
       setLoading(false);
@@ -145,11 +107,9 @@ export default function TimeTracker({ status, onStatusChange, activityStats }) {
 
   if (!status) {
     return (
-      <div className="bg-white rounded-lg shadow">
-        <div className="p-6">
-          <div className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          </div>
+      <div className="time-tracker-card">
+        <div className="time-tracker-loading">
+          <div className="spinner"></div>
         </div>
       </div>
     );
@@ -160,126 +120,135 @@ export default function TimeTracker({ status, onStatusChange, activityStats }) {
   const loginTime = status.login_time;
 
   return (
-    <div className="bg-white rounded-lg shadow">
-      <div className="p-6 border-b">
-        <h2 className="text-xl font-semibold flex items-center gap-2">
+    <div className="time-tracker-card">
+      <div className="time-tracker-header">
+        <h2 className="time-tracker-title">
           Time Tracker
           {window.electron?.isElectron && isClockedIn && (
-            <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded animate-pulse">
-              🔴 LIVE
+            <span className="time-tracker-live-badge">
+              <span className="live-dot"></span>
+              LIVE
             </span>
           )}
         </h2>
       </div>
-      <div className="p-6">
+
+      <div className="time-tracker-body">
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+          <div className="time-tracker-error">
             {error}
           </div>
         )}
 
-        <div className="space-y-6">
-          {/* Clock In/Out Status */}
-          <div className="flex items-center justify-between">
+        <div className="time-tracker-content">
+          {/* Status Display */}
+          <div className="time-tracker-status">
             <div>
-              <p className="text-sm text-gray-600 mb-1">Current Status</p>
-              <div className="flex items-center gap-2">
-                <div
-                  className={`w-3 h-3 rounded-full ${
-                    isClockedIn ? "bg-green-500 animate-pulse" : "bg-gray-300"
-                  }`}
-                ></div>
-                <span className="text-lg font-semibold">
+              <p className="time-tracker-label">Current Status</p>
+              <div className="time-tracker-status-info">
+                <div className={`status-indicator ${isClockedIn ? 'status-active' : 'status-inactive'}`}></div>
+                <span className="time-tracker-status-text">
                   {isClockedIn ? "Clocked In" : "Clocked Out"}
                 </span>
               </div>
             </div>
             {isClockedIn && loginTime && (
-              <div className="text-right">
-                <p className="text-sm text-gray-600">Since</p>
-                <p className="text-lg font-semibold">{formatTime(loginTime)}</p>
+              <div className="time-tracker-login-time">
+                <p className="time-tracker-label">Since</p>
+                <p className="time-tracker-time">{formatTime(loginTime)}</p>
               </div>
             )}
           </div>
 
           {/* Hours Display */}
-          <div className="bg-blue-50 rounded-lg p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Clock className="w-8 h-8 text-blue-600" />
-                <div>
-                  <p className="text-sm text-gray-600">
-                    {isClockedIn
-                      ? "Hours Today (Active Time)"
-                      : "Last Session Active Time"}
+          <div className="time-tracker-hours-card">
+            <div className="time-tracker-hours-content">
+              <div className="time-tracker-hours-icon">
+                <Clock className="w-7 h-7" />
+              </div>
+              <div>
+                <p className="stat-card-label">
+                  {isClockedIn ? "Hours Today (Active Time)" : "TODAY'S ACTIVE HOURS"}
+                </p>
+                <p className="time-tracker-hours-value">
+                  {currentActiveHours.toFixed(2)} hrs
+                </p>
+                {isClockedIn ? (
+                  <p className="time-tracker-hours-hint time-tracker-hours-hint-active">
+                    <span className="sync-dot"></span>
+                    Updates every 30 seconds
                   </p>
-                  <p className="text-3xl font-bold text-blue-600">
-                    {currentActiveHours.toFixed(2)} hrs
+                ) : (
+                  <p className="time-tracker-hours-hint">
+
                   </p>
-                  {isClockedIn ? (
-                    <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
-                      <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                      Updates every 30 seconds
-                    </p>
-                  ) : (
-                    <p className="text-xs text-gray-500 mt-1">
-                      From your last session today
-                    </p>
-                  )}
-                </div>
+                )}
               </div>
             </div>
           </div>
 
           {/* Live Activity Stats */}
           {isClockedIn && liveStats.startTime && (
-            <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-4 border-2 border-purple-200">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <Activity className="w-5 h-5 text-purple-600" />
-                  <h3 className="font-semibold">Activity Tracking</h3>
+            <div className="time-tracker-activity-card">
+              <div className="time-tracker-activity-header">
+                <div className="time-tracker-activity-title">
+                  <Activity className="w-5 h-5" />
+                  <h3>Activity Tracking</h3>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs bg-red-500 text-white px-2 py-1 rounded-full animate-pulse flex items-center gap-1">
-                    <span className="w-2 h-2 bg-white rounded-full"></span>
-                    LIVE
-                  </span>
+                <span className="time-tracker-activity-badge">
+                  <span className="live-dot"></span>
+                  LIVE
+                </span>
+              </div>
+              <div className="time-tracker-activity-grid">
+                <div className="time-tracker-activity-item">
+                  <div className="time-tracker-activity-icon">
+                    <MousePointer className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="time-tracker-activity-label">Mouse Events</p>
+                    <p className="time-tracker-activity-value">
+                      {liveStats.mouseEvents.toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+                <div className="time-tracker-activity-item">
+                  <div className="time-tracker-activity-icon">
+                    <Keyboard className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="time-tracker-activity-label">Keyboard Events</p>
+                    <p className="time-tracker-activity-value">
+                      {liveStats.keyboardEvents.toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+                <div className="time-tracker-activity-item">
+                  <div className="time-tracker-activity-icon">
+                    <Timer className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="time-tracker-activity-label">Active Time</p>
+                    <p className="time-tracker-activity-value time-tracker-activity-value-success">
+                      {Math.floor(liveStats.activeTime / 60)} min {liveStats.activeTime % 60} sec
+                    </p>
+                  </div>
+                </div>
+                <div className="time-tracker-activity-item">
+                  <div className="time-tracker-activity-icon">
+                    <Clock className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="time-tracker-activity-label">Idle Time</p>
+                    <p className="time-tracker-activity-value time-tracker-activity-value-warning">
+                      {Math.floor(liveStats.idleTime / 60)} min
+                    </p>
+                  </div>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs text-gray-600">Mouse Events</p>
-                  <p className="text-lg font-semibold text-purple-700">
-                    {liveStats.mouseEvents.toLocaleString()}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-600">Keyboard Events</p>
-                  <p className="text-lg font-semibold text-purple-700">
-                    {liveStats.keyboardEvents.toLocaleString()}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-600">Active Time</p>
-                  <p className="text-lg font-semibold text-green-600">
-                    {Math.floor(liveStats.activeTime / 60)} min{" "}
-                    {liveStats.activeTime % 60} sec
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-600">Idle Time</p>
-                  <p className="text-lg font-semibold text-orange-600">
-                    {Math.floor(liveStats.idleTime / 60)} min
-                  </p>
-                </div>
-              </div>
-              <div className="mt-3 pt-3 border-t border-purple-200 text-xs text-gray-600">
-                <div className="flex items-center justify-between">
-                  <span>
-                    🖥️ Agent syncs every 30s • Visual updates instantly
-                  </span>
-                  <span className="text-green-600 font-medium">● Live</span>
-                </div>
+              <div className="time-tracker-activity-footer">
+                <span>🖥️ Agent syncs every 30s • Visual updates instantly</span>
+                <span className="time-tracker-activity-status">● Live</span>
               </div>
             </div>
           )}
@@ -290,7 +259,7 @@ export default function TimeTracker({ status, onStatusChange, activityStats }) {
               <button
                 onClick={handleClockOut}
                 disabled={loading}
-                className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-lg flex items-center justify-center gap-2 disabled:opacity-50 transition"
+                className="time-tracker-btn time-tracker-btn-clockout"
               >
                 <LogOut className="w-5 h-5" />
                 {loading ? "Clocking Out..." : "Clock Out"}
@@ -299,7 +268,7 @@ export default function TimeTracker({ status, onStatusChange, activityStats }) {
               <button
                 onClick={handleClockIn}
                 disabled={loading}
-                className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg flex items-center justify-center gap-2 disabled:opacity-50 transition"
+                className="time-tracker-btn time-tracker-btn-clockin"
               >
                 <LogIn className="w-5 h-5" />
                 {loading ? "Clocking In..." : "Clock In"}
@@ -308,14 +277,11 @@ export default function TimeTracker({ status, onStatusChange, activityStats }) {
           </div>
 
           {/* Info */}
-          <div className="text-xs text-gray-500 text-center">
+          <div className="time-tracker-info">
             {isClockedIn ? (
               <>
-                <p>
-                  🟢 Live visual feedback • Desktop agent tracks all
-                  applications
-                </p>
-                <p className="mt-1 text-purple-600 font-medium">
+                <p>🟢 Live visual feedback • Desktop agent tracks all applications</p>
+                <p className="time-tracker-info-highlight">
                   ✨ Syncs with accurate agent data every 30 seconds
                 </p>
               </>

@@ -15,6 +15,7 @@ import {
   ListTodo,
   Plus,
   MessageSquare,
+  TrendingUp,
 } from "lucide-react";
 import { formatDateTime } from "../utils/helpers";
 
@@ -34,29 +35,18 @@ export default function HRDashboard() {
     loadData();
   }, []);
 
-  // Scroll to and highlight task when highlightTaskId changes
   useEffect(() => {
-    console.log("🔍 HR - highlightTaskId changed:", highlightTaskId);
-    console.log("🔍 Available task refs:", Object.keys(taskRefs.current));
-
     if (highlightTaskId && taskRefs.current[highlightTaskId]) {
-      console.log("✅ Found task ref, scrolling to:", highlightTaskId);
-
-      // Scroll to the task
       taskRefs.current[highlightTaskId].scrollIntoView({
         behavior: "smooth",
         block: "center",
       });
 
-      // Add highlight animation
       taskRefs.current[highlightTaskId].classList.add("highlight-task");
 
-      // Remove highlight after animation
       setTimeout(() => {
         taskRefs.current[highlightTaskId]?.classList.remove("highlight-task");
       }, 3000);
-    } else {
-      console.log("❌ Task ref not found for:", highlightTaskId);
     }
   }, [highlightTaskId, tasks]);
 
@@ -65,11 +55,11 @@ export default function HRDashboard() {
       const [employeesRes, tasksRes, messagesRes] = await Promise.all([
         getEmployees(),
         getAllTasks(),
-        getMyMessages(), // <<< ADD THIS
+        getMyMessages(),
       ]);
       setEmployees(employeesRes.data);
       setTasks(tasksRes.data);
-      setMessages(messagesRes.data || []); // <<< ADD THIS
+      setMessages(messagesRes.data || []);
     } catch (error) {
       console.error("Failed to load data:", error);
     } finally {
@@ -88,162 +78,162 @@ export default function HRDashboard() {
   const getStatusColor = (status) => {
     switch (status) {
       case "completed":
-        return "bg-green-100 text-green-800";
+        return "status-chip success";
       case "in_progress":
-        return "bg-blue-100 text-blue-800";
+        return "status-chip info";
       default:
-        return "bg-orange-100 text-orange-800";
+        return "status-chip warning";
     }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl">Loading...</div>
+      <div className="dashboard-loading">
+        <div className="spinner spinner-lg"></div>
+        <p className="dashboard-loading-text">Loading Dashboard...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="dashboard-container">
       <Navbar />
 
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">HR Dashboard</h1>
-          <p className="text-gray-600">Welcome back, {user?.full_name}</p>
+      <div className="dashboard-content">
+        {/* Header */}
+        <div className="dashboard-header">
+          <div>
+            <h1 className="dashboard-title">HR Dashboard</h1>
+            <p className="dashboard-subtitle">
+              Welcome back, <strong>{user?.full_name}</strong>
+            </p>
+          </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm">Total Employees</p>
-                <p className="text-3xl font-bold text-gray-800">
-                  {stats.totalEmployees}
-                </p>
+        <div className="stats-grid">
+          <div className="stat-card stat-card-primary">
+            <div className="stat-card-content">
+              <div className="stat-card-info">
+                <p className="stat-card-label">Total Employees</p>
+                <p className="stat-card-value">{stats.totalEmployees}</p>
               </div>
-              <Users className="w-12 h-12 text-blue-500" />
+              <div className="stat-card-icon stat-card-icon-blue">
+                <Users className="w-7 h-7" />
+              </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm">Active Today</p>
-                <p className="text-3xl font-bold text-green-600">
+          <div className="stat-card stat-card-success">
+            <div className="stat-card-content">
+              <div className="stat-card-info">
+                <p className="stat-card-label">Active Today</p>
+                <p className="stat-card-value stat-card-value-success">
                   {stats.activeToday}
                 </p>
               </div>
-              <CheckCircle className="w-12 h-12 text-green-500" />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm">Total Tasks</p>
-                <p className="text-3xl font-bold text-gray-800">
-                  {stats.totalTasks}
-                </p>
+              <div className="stat-card-icon stat-card-icon-green">
+                <CheckCircle className="w-7 h-7" />
               </div>
-              <ClockIcon className="w-12 h-12 text-orange-500" />
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm">Completed Tasks</p>
-                <p className="text-3xl font-bold text-green-600">
+          <div className="stat-card stat-card-warning">
+            <div className="stat-card-content">
+              <div className="stat-card-info">
+                <p className="stat-card-label">Total Tasks</p>
+                <p className="stat-card-value">{stats.totalTasks}</p>
+              </div>
+              <div className="stat-card-icon stat-card-icon-orange">
+                <ListTodo className="w-7 h-7" />
+              </div>
+            </div>
+          </div>
+
+          <div className="stat-card stat-card-success">
+            <div className="stat-card-content">
+              <div className="stat-card-info">
+                <p className="stat-card-label">Completed Tasks</p>
+                <p className="stat-card-value stat-card-value-success">
                   {stats.completedTasks}
                 </p>
               </div>
-              <CheckCircle className="w-12 h-12 text-green-500" />
+              <div className="stat-card-icon stat-card-icon-green">
+                <TrendingUp className="w-7 h-7" />
+              </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm">New Notifications</p>
-                <p className="text-3xl font-bold text-purple-600">
+          <div className="stat-card stat-card-info">
+            <div className="stat-card-content">
+              <div className="stat-card-info">
+                <p className="stat-card-label">New Notifications</p>
+                <p className="stat-card-value stat-card-value-info">
                   {stats.unreadMessages}
                 </p>
               </div>
-              <MessageSquare className="w-12 h-12 text-purple-500" />
+              <div className="stat-card-icon stat-card-icon-purple">
+                <MessageSquare className="w-7 h-7" />
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Employee List */}
-          <div className="lg:col-span-2 space-y-6">
+        <div className="dashboard-grid">
+          {/* Main Content */}
+          <div className="dashboard-main">
             {/* Employees Table */}
-            <div className="bg-white rounded-lg shadow">
-              <div className="p-6 border-b flex justify-between items-center">
-                <h2 className="text-xl font-semibold">Employees</h2>
+            <div className="dashboard-card">
+              <div className="dashboard-card-header">
+                <h2 className="dashboard-card-title">Employees</h2>
                 <button
                   onClick={() => setShowCreateModal(true)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded flex items-center gap-2"
+                  className="btn btn-primary"
                 >
                   <UserPlus className="w-4 h-4" />
-                  Add Employee
+                  <span>Add Employee</span>
                 </button>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
+              <div className="dashboard-table-wrapper">
+                <table className="dashboard-table">
+                  <thead>
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        Name
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        Email
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        Status
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        Hours Today
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        Actions
-                      </th>
+                      <th>Name</th>
+                      <th>Email</th>
+                      <th>Status</th>
+                      <th>Hours Today</th>
+                      <th>Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-200">
+                  <tbody>
                     {employees.map((employee) => (
-                      <tr key={employee.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="font-medium text-gray-900">
+                      <tr key={employee.id}>
+                        <td>
+                          <div className="employee-name">
                             {employee.full_name}
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {employee.email}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="employee-email">{employee.email}</td>
+                        <td>
                           <span
-                            className={`px-2 py-1 text-xs rounded-full ${
+                            className={
                               employee.today_status === "active"
-                                ? "bg-green-100 text-green-800"
-                                : "bg-gray-100 text-gray-800"
-                            }`}
+                                ? "status-chip active"
+                                : "status-chip inactive"
+                            }
                           >
                             {employee.today_status === "active"
                               ? "Active"
                               : "Offline"}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <td className="employee-hours">
                           {employee.today_hours?.toFixed(2) || "0.00"} hrs
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <td>
                           <button
                             onClick={() => setSelectedEmployee(employee)}
-                            className="text-blue-600 hover:text-blue-800"
+                            className="btn-link"
                           >
                             View Stats
                           </button>
@@ -256,54 +246,54 @@ export default function HRDashboard() {
             </div>
 
             {/* Tasks List */}
-            <div className="bg-white rounded-lg shadow">
-              <div className="p-6 border-b flex justify-between items-center">
-                <h2 className="text-xl font-semibold flex items-center gap-2">
+            <div className="dashboard-card">
+              <div className="dashboard-card-header">
+                <h2 className="dashboard-card-title">
                   <ListTodo className="w-5 h-5" />
-                  All Tasks
+                  <span>All Tasks</span>
                 </h2>
                 <button
                   onClick={() => setShowTaskModal(true)}
-                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded flex items-center gap-2"
+                  className="btn btn-success"
                 >
                   <Plus className="w-4 h-4" />
-                  Assign Task
+                  <span>Assign Task</span>
                 </button>
               </div>
-              <div className="p-6">
+              <div className="dashboard-card-body">
                 {tasks.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <ListTodo className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                    <p>No tasks assigned yet</p>
+                  <div className="empty-state">
+                    <ListTodo className="empty-state-icon" />
+                    <p className="empty-state-text">No tasks assigned yet</p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="tasks-list">
                     {tasks.map((task) => (
                       <div
                         key={task.id}
                         ref={(el) => (taskRefs.current[task.id] = el)}
-                        className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition"
+                        className="task-card"
                       >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h3 className="font-semibold text-gray-900">
-                                {task.title}
-                              </h3>
-                              <span
-                                className={`px-2 py-1 text-xs rounded-full ${getStatusColor(task.status)}`}
-                              >
+                        <div className="task-card-content">
+                          <div className="task-card-main">
+                            <div className="task-card-header">
+                              <h3 className="task-card-title">{task.title}</h3>
+                              <span className={getStatusColor(task.status)}>
                                 {task.status.replace("_", " ")}
                               </span>
                             </div>
-                            <p className="text-gray-600 text-sm mb-2">
+                            <p className="task-card-description">
                               {task.description}
                             </p>
-                            <div className="flex items-center gap-4 text-xs text-gray-500">
-                              <span>👤 {task.employee_name}</span>
-                              <span>📅 {formatDateTime(task.created_at)}</span>
+                            <div className="task-card-meta">
+                              <span className="task-meta-item">
+                                👤 {task.employee_name}
+                              </span>
+                              <span className="task-meta-item">
+                                📅 {formatDateTime(task.created_at)}
+                              </span>
                               {task.due_date && (
-                                <span>
+                                <span className="task-meta-item">
                                   ⏰ Due: {formatDateTime(task.due_date)}
                                 </span>
                               )}
@@ -319,11 +309,8 @@ export default function HRDashboard() {
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Clock Widget */}
+          <div className="dashboard-sidebar">
             <Clock />
-
-            {/* Messages/Notifications */}
             <HRMessageBoard
               messages={messages}
               onMessageRead={loadData}

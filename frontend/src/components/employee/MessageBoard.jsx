@@ -10,10 +10,6 @@ export default function MessageBoard({ messages, onMessageRead, onTaskMessageCli
   };
 
   const handleMessageClick = async (message) => {
-    console.log('📧 Employee Message clicked:', message);
-    console.log('📋 Task ID:', message.task_id);
-    
-    // Mark as read if unread
     if (!message.is_read) {
       try {
         await markAsRead(message.id);
@@ -23,61 +19,53 @@ export default function MessageBoard({ messages, onMessageRead, onTaskMessageCli
       }
     }
 
-    // If message has a task_id, trigger scroll to task
     if (message.task_id && onTaskMessageClick) {
-      console.log('🎯 Triggering scroll to task:', message.task_id);
       onTaskMessageClick(message.task_id);
-    } else {
-      console.log('⚠️ No task_id found or no callback');
     }
   };
 
   return (
-    <div className="bg-white rounded-lg shadow">
-      <div className="p-6 border-b">
-        <h2 className="text-xl font-semibold">Messages</h2>
+    <div className="message-board">
+      <div className="message-board-header">
+        <h2 className="message-board-title">Messages</h2>
       </div>
-      <div className="p-6">
+      <div className="message-board-body">
         {messages.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            <Mail className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-            <p>No messages</p>
+          <div className="message-empty">
+            <Mail className="message-empty-icon" />
+            <p className="message-empty-text">No messages</p>
           </div>
         ) : (
-          <div className="space-y-3 max-h-96 overflow-y-auto">
+          <div className="message-list">
             {messages.map((message) => (
               <div
                 key={message.id}
-                className={`border rounded-lg p-4 cursor-pointer transition hover:shadow-md ${
-                  message.is_read 
-                    ? 'border-gray-200 bg-white' 
-                    : 'border-blue-200 bg-blue-50'
-                } ${isTaskMessage(message) ? 'hover:border-green-300' : ''}`}
+                className={`message-item ${
+                  isTaskMessage(message) ? 'message-task' : ''
+                } ${message.is_read ? 'message-read' : 'message-unread'}`}
                 onClick={() => handleMessageClick(message)}
               >
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center gap-2">
+                <div className="message-header">
+                  <div className="message-meta">
                     {isTaskMessage(message) && (
-                      <ListTodo className="w-4 h-4 text-green-600" />
+                      <ListTodo className="w-4 h-4 message-icon-task" />
                     )}
                     {message.is_read ? (
-                      <MailOpen className="w-4 h-4 text-gray-400" />
+                      <MailOpen className="w-4 h-4 message-icon-read" />
                     ) : (
-                      <Mail className="w-4 h-4 text-blue-600" />
+                      <Mail className="w-4 h-4 message-icon-unread" />
                     )}
-                    <span className="text-sm font-medium text-gray-700">
+                    <span className="message-from">
                       {message.from_name || 'HR'}
                     </span>
                   </div>
-                  <span className="text-xs text-gray-500">
+                  <span className="message-time">
                     {formatDateTime(message.created_at)}
                   </span>
                 </div>
-                <p className="text-sm text-gray-600 whitespace-pre-line">{message.content}</p>
+                <p className="message-content">{message.content}</p>
                 {isTaskMessage(message) && (
-                  <p className="text-xs text-green-600 mt-2 font-medium">
-                    💡 Click to view task
-                  </p>
+                  <p className="message-hint">💡 Click to view task</p>
                 )}
               </div>
             ))}

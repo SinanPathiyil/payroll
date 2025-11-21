@@ -1,32 +1,44 @@
 import { useContext } from 'react';
 import { AuthContext } from '../../context/AuthContext';
-import { LogOut, User } from 'lucide-react';
+import { LogOut, User, Shield } from 'lucide-react';
 
 export default function Navbar() {
   const { user, logout } = useContext(AuthContext);
 
   return (
-    <nav className="bg-blue-600 text-white shadow-lg">
-      <div className="container mx-auto px-4">
-        <div className="flex justify-between items-center h-16">
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold">Employee Tracker</h1>
-            <span className="bg-blue-700 px-3 py-1 rounded-full text-sm">
-              {user?.role === 'hr' ? 'HR Portal' : 'Employee Portal'}
+    <nav className="navbar">
+      <div className="navbar-container">
+        <div className="navbar-content">
+          <div className="navbar-brand">
+            <h1 className="navbar-title">Payroll System</h1>
+            <span className="navbar-badge">
+              {user?.role === 'hr' ? (
+                <>
+                  <Shield className="w-3.5 h-3.5" />
+                  <span>HR Portal</span>
+                </>
+              ) : (
+                <>
+                  <User className="w-3.5 h-3.5" />
+                  <span>Employee Portal</span>
+                </>
+              )}
             </span>
           </div>
           
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <User className="w-5 h-5" />
-              <span>{user?.full_name}</span>
+          <div className="navbar-actions">
+            <div className="navbar-user">
+              <div className="navbar-user-avatar">
+                <User className="w-4 h-4" />
+              </div>
+              <span className="navbar-user-name">{user?.full_name}</span>
             </div>
             <button
               onClick={logout}
-              className="flex items-center gap-2 bg-blue-700 hover:bg-blue-800 px-4 py-2 rounded transition"
+              className="navbar-logout"
             >
               <LogOut className="w-4 h-4" />
-              Logout
+              <span>Sign Out</span>
             </button>
           </div>
         </div>

@@ -81,6 +81,8 @@ payroll
 │  ├─ src
 │  │  ├─ App.jsx
 │  │  ├─ assets
+│  │  │  ├─ boehm-bg-full.png
+│  │  │  ├─ boehm-logo.png
 │  │  │  └─ logo.svg
 │  │  ├─ components
 │  │  │  ├─ common

@@ -16,19 +16,28 @@ class MonitoringAgent:
         self.employee_email = None
         self.is_running = False
         self.session_number = None
-        self.cleanup_completed = False  # ADD THIS LINE
-        
-        # Setup signal handlers AND atexit handler
+        self.cleanup_completed = False
+    
+        # ===== ADD THIS: Cleanup any leftover signal files =====
+        signal_file = os.path.join(os.path.dirname(__file__), '.clockout_signal')
+        if os.path.exists(signal_file):
+            try:
+                os.remove(signal_file)
+                print("[CLEANUP] Removed leftover clock-out signal file")
+            except Exception as e:
+                print(f"[WARN] Could not remove signal file: {e}")
+        # ========================================================
+    
+        # Setup signal handlers
         signal.signal(signal.SIGTERM, self._signal_handler)
         signal.signal(signal.SIGINT, self._signal_handler)
-        atexit.register(self._cleanup_handler)  # ADD THIS LINE - Fallback cleanup
-        
+        atexit.register(self._cleanup_handler)
+    
         print("=" * 80)
         print("[*] EMPLOYEE MONITORING AGENT - ENHANCED")
         print("=" * 80)
-        print("[*] Tracks activity by application and website")
-        print("=" * 80)
-    
+        
+        
     def _signal_handler(self, signum, frame):
         """Handle shutdown signals gracefully (includes clock-out)"""
         print(f"\n[*] Received signal {signum} (Clock-out detected), shutting down gracefully...")

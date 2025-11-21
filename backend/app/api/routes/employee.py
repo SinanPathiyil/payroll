@@ -142,30 +142,56 @@ async def get_status(
     """Get current clock-in status"""
     today = datetime.now().strftime("%Y-%m-%d")
     
-    # Check for active attendance TODAY (not just any active record)
-    attendance = await db.attendance.find_one({
+    # Check for active attendance TODAY
+    active_attendance = await db.attendance.find_one({
         "user_id": str(current_user["_id"]),
         "date": today,
         "status": "active"
     })
     
-    is_clocked_in = bool(attendance and attendance.get("status") == "active")
+    is_clocked_in = bool(active_attendance)
+    login_time = active_attendance.get("login_time") if active_attendance else None
     
-    current_hours = 0.0
-    login_time = None
+    # ========================================
+    # TODAY'S TOTAL HOURS (from attendance - all sessions)
+    # ========================================
+    today_attendance_cursor = db.attendance.find({
+        "user_id": str(current_user["_id"]),
+        "date": today,
+        "status": "completed"  # Only completed sessions have total_hours
+    })
     
-    if is_clocked_in and attendance.get("login_time"):
-        time_diff = datetime.now() - attendance["login_time"]
-        current_hours = time_diff.total_seconds() / 3600
-        login_time = attendance["login_time"]
+    today_total_hours = 0.0
+    async for session in today_attendance_cursor:
+        hours = session.get("total_hours", 0) or 0
+        today_total_hours += hours
+    
+    # ========================================
+    # CURRENT SESSION ACTIVE TIME (from latest activity)
+    # ========================================
+    current_active_hours = 0.0
+    if is_clocked_in:
+        latest_activity = await db.activities.find_one(
+            {
+                "user_id": str(current_user["_id"]),
+                "date": today
+            },
+            sort=[("recorded_at", -1)]
+        )
+        
+        if latest_activity:
+            # Convert active_time_seconds to hours
+            active_seconds = latest_activity.get("active_time_seconds", 0)
+            current_active_hours = active_seconds / 3600
+            print(f"[DEBUG] Current active time: {active_seconds}s = {current_active_hours:.2f}h")
     
     return {
         "is_clocked_in": is_clocked_in,
         "login_time": login_time,
-        "current_hours": round(current_hours, 2),
+        "today_total_hours": round(today_total_hours, 2),      # From attendance (completed sessions)
+        "current_active_hours": round(current_active_hours, 2), # From latest activity (current session)
         "date": today
     }
-
 
 @router.post("/cleanup-stale")
 async def cleanup_stale_attendance(

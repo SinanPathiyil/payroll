@@ -1,39 +1,39 @@
-import { useState, useEffect } from 'react';
-import { employeeLogin, employeeLogout } from '../../services/api';
-import { Clock, LogIn, LogOut, Activity } from 'lucide-react';
-import { formatTime, formatHours } from '../../utils/helpers';
+import { useState, useEffect } from "react";
+import { employeeLogin, employeeLogout } from "../../services/api";
+import { Clock, LogIn, LogOut, Activity } from "lucide-react";
+import { formatTime, formatHours } from "../../utils/helpers";
 
 export default function TimeTracker({ status, onStatusChange, activityStats }) {
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  
+  const [error, setError] = useState("");
+
   // Live display values (starts FROM agent data, then increments)
   const [liveStats, setLiveStats] = useState({
     mouseEvents: 0,
     keyboardEvents: 0,
     activeTime: 0,
     idleTime: 0,
-    startTime: null
+    startTime: null,
   });
 
   // Initialize live stats FROM agent data when clock in
   useEffect(() => {
     if (activityStats && status.is_clocked_in) {
-      console.log('🔄 Syncing with agent data:', activityStats);
-      
+      console.log("🔄 Syncing with agent data:", activityStats);
+
       // Update live stats with agent data (replaces current values)
       setLiveStats({
         mouseEvents: activityStats.mouseEvents || 0,
         keyboardEvents: activityStats.keyboardEvents || 0,
         activeTime: activityStats.activeTime || 0,
         idleTime: activityStats.idleTime || 0,
-        startTime: Date.now() // Reset timer for active time calculation
+        startTime: Date.now(), // Reset timer for active time calculation
       });
-      
-      console.log('✅ Live stats synced to:', {
+
+      console.log("✅ Live stats synced to:", {
         mouse: activityStats.mouseEvents,
         keyboard: activityStats.keyboardEvents,
-        active: activityStats.activeTime
+        active: activityStats.activeTime,
       });
     }
   }, [activityStats]); // Updates every time agent sends data (every 30s)
@@ -47,35 +47,35 @@ export default function TimeTracker({ status, onStatusChange, activityStats }) {
         keyboardEvents: 0,
         activeTime: 0,
         idleTime: 0,
-        startTime: null
+        startTime: null,
       });
       return;
     }
 
     const handleMouseMove = () => {
-      setLiveStats(prev => ({
+      setLiveStats((prev) => ({
         ...prev,
-        mouseEvents: prev.mouseEvents + 1 // Increment from current value
+        mouseEvents: prev.mouseEvents + 1, // Increment from current value
       }));
     };
 
     const handleKeyPress = () => {
-      setLiveStats(prev => ({
+      setLiveStats((prev) => ({
         ...prev,
-        keyboardEvents: prev.keyboardEvents + 1 // Increment from current value
+        keyboardEvents: prev.keyboardEvents + 1, // Increment from current value
       }));
     };
 
     // Track only in Electron window (browser tab)
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('keydown', handleKeyPress);
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("keydown", handleKeyPress);
 
-    console.log('🔴 Live tracking started');
+    console.log("🔴 Live tracking started");
 
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('keydown', handleKeyPress);
-      console.log('⚪ Live tracking stopped');
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("keydown", handleKeyPress);
+      console.log("⚪ Live tracking stopped");
     };
   }, [status.is_clocked_in]);
 
@@ -86,9 +86,9 @@ export default function TimeTracker({ status, onStatusChange, activityStats }) {
     }
 
     const timer = setInterval(() => {
-      setLiveStats(prev => ({
+      setLiveStats((prev) => ({
         ...prev,
-        activeTime: prev.activeTime + 1 // Add 1 second
+        activeTime: prev.activeTime + 1, // Add 1 second
       }));
     }, 1000);
 
@@ -97,47 +97,47 @@ export default function TimeTracker({ status, onStatusChange, activityStats }) {
 
   const handleClockIn = async () => {
     setLoading(true);
-    setError('');
+    setError("");
     try {
       const response = await employeeLogin();
-      
+
       // Notify Electron
       if (window.electron?.onClockIn) {
-        const token = localStorage.getItem('token');
-        const userStr = localStorage.getItem('user');
+        const token = localStorage.getItem("token");
+        const userStr = localStorage.getItem("user");
         const user = userStr ? JSON.parse(userStr) : null;
-        
-        console.log('🔵 Calling Electron onClockIn');
+
+        console.log("🔵 Calling Electron onClockIn");
         await window.electron.onClockIn(token, user?.email);
-        console.log('✅ Electron agent started');
+        console.log("✅ Electron agent started");
       }
-      
+
       // This will fetch agent data and initialize live stats
       onStatusChange();
     } catch (err) {
-      console.error('❌ Clock in error:', err);
-      setError(err.response?.data?.detail || 'Failed to clock in');
+      console.error("❌ Clock in error:", err);
+      setError(err.response?.data?.detail || "Failed to clock in");
     } finally {
       setLoading(false);
     }
   };
-  
+
   const handleClockOut = async () => {
     setLoading(true);
-    setError('');
+    setError("");
     try {
       await employeeLogout();
-      
+
       if (window.electron?.onClockOut) {
-        console.log('🔵 Calling Electron onClockOut');
+        console.log("🔵 Calling Electron onClockOut");
         await window.electron.onClockOut();
-        console.log('✅ Electron agent stopped');
+        console.log("✅ Electron agent stopped");
       }
-      
+
       onStatusChange();
     } catch (err) {
-      console.error('❌ Clock out error:', err);
-      setError(err.response?.data?.detail || 'Failed to clock out');
+      console.error("❌ Clock out error:", err);
+      setError(err.response?.data?.detail || "Failed to clock out");
     } finally {
       setLoading(false);
     }
@@ -156,7 +156,7 @@ export default function TimeTracker({ status, onStatusChange, activityStats }) {
   }
 
   const isClockedIn = status.is_clocked_in === true;
-  const currentHours = status.current_hours || 0;
+  const currentActiveHours = status.current_active_hours || 0;
   const loginTime = status.login_time;
 
   return (
@@ -184,11 +184,13 @@ export default function TimeTracker({ status, onStatusChange, activityStats }) {
             <div>
               <p className="text-sm text-gray-600 mb-1">Current Status</p>
               <div className="flex items-center gap-2">
-                <div className={`w-3 h-3 rounded-full ${
-                  isClockedIn ? 'bg-green-500 animate-pulse' : 'bg-gray-300'
-                }`}></div>
+                <div
+                  className={`w-3 h-3 rounded-full ${
+                    isClockedIn ? "bg-green-500 animate-pulse" : "bg-gray-300"
+                  }`}
+                ></div>
                 <span className="text-lg font-semibold">
-                  {isClockedIn ? 'Clocked In' : 'Clocked Out'}
+                  {isClockedIn ? "Clocked In" : "Clocked Out"}
                 </span>
               </div>
             </div>
@@ -206,10 +208,18 @@ export default function TimeTracker({ status, onStatusChange, activityStats }) {
               <div className="flex items-center gap-3">
                 <Clock className="w-8 h-8 text-blue-600" />
                 <div>
-                  <p className="text-sm text-gray-600">Hours Today</p>
-                  <p className="text-3xl font-bold text-blue-600">
-                    {formatHours(currentHours)}
+                  <p className="text-sm text-gray-600">
+                    Hours Today (Active Time)
                   </p>
+                  <p className="text-3xl font-bold text-blue-600">
+                    {currentActiveHours.toFixed(2)} hrs
+                  </p>
+                  {isClockedIn && (
+                    <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                      <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                      Updates every 30 seconds
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -246,7 +256,8 @@ export default function TimeTracker({ status, onStatusChange, activityStats }) {
                 <div>
                   <p className="text-xs text-gray-600">Active Time</p>
                   <p className="text-lg font-semibold text-green-600">
-                    {Math.floor(liveStats.activeTime / 60)} min {liveStats.activeTime % 60} sec
+                    {Math.floor(liveStats.activeTime / 60)} min{" "}
+                    {liveStats.activeTime % 60} sec
                   </p>
                 </div>
                 <div>
@@ -258,7 +269,9 @@ export default function TimeTracker({ status, onStatusChange, activityStats }) {
               </div>
               <div className="mt-3 pt-3 border-t border-purple-200 text-xs text-gray-600">
                 <div className="flex items-center justify-between">
-                  <span>🖥️ Agent syncs every 30s • Visual updates instantly</span>
+                  <span>
+                    🖥️ Agent syncs every 30s • Visual updates instantly
+                  </span>
                   <span className="text-green-600 font-medium">● Live</span>
                 </div>
               </div>
@@ -274,7 +287,7 @@ export default function TimeTracker({ status, onStatusChange, activityStats }) {
                 className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-lg flex items-center justify-center gap-2 disabled:opacity-50 transition"
               >
                 <LogOut className="w-5 h-5" />
-                {loading ? 'Clocking Out...' : 'Clock Out'}
+                {loading ? "Clocking Out..." : "Clock Out"}
               </button>
             ) : (
               <button
@@ -283,7 +296,7 @@ export default function TimeTracker({ status, onStatusChange, activityStats }) {
                 className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg flex items-center justify-center gap-2 disabled:opacity-50 transition"
               >
                 <LogIn className="w-5 h-5" />
-                {loading ? 'Clocking In...' : 'Clock In'}
+                {loading ? "Clocking In..." : "Clock In"}
               </button>
             )}
           </div>
@@ -292,7 +305,10 @@ export default function TimeTracker({ status, onStatusChange, activityStats }) {
           <div className="text-xs text-gray-500 text-center">
             {isClockedIn ? (
               <>
-                <p>🟢 Live visual feedback • Desktop agent tracks all applications</p>
+                <p>
+                  🟢 Live visual feedback • Desktop agent tracks all
+                  applications
+                </p>
                 <p className="mt-1 text-purple-600 font-medium">
                   ✨ Syncs with accurate agent data every 30 seconds
                 </p>

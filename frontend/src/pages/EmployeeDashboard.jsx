@@ -47,16 +47,14 @@ export default function EmployeeDashboard() {
   useEffect(() => {
     loadData();
 
-    // Auto-refresh every 30 seconds (for current active hours when clocked in)
+    // Auto-refresh every 30 seconds (always - for real-time updates)
     const interval = setInterval(() => {
-      if (status.is_clocked_in) {
-        console.log("🔄 Auto-refreshing status...");
-        loadData();
-      }
+      console.log("🔄 Auto-refreshing status...");
+      loadData();
     }, 30000); // 30 seconds
 
     return () => clearInterval(interval);
-  }, [status.is_clocked_in]);
+  }, []); // Removed dependency - always runs
 
   const loadData = async () => {
     try {
@@ -174,7 +172,9 @@ export default function EmployeeDashboard() {
                   {status.today_total_hours?.toFixed(2) || "0.00"} hrs
                 </p>
                 <p className="text-xs text-gray-500 mt-1">
-                  From completed sessions
+                  {status.is_clocked_in
+                    ? "Real-time (includes current session)"
+                    : "All sessions completed"}
                 </p>
               </div>
               <ClockIcon className="w-12 h-12 text-blue-500" />

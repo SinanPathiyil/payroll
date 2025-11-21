@@ -153,24 +153,73 @@ async def get_status(
     login_time = active_attendance.get("login_time") if active_attendance else None
     
     # ========================================
-    # TODAY'S TOTAL HOURS (from attendance - all sessions)
+    # TODAY'S TOTAL HOURS - Completed sessions
     # ========================================
     today_attendance_cursor = db.attendance.find({
         "user_id": str(current_user["_id"]),
         "date": today,
-        "status": "completed"  # Only completed sessions have total_hours
+        "status": "completed"
     })
     
-    today_total_hours = 0.0
+    completed_hours = 0.0
     async for session in today_attendance_cursor:
         hours = session.get("total_hours", 0) or 0
-        today_total_hours += hours
+        completed_hours += hours
+    
+    print(f"[DEBUG] Completed hours: {completed_hours}")
     
     # ========================================
-    # CURRENT SESSION ACTIVE TIME (from latest activity)
+    # GET ACTIVITY DATA
     # ========================================
+    current_session_hours = 0.0
     current_active_hours = 0.0
-    if is_clocked_in:
+    
+    if is_clocked_in and login_time:
+        # Get CURRENT session activity
+        current_session_activity = await db.activities.find_one(
+            {
+                "user_id": str(current_user["_id"]),
+                "date": today,
+                "recorded_at": {"$gte": login_time}
+            },
+            sort=[("recorded_at", -1)]
+        )
+    
+        if current_session_activity:
+            # Session time for "Today's Hours"
+            session_time_seconds = current_session_activity.get("session_time_seconds", 0)
+            current_session_hours = session_time_seconds / 3600
+        
+            # Active time for "Hours Today" - ALREADY CUMULATIVE!
+            active_time_seconds = current_session_activity.get("active_time_seconds", 0)
+            current_active_hours = active_time_seconds / 3600
+        
+            print(f"[DEBUG] Session time: {session_time_seconds}s = {current_session_hours:.2f}h")
+            print(f"[DEBUG] Active time (cumulative): {active_time_seconds}s = {current_active_hours:.2f}h")
+        else:
+            # No current session data yet - use previous session as baseline
+            previous_session_activity = await db.activities.find_one(
+                {
+                    "user_id": str(current_user["_id"]),
+                    "date": today,
+                    "recorded_at": {"$lt": login_time}
+                },
+                sort=[("recorded_at", -1)]
+            )
+        
+            if previous_session_activity:
+                # Show previous session's cumulative active time
+                active_time_seconds = previous_session_activity.get("active_time_seconds", 0)
+                current_active_hours = active_time_seconds / 3600
+                print(f"[DEBUG] Using previous session baseline: {active_time_seconds}s = {current_active_hours:.2f}h")
+            else:
+                current_active_hours = 0.0
+                print(f"[DEBUG] No activity data found")
+        
+            current_session_hours = 0.0
+        
+    else:
+        # When clocked out, get last activity from today
         latest_activity = await db.activities.find_one(
             {
                 "user_id": str(current_user["_id"]),
@@ -180,19 +229,28 @@ async def get_status(
         )
         
         if latest_activity:
-            # Convert active_time_seconds to hours
             active_seconds = latest_activity.get("active_time_seconds", 0)
             current_active_hours = active_seconds / 3600
-            print(f"[DEBUG] Current active time: {active_seconds}s = {current_active_hours:.2f}h")
+            print(f"[DEBUG] Last session active (clocked out): {active_seconds}s = {current_active_hours:.2f}h")
+    
+    # ========================================
+    # CALCULATE TODAY'S TOTAL HOURS
+    # ========================================
+    if is_clocked_in:
+        today_total_hours = completed_hours + current_session_hours
+        print(f"[DEBUG] Today total: {completed_hours} + {current_session_hours} = {today_total_hours}")
+    else:
+        today_total_hours = completed_hours
+        print(f"[DEBUG] Today total (out): {completed_hours}")
     
     return {
         "is_clocked_in": is_clocked_in,
         "login_time": login_time,
-        "today_total_hours": round(today_total_hours, 2),      # From attendance (completed sessions)
-        "current_active_hours": round(current_active_hours, 2), # From latest activity (current session)
+        "today_total_hours": round(today_total_hours, 2),
+        "current_active_hours": round(current_active_hours, 2),  # Includes previous baseline
         "date": today
     }
-
+    
 @router.post("/cleanup-stale")
 async def cleanup_stale_attendance(
     current_user: dict = Depends(get_current_user),

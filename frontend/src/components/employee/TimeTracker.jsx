@@ -209,15 +209,21 @@ export default function TimeTracker({ status, onStatusChange, activityStats }) {
                 <Clock className="w-8 h-8 text-blue-600" />
                 <div>
                   <p className="text-sm text-gray-600">
-                    Hours Today (Active Time)
+                    {isClockedIn
+                      ? "Hours Today (Active Time)"
+                      : "Last Session Active Time"}
                   </p>
                   <p className="text-3xl font-bold text-blue-600">
                     {currentActiveHours.toFixed(2)} hrs
                   </p>
-                  {isClockedIn && (
+                  {isClockedIn ? (
                     <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
                       <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
                       Updates every 30 seconds
+                    </p>
+                  ) : (
+                    <p className="text-xs text-gray-500 mt-1">
+                      From your last session today
                     </p>
                   )}
                 </div>

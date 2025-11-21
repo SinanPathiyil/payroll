@@ -55,10 +55,10 @@ export default function EmployeeActivityBreakdown({ employeeId, employeeName, on
   const totalDurationMinutes = breakdown.reduce((sum, item) => sum + item.total_duration_minutes, 0);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-white rounded-lg shadow-2xl max-w-5xl w-full my-8">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-2xl max-w-5xl w-full max-h-[90vh] flex flex-col">
+        {/* ✅ STICKY HEADER - Always visible */}
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-t-lg sticky top-0 z-10 shadow-lg">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-3xl font-bold">{employeeName}</h2>
@@ -73,8 +73,8 @@ export default function EmployeeActivityBreakdown({ employeeId, employeeName, on
           </div>
         </div>
 
-        {/* Content */}
-        <div className="p-6">
+        {/* ✅ SCROLLABLE CONTENT */}
+        <div className="overflow-y-auto p-6">
           {/* Date Range Selector */}
           <div className="mb-6 bg-gray-50 rounded-lg p-4">
             <label className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">

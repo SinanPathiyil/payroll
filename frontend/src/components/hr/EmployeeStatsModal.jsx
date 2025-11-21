@@ -36,9 +36,10 @@ export default function EmployeeStatsModal({ employee, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full my-8">
-        <div className="flex justify-between items-center p-6 border-b">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+        {/* ✅ STICKY HEADER - Always visible */}
+        <div className="flex justify-between items-center p-6 border-b bg-white rounded-t-lg sticky top-0 z-10 shadow-sm">
           <div>
             <h2 className="text-2xl font-semibold">{employee.full_name}</h2>
             <p className="text-gray-500">{employee.email}</p>
@@ -48,7 +49,8 @@ export default function EmployeeStatsModal({ employee, onClose }) {
           </button>
         </div>
 
-        <div className="p-6 space-y-6">
+        {/* ✅ SCROLLABLE CONTENT */}
+        <div className="overflow-y-auto p-6 space-y-6">
           {/* Summary Stats */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-blue-50 rounded-lg p-4">
@@ -128,7 +130,7 @@ export default function EmployeeStatsModal({ employee, onClose }) {
             </div>
           </div>
 
-          {/* ✅ NEW: SALARY INFORMATION SECTION */}
+          {/* Salary Information Section */}
           {stats?.salary_info && (
             <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-6 border-2 border-green-200">
               <div className="flex items-center gap-2 mb-4">
@@ -217,6 +219,7 @@ export default function EmployeeStatsModal({ employee, onClose }) {
           <AttendanceTable records={stats?.attendance?.records || []} />
         </div>
       </div>
+      
       {showActivityBreakdown && (
         <EmployeeActivityBreakdown
           employeeId={employee.id || employee._id}

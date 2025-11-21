@@ -1,10 +1,11 @@
 from pydantic import BaseModel
-from datetime import datetime
 from typing import Optional
+from datetime import datetime
 
 class MessageCreate(BaseModel):
     to_user: str
     content: str
+    task_id: Optional[str] = None  # <<< ADD THIS LINE
 
 class MessageResponse(BaseModel):
     id: str
@@ -13,3 +14,4 @@ class MessageResponse(BaseModel):
     content: str
     is_read: bool
     created_at: datetime
+    task_id: Optional[str] = None  # <<< ADD THIS LINE

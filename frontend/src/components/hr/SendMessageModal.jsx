@@ -1,17 +1,21 @@
-import { useState, useEffect } from 'react';
-import { X, Loader, Send } from 'lucide-react';
-import { getEmployees, getAllTasks, sendMessage } from '../../services/api';
+import { useState, useEffect } from "react";
+import { X, Loader, Send } from "lucide-react";
+import { getEmployees, getAllTasks, sendMessage } from "../../services/api";
 
-export default function SendMessageModal({ onClose, onSuccess, position = 'left' }) {
+export default function SendMessageModal({
+  onClose,
+  onSuccess,
+  position = "left",
+}) {
   const [employees, setEmployees] = useState([]);
   const [allTasks, setAllTasks] = useState([]);
   const [formData, setFormData] = useState({
-    employee_id: '',
-    task_id: '',
-    message: ''
+    employee_id: "",
+    task_id: "",
+    message: "",
   });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [loadingData, setLoadingData] = useState(true);
 
   useEffect(() => {
@@ -22,12 +26,12 @@ export default function SendMessageModal({ onClose, onSuccess, position = 'left'
     try {
       const [employeesRes, tasksRes] = await Promise.all([
         getEmployees(),
-        getAllTasks()
+        getAllTasks(),
       ]);
       setEmployees(employeesRes.data);
       setAllTasks(tasksRes.data);
     } catch (err) {
-      setError('Failed to load data');
+      setError("Failed to load data");
     } finally {
       setLoadingData(false);
     }
@@ -35,15 +39,15 @@ export default function SendMessageModal({ onClose, onSuccess, position = 'left'
 
   // Filter tasks by selected employee
   const employeeTasks = formData.employee_id
-    ? allTasks.filter(task => task.assigned_to === formData.employee_id)
+    ? allTasks.filter((task) => task.assigned_to === formData.employee_id)
     : [];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
     if (!formData.employee_id || !formData.message) {
-      setError('Please select an employee and enter a message');
+      setError("Please select an employee and enter a message");
       return;
     }
 
@@ -51,8 +55,8 @@ export default function SendMessageModal({ onClose, onSuccess, position = 'left'
 
     try {
       // Get selected task details if task is selected
-      const selectedTask = formData.task_id 
-        ? allTasks.find(t => t.id === formData.task_id)
+      const selectedTask = formData.task_id
+        ? allTasks.find((t) => t.id === formData.task_id)
         : null;
 
       // Build message content
@@ -61,14 +65,22 @@ export default function SendMessageModal({ onClose, onSuccess, position = 'left'
         messageContent = `Regarding Task: "${selectedTask.title}"\n\n${formData.message}`;
       }
 
-      await sendMessage({
+      // Prepare message data
+      const messageData = {
         to_user: formData.employee_id,
-        content: messageContent
-      });
+        content: messageContent,
+      };
+
+      // Include task_id if a task was selected
+      if (formData.task_id) {
+        messageData.task_id = formData.task_id;
+      }
+
+      await sendMessage(messageData);
 
       onSuccess();
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to send message');
+      setError(err.response?.data?.detail || "Failed to send message");
     } finally {
       setLoading(false);
     }
@@ -76,23 +88,25 @@ export default function SendMessageModal({ onClose, onSuccess, position = 'left'
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       [name]: value,
       // Reset task when employee changes
-      ...(name === 'employee_id' ? { task_id: '' } : {})
+      ...(name === "employee_id" ? { task_id: "" } : {}),
     }));
   };
 
   // Position classes
   const positionClasses = {
-    center: 'items-center justify-center',
-    left: 'items-center justify-start pl-8',
-    right: 'items-center justify-end pr-8'
+    center: "items-center justify-center",
+    left: "items-center justify-start pl-8",
+    right: "items-center justify-end pr-8",
   };
 
   return (
-    <div className={`fixed inset-0 bg-black bg-opacity-50 flex ${positionClasses[position]} z-50`}>
+    <div
+      className={`fixed inset-0 bg-black bg-opacity-50 flex ${positionClasses[position]} z-50`}
+    >
       <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b sticky top-0 bg-white">
@@ -160,10 +174,14 @@ export default function SendMessageModal({ onClose, onSuccess, position = 'left'
                 ))}
               </select>
               {!formData.employee_id && (
-                <p className="text-xs text-gray-500 mt-1">Select an employee first</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Select an employee first
+                </p>
               )}
               {formData.employee_id && employeeTasks.length === 0 && (
-                <p className="text-xs text-gray-500 mt-1">No tasks for this employee</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  No tasks for this employee
+                </p>
               )}
             </div>
 

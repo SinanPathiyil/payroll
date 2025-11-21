@@ -3,14 +3,14 @@ import { Mail, MailOpen, ListTodo } from 'lucide-react';
 import { formatDateTime } from '../../utils/helpers';
 
 export default function MessageBoard({ messages, onMessageRead, onTaskMessageClick }) {
-  
-  // Helper function to check if message is task-related
   const isTaskMessage = (message) => {
-    return message.task_id || message.content.toLowerCase().includes('task assigned');
+    return message.task_id || 
+           message.content.toLowerCase().includes('task assigned') ||
+           message.content.toLowerCase().includes('regarding task');
   };
 
   const handleMessageClick = async (message) => {
-    console.log('📧 Message clicked:', message);
+    console.log('📧 Employee Message clicked:', message);
     console.log('📋 Task ID:', message.task_id);
     
     // Mark as read if unread
@@ -73,7 +73,12 @@ export default function MessageBoard({ messages, onMessageRead, onTaskMessageCli
                     {formatDateTime(message.created_at)}
                   </span>
                 </div>
-                <p className="text-sm text-gray-600">{message.content}</p>
+                <p className="text-sm text-gray-600 whitespace-pre-line">{message.content}</p>
+                {isTaskMessage(message) && (
+                  <p className="text-xs text-green-600 mt-2 font-medium">
+                    💡 Click to view task
+                  </p>
+                )}
               </div>
             ))}
           </div>

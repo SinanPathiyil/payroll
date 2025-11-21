@@ -102,6 +102,10 @@ async def send_message(
         "created_at": datetime.now()
     }
     
+    # Add task_id if provided (optional)
+    if hasattr(message_data, 'task_id') and message_data.task_id:
+        message["task_id"] = message_data.task_id
+    
     result = await db.messages.insert_one(message)
     message["_id"] = result.inserted_id
     

@@ -1485,11 +1485,15 @@ textarea::placeholder {
   background: rgba(11, 11, 13, 0.6);
   backdrop-filter: blur(8px);
   display: flex;
-  align-items: center;
+  align-items: flex-start;  /* 👈 CHANGED: Start from top */
   justify-content: center;
   z-index: 1000;
-  padding: 16px;
+  padding-top: 80px;  /* 👈 ADDED: Space for navbar */
+  padding-left: 16px;
+  padding-right: 16px;
+  padding-bottom: 16px;
   animation: fadeIn 0.3s ease;
+  overflow-y: auto;  /* 👈 ADDED: Allow scrolling if modal is tall */
 }
 
 .modal-container {

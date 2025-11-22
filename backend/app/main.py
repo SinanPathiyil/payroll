@@ -10,7 +10,7 @@ app = FastAPI(title="Employee Tracker API")
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[ "https://payroll-frontend-boehm.netlify.app/",
+    allow_origins=[ "https://payroll-frontend-boehm.netlify.app",
                    "http://localhost:3000",
            "http://localhost:5173",
            "http://127.0.0.1:3000",

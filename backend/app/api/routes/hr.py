@@ -370,3 +370,79 @@ async def update_settings(
         )
     
     return {"message": "Settings updated successfully"}
+
+
+
+@router.get("/employee/{employee_id}/ai-productivity")
+async def get_employee_ai_productivity(
+    employee_id: str,
+    current_user: dict = Depends(get_current_hr),
+    db = Depends(get_database)
+):
+    """
+    HR endpoint to get AI productivity analysis for any employee
+    """
+    from datetime import date
+    from app.services.activity_tracker import ActivityTrackerService
+    from app.services.ai_productivity_service import ai_productivity_service
+    
+    # Validate employee exists
+    employee = await db.users.find_one({"_id": ObjectId(employee_id)})
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    # Get current month range
+    today = date.today()
+    first_day_of_month = today.replace(day=1)
+    
+    # Get raw monthly app data
+    activity_service = ActivityTrackerService(db)
+    raw_apps = await activity_service.get_raw_monthly_app_data(
+        employee_email=employee["email"],
+        start_date=first_day_of_month,
+        end_date=today
+    )
+    
+    if not raw_apps:
+        return {
+            "success": False,
+            "message": "No activity data found for current month",
+            "month": today.strftime("%B %Y")
+        }
+    
+    # Get AI analysis
+    month_label = today.strftime("%B %Y")
+    employee_name = employee.get("full_name", employee["email"])
+    
+    ai_analysis = await ai_productivity_service.analyze_productivity(
+        raw_apps=raw_apps,
+        employee_name=employee_name,
+        month=month_label
+    )
+    
+    total_seconds = sum(app["total_time_spent_seconds"] for app in raw_apps)
+    total_hours = round(total_seconds / 3600, 2)
+    
+    return {
+        "success": True,
+        "employee": {
+            "id": employee_id,
+            "name": employee_name,
+            "email": employee["email"]
+        },
+        "period": {
+            "month": month_label,
+            "start_date": first_day_of_month.isoformat(),
+            "end_date": today.isoformat()
+        },
+        "activity_summary": {
+            "total_hours": total_hours,
+            "total_apps": len(raw_apps)
+        },
+        "ai_analysis": ai_analysis,
+         "debug_data": {  # ✅ ADD THIS
+            "raw_apps": raw_apps,
+            "total_apps": len(raw_apps),
+            "total_hours": total_hours
+         }
+    }

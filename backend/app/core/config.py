@@ -1,5 +1,6 @@
 # backend/app/core/config.py
 
+import os
 from pydantic_settings import BaseSettings
 from typing import Optional
 
@@ -13,8 +14,7 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
     
-    # Optional AI settings (won't break if not in .env)
-    GEMINI_API_KEY: Optional[str] = None
+    GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
 
     class Config:
         env_file = ".env"
@@ -22,3 +22,4 @@ class Settings(BaseSettings):
         extra = "ignore"  # Ignore extra fields in .env (this fixes your error!)
 
 settings = Settings()
+

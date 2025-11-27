@@ -58,6 +58,10 @@ export const getEmployeeAppBreakdown = (employeeId, startDate, endDate) =>
 // <<< END OF NEW FUNCTION >>>
 export const updateSettings = (settings) => api.put('/hr/settings', settings);
 
+// Get AI productivity analysis for an employee (HR only)
+export const getEmployeeAIProductivity = (employeeId) => 
+  api.get(`/hr/employee/${employeeId}/ai-productivity`);
+
 // Employee
 export const employeeLogin = () => api.post('/employee/login');
 export const employeeLogout = () => api.post('/employee/logout');

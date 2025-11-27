@@ -12,6 +12,7 @@ import { getEmployeeStats } from "../../services/api";
 import AttendanceTable from "./AttendanceTable";
 import { formatHours } from "../../utils/helpers";
 import EmployeeActivityBreakdown from "./EmployeeActivityBreakdown";
+import AIProductivityScore from "./AIProductivityScore";
 
 export default function EmployeeStatsModal({ employee, onClose }) {
   const [stats, setStats] = useState(null);
@@ -146,7 +147,10 @@ export default function EmployeeStatsModal({ employee, onClose }) {
               </div>
             </div>
           </div>
-
+          
+          {/* AI Productivity Analysis */}
+          <AIProductivityScore employeeId={employee.id} />
+          
           {/* Salary Information */}
           {stats?.salary_info && (
             <div className="employee-salary-card">

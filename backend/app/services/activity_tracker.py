@@ -154,3 +154,83 @@ class ActivityTrackerService:
         breakdown_list.sort(key=lambda x: x["total_duration_seconds"], reverse=True)
         
         return breakdown_list
+    
+    async def get_raw_monthly_app_data(
+        self,
+        employee_email: str,
+        start_date: date,
+        end_date: date
+    ) -> List[Dict]:
+        """
+        Get raw application data aggregated by application name.
+        Sums mouse_movements, key_presses, and time_spent_seconds for each app.
+        
+        Args:
+            employee_email: Employee's email
+            start_date: Start date (e.g., first day of month)
+            end_date: End date (e.g., today)
+            
+        Returns:
+            List of apps with cumulative stats
+        """
+        
+        start_datetime = datetime.combine(start_date, datetime.min.time())
+        end_datetime = datetime.combine(end_date, datetime.max.time())
+        
+        # Fetch all activities
+        cursor = self.db.activities.find({
+            "employee_email": employee_email,
+            "recorded_at": {
+                "$gte": start_datetime,
+                "$lte": end_datetime
+            }
+        })
+        
+        activities = await cursor.to_list(length=None)
+        
+        if not activities:
+            return []
+        
+        # Aggregate by application name
+        app_stats = {}
+        
+        for activity in activities:
+            applications = activity.get("applications", [])
+            
+            for app in applications:
+                app_name = app.get("application", "Unknown")
+                mouse_movements = app.get("mouse_movements", 0)
+                key_presses = app.get("key_presses", 0)
+                time_spent = app.get("time_spent_seconds", 0)
+                window_title = app.get("window_title", "")
+                url = app.get("url", "")
+                
+                # Initialize if first time seeing this app
+                if app_name not in app_stats:
+                    app_stats[app_name] = {
+                        "application": app_name,
+                        "total_mouse_movements": 0,
+                        "total_key_presses": 0,
+                        "total_time_spent_seconds": 0,
+                        "last_window_title": "",
+                        "last_url": ""
+                    }
+                
+                # Accumulate totals
+                app_stats[app_name]["total_mouse_movements"] += mouse_movements
+                app_stats[app_name]["total_key_presses"] += key_presses
+                app_stats[app_name]["total_time_spent_seconds"] += time_spent
+                
+                # Keep latest window title and URL
+                if window_title:
+                    app_stats[app_name]["last_window_title"] = window_title
+                if url:
+                    app_stats[app_name]["last_url"] = url
+        
+        # Convert to list
+        result = list(app_stats.values())
+        
+        # Sort by time spent (descending)
+        result.sort(key=lambda x: x["total_time_spent_seconds"], reverse=True)
+        
+        return result

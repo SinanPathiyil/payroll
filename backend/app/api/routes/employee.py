@@ -9,7 +9,6 @@ from typing import Optional
 import logging
 from datetime import datetime 
 
-
 # UNCOMMENT THIS LINE: if have a classifier
 from app.services.smart_classifier import smart_classifier
 

@@ -16,6 +16,14 @@ class AIProductivityService:
     def format_raw_app_data_for_llm(self, raw_apps: list, employee_name: str, month: str) -> str:
         """Format raw application data into a structured prompt for LLM"""
         
+         # ✅ ADD THIS
+        print("\n" + "="*80)
+        print(f"📊 FORMATTING DATA FOR LLM")
+        print(f"Employee: {employee_name}")
+        print(f"Month: {month}")
+        print(f"Total Apps: {len(raw_apps)}")
+        print("="*80 + "\n")
+        
         total_seconds = sum(app["total_time_spent_seconds"] for app in raw_apps)
         total_hours = round(total_seconds / 3600, 2)
         total_minutes = round(total_seconds / 60, 2)
@@ -80,6 +88,13 @@ Return ONLY the JSON, no extra text."""
         
         try:
             prompt = self.format_raw_app_data_for_llm(raw_apps, employee_name, month)
+            
+            # ✅ ADD THESE PRINT STATEMENTS
+            print("\n" + "="*80)
+            print("🤖 FULL PROMPT BEING SENT TO GROQ:")
+            print("="*80)
+            print(prompt)
+            print("="*80 + "\n")
             
             logger.info(f"🤖 Sending raw app data to Groq AI for analysis...")
             

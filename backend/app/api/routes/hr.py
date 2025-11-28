@@ -382,6 +382,8 @@ async def get_employee_ai_productivity(
     """
     HR endpoint to get AI productivity analysis for any employee
     """
+    print(f"\n🔍 HR AI ENDPOINT CALLED for employee: {employee_id}\n")
+    
     from datetime import date
     from app.services.activity_tracker import ActivityTrackerService
     from app.services.ai_productivity_service import ai_productivity_service

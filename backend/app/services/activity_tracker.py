@@ -174,6 +174,10 @@ class ActivityTrackerService:
             List of apps with cumulative stats
         """
         
+         # ✅ ADD THIS
+        print(f"\n📊 Fetching raw app data for {employee_email}")
+        print(f"Date range: {start_date} to {end_date}\n")
+        
         start_datetime = datetime.combine(start_date, datetime.min.time())
         end_datetime = datetime.combine(end_date, datetime.max.time())
         
@@ -232,5 +236,13 @@ class ActivityTrackerService:
         
         # Sort by time spent (descending)
         result.sort(key=lambda x: x["total_time_spent_seconds"], reverse=True)
+        
+        # ✅ ADD THIS
+        print(f"\n✅ Found {len(result)} apps with data")
+        if result:
+            print(f"Top 5 apps:")
+            for i, app in enumerate(result[:5], 1):
+                print(f"  {i}. {app['application']}: {app['total_time_spent_seconds']}s")
+        print()
         
         return result

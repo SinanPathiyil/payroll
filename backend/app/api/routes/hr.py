@@ -199,6 +199,12 @@ async def get_employee_stats(
     # Last 7 days attendance
     seven_days_ago = datetime.now() - timedelta(days=7)
     
+    # Current month for avg productivity only
+    from datetime import date
+    today = datetime.now()
+    first_day_of_month = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    current_month_label = today.strftime("%B %Y")
+    
     attendance_records = []
     cursor = db.attendance.find({
         "user_id": employee_id,
@@ -254,6 +260,32 @@ async def get_employee_stats(
     avg_productivity = 0
     if productivity_scores:
         avg_productivity = sum(productivity_scores) / len(productivity_scores)
+        
+    # Monthly avg productivity
+    monthly_productivity_scores = []
+    
+    monthly_activity_cursor = db.activities.find({
+        "user_id": employee_id,
+        "recorded_at": {"$gte": first_day_of_month}
+    }).sort("recorded_at", 1)
+    
+    # Group by date and get last record of each day
+    monthly_daily_activities = {}
+    
+    async for activity in monthly_activity_cursor:
+        date_key = activity.get("date")
+        score = activity.get("productivity_score", 0)
+        
+        if score > 0:
+            monthly_productivity_scores.append(score)
+        
+        monthly_daily_activities[date_key] = activity
+    
+    # Calculate monthly average
+    monthly_avg_productivity = 0
+    
+    if monthly_productivity_scores:
+        monthly_avg_productivity = sum(monthly_productivity_scores) / len(monthly_productivity_scores)
     
     # Tasks stats
     total_tasks = await db.tasks.count_documents({"assigned_to": employee_id})
@@ -286,8 +318,10 @@ async def get_employee_stats(
             "total_idle_time": round(total_idle_seconds / 3600, 2),      
             "total_mouse_events": total_mouse_events,
             "total_keyboard_events": total_keyboard_events,
-            "avg_productivity_score": round(avg_productivity, 2),
-            "days_tracked": len(daily_activities)
+            "avg_productivity_score": round(monthly_avg_productivity, 2),
+            "days_tracked": len(daily_activities),
+            "monthly_avg_productivity": round(monthly_avg_productivity, 2),
+            "monthly_period": current_month_label  
         },
         "tasks_summary": {
             "total": total_tasks,

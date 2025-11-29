@@ -96,7 +96,11 @@ export default function EmployeeStatsModal({ employee, onClose }) {
                 <TrendingUp className="w-7 h-7" />
               </div>
               <div>
-                <p className="employee-stat-label">Avg Productivity</p>
+                <p className="employee-stat-label">
+                  Avg Productivity{" "}
+                  {stats?.activity_summary?.monthly_period &&
+                    `(${stats.activity_summary.monthly_period})`}
+                </p>
                 <p className="employee-stat-value">
                   {stats?.activity_summary?.avg_productivity_score?.toFixed(
                     0
@@ -180,7 +184,11 @@ export default function EmployeeStatsModal({ employee, onClose }) {
                     }}
                     className="px-3 py-1 text-sm border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                   >
-                    <option value="avg">Average Productivity (7 days)</option>
+                    <option value="avg">
+                      Average Productivity{" "}
+                      {stats?.activity_summary?.monthly_period &&
+                        `(${stats.activity_summary.monthly_period})`}
+                    </option>
                     <option value="ai" disabled={!aiProductivityScore}>
                       AI Productivity{" "}
                       {!aiProductivityScore

@@ -7,6 +7,7 @@ import {
   Monitor,
   DollarSign,
   TrendingDown,
+  Brain,
 } from "lucide-react";
 import { getEmployeeStats } from "../../services/api";
 import AttendanceTable from "./AttendanceTable";
@@ -18,6 +19,8 @@ export default function EmployeeStatsModal({ employee, onClose }) {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showActivityBreakdown, setShowActivityBreakdown] = useState(false);
+  const [aiProductivityScore, setAiProductivityScore] = useState(null);
+  const [salaryMode, setSalaryMode] = useState("avg");
 
   useEffect(() => {
     loadStats();
@@ -147,99 +150,204 @@ export default function EmployeeStatsModal({ employee, onClose }) {
               </div>
             </div>
           </div>
-          
+
           {/* AI Productivity Analysis */}
-          <AIProductivityScore employeeId={employee.id} />
-          
+          <AIProductivityScore
+            employeeId={employee.id}
+            onScoreUpdate={setAiProductivityScore}
+          />
+
           {/* Salary Information */}
           {stats?.salary_info && (
             <div className="employee-salary-card">
               <div className="employee-salary-header">
-                <DollarSign className="w-6 h-6" />
-                <h3 className="employee-salary-title">Salary Calculation</h3>
-              </div>
-
-              <div className="employee-salary-grid">
-                <div className="employee-salary-section">
-                  <div className="employee-salary-row">
-                    <span className="employee-salary-label">Base Salary:</span>
-                    <span className="employee-salary-value">
-                      ${stats.salary_info.base_salary.toLocaleString()}
-                    </span>
-                  </div>
-
-                  <div className="employee-salary-row">
-                    <span className="employee-salary-label">
-                      Avg Productivity:
-                    </span>
-                    <span className="employee-salary-value employee-salary-highlight">
-                      {stats.salary_info.avg_productivity}%
-                    </span>
-                  </div>
-
-                  <div className="employee-salary-row">
-                    <span className="employee-salary-label">
-                      Productivity Tier:
-                    </span>
-                    <span
-                      className={`status-chip ${
-                        stats.salary_info.multiplier === 1.0
-                          ? "success"
-                          : stats.salary_info.multiplier >= 0.95
-                            ? "info"
-                            : stats.salary_info.multiplier >= 0.9
-                              ? "warning"
-                              : "danger"
-                      }`}
-                    >
-                      {stats.salary_info.tier}
-                    </span>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <DollarSign className="w-6 h-6" />
+                  <h3 className="employee-salary-title">Salary Calculation</h3>
                 </div>
 
-                <div className="employee-salary-section">
-                  <div className="employee-salary-row">
-                    <span className="employee-salary-label">Multiplier:</span>
-                    <span className="employee-salary-value">
-                      {(stats.salary_info.multiplier * 100).toFixed(0)}%
-                    </span>
-                  </div>
+                {/* Toggle Dropdown */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-600">Based on:</span>
+                  <select
+                    value={salaryMode}
+                    onChange={(e) => {
+                      if (e.target.value === "ai" && !aiProductivityScore) {
+                        alert("Please analyze productivity with AI first");
+                        return;
+                      }
+                      setSalaryMode(e.target.value);
+                    }}
+                    className="px-3 py-1 text-sm border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  >
+                    <option value="avg">Average Productivity (7 days)</option>
+                    <option value="ai" disabled={!aiProductivityScore}>
+                      AI Productivity{" "}
+                      {!aiProductivityScore
+                        ? "(Not analyzed)"
+                        : "(Current month)"}
+                    </option>
+                  </select>
+                </div>
+              </div>
 
-                  {stats.salary_info.deduction > 0 && (
-                    <div className="employee-salary-row">
-                      <span className="employee-salary-label">
-                        <TrendingDown className="w-4 h-4" />
-                        Deduction:
-                      </span>
-                      <span className="employee-salary-value employee-salary-deduction">
-                        -${stats.salary_info.deduction.toLocaleString()}
-                      </span>
+              {(() => {
+                // Calculate which productivity score to use
+                const avgProductivity =
+                  stats.activity_summary?.avg_productivity_score || 0;
+                const selectedProductivity =
+                  salaryMode === "ai" && aiProductivityScore
+                    ? aiProductivityScore
+                    : avgProductivity;
+
+                // Calculate salary based on selected productivity
+                const calculateSalary = (baseAmount, productivity) => {
+                  let multiplier = 1.0;
+                  let tier = "Excellent (90-100%)";
+
+                  if (productivity >= 90) {
+                    multiplier = 1.0;
+                    tier = "Excellent (90-100%)";
+                  } else if (productivity >= 80) {
+                    multiplier = 0.95;
+                    tier = "Good (80-89%)";
+                  } else if (productivity >= 70) {
+                    multiplier = 0.9;
+                    tier = "Average (70-79%)";
+                  } else if (productivity >= 60) {
+                    multiplier = 0.85;
+                    tier = "Below Average (60-69%)";
+                  } else {
+                    multiplier = 0.8;
+                    tier = "Needs Improvement (<60%)";
+                  }
+
+                  return {
+                    base_salary: baseAmount,
+                    avg_productivity: productivity,
+                    tier,
+                    multiplier,
+                    actual_salary: baseAmount * multiplier,
+                    deduction: baseAmount - baseAmount * multiplier,
+                  };
+                };
+
+                const baseSalary = stats.salary_info.base_salary;
+                const displaySalary = calculateSalary(
+                  baseSalary,
+                  selectedProductivity
+                );
+
+                return (
+                  <>
+                    <div className="employee-salary-grid">
+                      <div className="employee-salary-section">
+                        <div className="employee-salary-row">
+                          <span className="employee-salary-label">
+                            Base Salary:
+                          </span>
+                          <span className="employee-salary-value">
+                            ${displaySalary.base_salary.toLocaleString()}
+                          </span>
+                        </div>
+
+                        <div className="employee-salary-row">
+                          <span className="employee-salary-label">
+                            {salaryMode === "ai" ? "🤖 AI" : "📊 Avg"}{" "}
+                            Productivity:
+                          </span>
+                          <span className="employee-salary-value employee-salary-highlight">
+                            {selectedProductivity.toFixed(0)}%
+                          </span>
+                        </div>
+
+                        <div className="employee-salary-row">
+                          <span className="employee-salary-label">
+                            Productivity Tier:
+                          </span>
+                          <span
+                            className={`status-chip ${
+                              displaySalary.multiplier === 1.0
+                                ? "success"
+                                : displaySalary.multiplier >= 0.95
+                                  ? "info"
+                                  : displaySalary.multiplier >= 0.9
+                                    ? "warning"
+                                    : "danger"
+                            }`}
+                          >
+                            {displaySalary.tier}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="employee-salary-section">
+                        <div className="employee-salary-row">
+                          <span className="employee-salary-label">
+                            Multiplier:
+                          </span>
+                          <span className="employee-salary-value">
+                            {(displaySalary.multiplier * 100).toFixed(0)}%
+                          </span>
+                        </div>
+
+                        {displaySalary.deduction > 0 && (
+                          <div className="employee-salary-row">
+                            <span className="employee-salary-label">
+                              <TrendingDown className="w-4 h-4" />
+                              Deduction:
+                            </span>
+                            <span className="employee-salary-value employee-salary-deduction">
+                              -${displaySalary.deduction.toLocaleString()}
+                            </span>
+                          </div>
+                        )}
+
+                        <div className="employee-salary-total">
+                          <span className="employee-salary-total-label">
+                            Actual Salary:
+                          </span>
+                          <span className="employee-salary-total-value">
+                            ${displaySalary.actual_salary.toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                  )}
 
-                  <div className="employee-salary-total">
-                    <span className="employee-salary-total-label">
-                      Actual Salary:
-                    </span>
-                    <span className="employee-salary-total-value">
-                      ${stats.salary_info.actual_salary.toLocaleString()}
-                    </span>
-                  </div>
-                </div>
-              </div>
+                    {/* Info Banner */}
+                    {salaryMode === "ai" && aiProductivityScore && (
+                      <div className="mt-3 p-3 bg-purple-50 rounded-lg border border-purple-200 flex items-center gap-2">
+                        <Brain className="w-4 h-4 text-purple-600" />
+                        <p className="text-xs text-purple-700">
+                          <span className="font-semibold">
+                            Using AI-analyzed productivity score
+                          </span>{" "}
+                          from current month data
+                        </p>
+                      </div>
+                    )}
 
-              <div className="employee-salary-legend">
-                <p className="employee-salary-legend-title">
-                  Productivity Tiers:
-                </p>
-                <div className="employee-salary-legend-items">
-                  <span className="status-chip success">90-100% = 100%</span>
-                  <span className="status-chip info">80-89% = 95%</span>
-                  <span className="status-chip warning">70-79% = 90%</span>
-                  <span className="status-chip danger">60-69% = 85%</span>
-                  <span className="status-chip danger">&lt;60% = 80%</span>
-                </div>
-              </div>
+                    <div className="employee-salary-legend">
+                      <p className="employee-salary-legend-title">
+                        Productivity Tiers:
+                      </p>
+                      <div className="employee-salary-legend-items">
+                        <span className="status-chip success">
+                          90-100% = 100%
+                        </span>
+                        <span className="status-chip info">80-89% = 95%</span>
+                        <span className="status-chip warning">
+                          70-79% = 90%
+                        </span>
+                        <span className="status-chip danger">60-69% = 85%</span>
+                        <span className="status-chip danger">
+                          &lt;60% = 80%
+                        </span>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           )}
 

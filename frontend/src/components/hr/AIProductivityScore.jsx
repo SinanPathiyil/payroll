@@ -2,7 +2,7 @@ import { Brain, Sparkles, TrendingUp, AlertCircle, Zap } from "lucide-react";
 import { useState } from "react";
 import { getEmployeeAIProductivity } from "../../services/api";
 
-export default function AIProductivityScore({ employeeId }) {
+export default function AIProductivityScore({ employeeId, onScoreUpdate }) {
   const [aiData, setAiData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -17,6 +17,7 @@ export default function AIProductivityScore({ employeeId }) {
       if (response.data.success) {
         setAiData(response.data);
         setAnalyzed(true);
+        onScoreUpdate(response.data.ai_analysis.productivity_score);
       } else {
         setError(response.data.message || "No AI data available");
       }

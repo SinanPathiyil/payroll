@@ -8,6 +8,7 @@ import {
   DollarSign,
   TrendingDown,
   Brain,
+  BarChart3,
 } from "lucide-react";
 import { getEmployeeStats } from "../../services/api";
 import AttendanceTable from "./AttendanceTable";
@@ -261,7 +262,17 @@ export default function EmployeeStatsModal({ employee, onClose }) {
 
                         <div className="employee-salary-row">
                           <span className="employee-salary-label">
-                            {salaryMode === "ai" ? "🤖 AI" : "📊 Avg"}{" "}
+                            {salaryMode === "ai" ? (
+                              <span className="inline-flex items-center gap-1">
+                                <Brain className="w-4 h-4" />
+                                AI
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1">
+                                <BarChart3 className="w-4 h-4" />
+                                Avg
+                              </span>
+                            )}{" "}
                             Productivity:
                           </span>
                           <span className="employee-salary-value employee-salary-highlight">

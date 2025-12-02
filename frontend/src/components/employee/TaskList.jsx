@@ -1,7 +1,15 @@
-import { useState, useRef, useEffect } from 'react';
-import { updateTask } from '../../services/api';
-import { CheckCircle, Clock, AlertCircle, Play } from 'lucide-react';
-import { formatDateTime } from '../../utils/helpers';
+import { useState, useRef, useEffect } from "react";
+import { updateTask } from "../../services/api";
+import {
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  Play,
+  Calendar,
+  CalendarCheck,
+  User,
+} from "lucide-react";
+import { formatDateTime } from "../../utils/helpers";
 
 export default function TaskList({ tasks, onTaskUpdate, highlightTaskId }) {
   const [updatingTask, setUpdatingTask] = useState(null);
@@ -10,14 +18,14 @@ export default function TaskList({ tasks, onTaskUpdate, highlightTaskId }) {
   useEffect(() => {
     if (highlightTaskId && taskRefs.current[highlightTaskId]) {
       taskRefs.current[highlightTaskId].scrollIntoView({
-        behavior: 'smooth',
-        block: 'center'
+        behavior: "smooth",
+        block: "center",
       });
 
-      taskRefs.current[highlightTaskId].classList.add('highlight-task');
-      
+      taskRefs.current[highlightTaskId].classList.add("highlight-task");
+
       setTimeout(() => {
-        taskRefs.current[highlightTaskId]?.classList.remove('highlight-task');
+        taskRefs.current[highlightTaskId]?.classList.remove("highlight-task");
       }, 3000);
     }
   }, [highlightTaskId, tasks]);
@@ -28,7 +36,7 @@ export default function TaskList({ tasks, onTaskUpdate, highlightTaskId }) {
       await updateTask(taskId, { status: newStatus });
       onTaskUpdate();
     } catch (error) {
-      console.error('Failed to update task:', error);
+      console.error("Failed to update task:", error);
     } finally {
       setUpdatingTask(null);
     }
@@ -36,9 +44,9 @@ export default function TaskList({ tasks, onTaskUpdate, highlightTaskId }) {
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'completed':
+      case "completed":
         return <CheckCircle className="w-5 h-5" />;
-      case 'in_progress':
+      case "in_progress":
         return <Clock className="w-5 h-5" />;
       default:
         return <AlertCircle className="w-5 h-5" />;
@@ -47,12 +55,12 @@ export default function TaskList({ tasks, onTaskUpdate, highlightTaskId }) {
 
   const getStatusClass = (status) => {
     switch (status) {
-      case 'completed':
-        return 'task-status-completed';
-      case 'in_progress':
-        return 'task-status-progress';
+      case "completed":
+        return "task-status-completed";
+      case "in_progress":
+        return "task-status-progress";
       default:
-        return 'task-status-pending';
+        return "task-status-pending";
     }
   };
 
@@ -85,30 +93,48 @@ export default function TaskList({ tasks, onTaskUpdate, highlightTaskId }) {
                     </div>
                     <p className="task-item-description">{task.description}</p>
                     <div className="task-item-meta">
-                      <span>Created: {formatDateTime(task.created_at)}</span>
+                      <span className="task-meta-item">
+                        <Calendar className="w-4 h-4" />
+                        <span>Created: {formatDateTime(task.created_at)}</span>
+                      </span>
                       {task.due_date && (
-                        <span>Due: {formatDateTime(task.due_date)}</span>
+                        <span className="task-meta-item">
+                          <Clock className="w-4 h-4" />
+                          <span>Due: {formatDateTime(task.due_date)}</span>
+                        </span>
                       )}
                       {task.completed_at && (
-                        <span>Completed: {formatDateTime(task.completed_at)}</span>
+                        <span className="task-meta-item">
+                          <CalendarCheck className="w-4 h-4" />
+                          <span>
+                            Completed: {formatDateTime(task.completed_at)}
+                          </span>
+                        </span>
                       )}
                     </div>
                   </div>
                   <div className="task-item-badge">
-                    <span className={`status-chip ${
-                      task.status === 'completed' ? 'success' : 
-                      task.status === 'in_progress' ? 'info' : 'warning'
-                    }`}>
-                      {task.status.replace('_', ' ')}
+                    <span
+                      className={`status-chip ${
+                        task.status === "completed"
+                          ? "success"
+                          : task.status === "in_progress"
+                            ? "info"
+                            : "warning"
+                      }`}
+                    >
+                      {task.status.replace("_", " ")}
                     </span>
                   </div>
                 </div>
 
-                {task.status !== 'completed' && (
+                {task.status !== "completed" && (
                   <div className="task-item-actions">
-                    {task.status === 'pending' && (
+                    {task.status === "pending" && (
                       <button
-                        onClick={() => handleStatusChange(task.id, 'in_progress')}
+                        onClick={() =>
+                          handleStatusChange(task.id, "in_progress")
+                        }
                         disabled={updatingTask === task.id}
                         className="btn btn-primary btn-sm"
                       >
@@ -116,9 +142,9 @@ export default function TaskList({ tasks, onTaskUpdate, highlightTaskId }) {
                         Start Task
                       </button>
                     )}
-                    {task.status === 'in_progress' && (
+                    {task.status === "in_progress" && (
                       <button
-                        onClick={() => handleStatusChange(task.id, 'completed')}
+                        onClick={() => handleStatusChange(task.id, "completed")}
                         disabled={updatingTask === task.id}
                         className="btn btn-success btn-sm"
                       >

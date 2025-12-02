@@ -1042,7 +1042,12 @@ textarea::placeholder {
 .task-meta-item {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+}
+
+.task-meta-item svg {
+  color: var(--text-secondary);
+  flex-shrink: 0;
 }
 
 /* Empty State */

@@ -32,6 +32,7 @@ payroll
 │  │  │  └─ user.py
 │  │  ├─ services
 │  │  │  ├─ activity_tracker.py
+│  │  │  ├─ ai_productivity_service.py
 │  │  │  ├─ auth_service.py
 │  │  │  ├─ employee_service.py
 │  │  │  ├─ hr_service.py
@@ -39,7 +40,8 @@ payroll
 │  │  └─ utils
 │  │     └─ helpers.py
 │  ├─ Dockerfile
-│  └─ requirements.txt
+│  ├─ requirements.txt
+│  └─ runtime.txt
 ├─ create_hr.py
 ├─ desktop-agent
 │  ├─ activity_tracker.py
@@ -97,6 +99,7 @@ payroll
 │  │  │  │  ├─ TimeTracker.jsx
 │  │  │  │  └─ Widgets.jsx
 │  │  │  ├─ hr
+│  │  │  │  ├─ AIProductivityScore.jsx
 │  │  │  │  ├─ AttendanceTable.jsx
 │  │  │  │  ├─ CreateTaskModal.jsx
 │  │  │  │  ├─ CreateUserModal.jsx

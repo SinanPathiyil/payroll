@@ -16,6 +16,9 @@ import {
   Plus,
   MessageSquare,
   TrendingUp,
+  User,
+  Calendar,
+  AlertCircle,
 } from "lucide-react";
 import { formatDateTime } from "../utils/helpers";
 
@@ -83,6 +86,28 @@ export default function HRDashboard() {
         return "status-chip info";
       default:
         return "status-chip warning";
+    }
+  };
+
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case "completed":
+        return <CheckCircle className="w-5 h-5" />;
+      case "in_progress":
+        return <ClockIcon className="w-5 h-5" />;
+      default:
+        return <AlertCircle className="w-5 h-5" />;
+    }
+  };
+
+  const getStatusClass = (status) => {
+    switch (status) {
+      case "completed":
+        return "task-status-completed";
+      case "in_progress":
+        return "task-status-progress";
+      default:
+        return "task-status-pending";
     }
   };
 
@@ -246,58 +271,77 @@ export default function HRDashboard() {
             </div>
 
             {/* Tasks List */}
-            <div className="dashboard-card">
-              <div className="dashboard-card-header">
-                <h2 className="dashboard-card-title">
-                  <ListTodo className="w-5 h-5" />
-                  <span>All Tasks</span>
-                </h2>
+            <div className="task-list-card">
+              <div className="task-list-header">
+                <h2 className="task-list-title">All Tasks</h2>
                 <button
                   onClick={() => setShowTaskModal(true)}
-                  className="btn btn-success"
+                  className="btn btn-success btn-sm"
                 >
                   <Plus className="w-4 h-4" />
                   <span>Assign Task</span>
                 </button>
               </div>
-              <div className="dashboard-card-body">
+              <div className="task-list-body">
                 {tasks.length === 0 ? (
-                  <div className="empty-state">
-                    <ListTodo className="empty-state-icon" />
-                    <p className="empty-state-text">No tasks assigned yet</p>
+                  <div className="task-list-empty">
+                    <AlertCircle className="task-list-empty-icon" />
+                    <p className="task-list-empty-text">
+                      No tasks assigned yet
+                    </p>
                   </div>
                 ) : (
-                  <div className="tasks-list">
+                  <div className="task-list-content">
                     {tasks.map((task) => (
                       <div
                         key={task.id}
                         ref={(el) => (taskRefs.current[task.id] = el)}
-                        className="task-card"
+                        className={`task-item ${getStatusClass(task.status)}`}
                       >
-                        <div className="task-card-content">
-                          <div className="task-card-main">
-                            <div className="task-card-header">
-                              <h3 className="task-card-title">{task.title}</h3>
-                              <span className={getStatusColor(task.status)}>
-                                {task.status.replace("_", " ")}
-                              </span>
+                        <div className="task-item-content">
+                          <div className="task-item-main">
+                            <div className="task-item-header">
+                              <div className="task-item-icon">
+                                {getStatusIcon(task.status)}
+                              </div>
+                              <h3 className="task-item-title">{task.title}</h3>
                             </div>
-                            <p className="task-card-description">
+                            <p className="task-item-description">
                               {task.description}
                             </p>
-                            <div className="task-card-meta">
+                            <div className="task-item-meta">
                               <span className="task-meta-item">
-                                👤 {task.employee_name}
+                                <User className="w-4 h-4" />
+                                <span>{task.employee_name}</span>
                               </span>
                               <span className="task-meta-item">
-                                📅 {formatDateTime(task.created_at)}
+                                <Calendar className="w-4 h-4" />
+                                <span>
+                                  Created: {formatDateTime(task.created_at)}
+                                </span>
                               </span>
                               {task.due_date && (
                                 <span className="task-meta-item">
-                                  ⏰ Due: {formatDateTime(task.due_date)}
+                                  <ClockIcon className="w-4 h-4" />
+                                  <span>
+                                    Due: {formatDateTime(task.due_date)}
+                                  </span>
                                 </span>
                               )}
                             </div>
+                          </div>
+                          <div className="task-item-badge">
+                            <span
+                              className={`status-chip ${
+                                task.status === "completed"
+                                  ? "success"
+                                  : task.status === "in_progress"
+                                    ? "info"
+                                    : "warning"
+                              }`}
+                            >
+                              {task.status.replace("_", " ")}
+                            </span>
                           </div>
                         </div>
                       </div>

@@ -99,7 +99,6 @@ export default function HRMessageBoard({
                           </span>
                         </div>
                         <p className="message-content">{message.content}</p>
-                        <p className="message-hint">💡 Click to view task</p>
                       </>
                     )}
 

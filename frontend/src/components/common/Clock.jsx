@@ -15,6 +15,8 @@ export default function Clock() {
         <ClockIcon className="clock-icon" />
         <h3 className="clock-title">Live Time</h3>
       </div>
+      
+      {/* Time Display */}
       <div className="clock-time">
         {time.toLocaleTimeString('en-US', { 
           hour: '2-digit', 
@@ -23,16 +25,23 @@ export default function Clock() {
           hour12: true 
         })}
       </div>
-      <div className="clock-date">
-        <Calendar className="w-3.5 h-3.5" />
-        <span>
-          {time.toLocaleDateString('en-US', { 
-            weekday: 'long', 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
-          })}
-        </span>
+      
+      {/* Date Section - Card Style */}
+      <div className="clock-date-section">
+        <div className="clock-date-icon-wrapper">
+          <Calendar className="clock-date-icon" />
+        </div>
+        <div className="clock-date-content">
+          <p className="clock-date-label">Today's Date</p>
+          <p className="clock-date-value">
+            {time.toLocaleDateString('en-US', { 
+              weekday: 'long', 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric' 
+            })}
+          </p>
+        </div>
       </div>
     </div>
   );

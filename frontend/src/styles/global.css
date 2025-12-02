@@ -1433,6 +1433,80 @@ textarea::placeholder {
   line-height: 1.4;
 }
 
+
+/* ============================================
+   CLOCK DATE SECTION - CARD STYLE
+   ============================================ */
+
+.clock-date-section {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(11, 11, 13, 0.03);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  margin-top: 12px;
+}
+
+.clock-date-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, rgba(11, 11, 13, 0.08), rgba(11, 11, 13, 0.05));
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+}
+
+.clock-date-icon {
+  width: 18px;
+  height: 18px;
+  color: var(--text-primary);
+}
+
+.clock-date-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.clock-date-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.clock-date-value {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.4;
+  margin: 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .clock-date-section {
+    padding: 10px;
+    gap: 10px;
+  }
+  
+  .clock-date-icon-wrapper {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .clock-date-value {
+    font-size: 0.85rem;
+  }
+}
+
 /* ============================================
    RESPONSIVE - Navbar & Clock
    ============================================ */

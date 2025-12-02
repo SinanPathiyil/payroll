@@ -64,9 +64,6 @@ export default function MessageBoard({ messages, onMessageRead, onTaskMessageCli
                   </span>
                 </div>
                 <p className="message-content">{message.content}</p>
-                {isTaskMessage(message) && (
-                  <p className="message-hint">💡 Click to view task</p>
-                )}
               </div>
             ))}
           </div>

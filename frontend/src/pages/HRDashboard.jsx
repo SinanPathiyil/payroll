@@ -272,11 +272,14 @@ export default function HRDashboard() {
 
             {/* Tasks List */}
             <div className="task-list-card">
-              <div className="task-list-header">
-                <h2 className="task-list-title">All Tasks</h2>
+              <div className="dashboard-card-header">
+                <h2 className="dashboard-card-title">
+                  <ListTodo className="w-5 h-5" />
+                  <span>All Tasks</span>
+                </h2>
                 <button
                   onClick={() => setShowTaskModal(true)}
-                  className="btn btn-success btn-sm"
+                  className="btn btn-success"
                 >
                   <Plus className="w-4 h-4" />
                   <span>Assign Task</span>

@@ -75,7 +75,9 @@ export default function HRDashboard() {
     activeToday: employees.filter((e) => e.today_status === "active").length,
     totalTasks: tasks.length,
     completedTasks: tasks.filter((t) => t.status === "completed").length,
-    unreadMessages: messages.filter((m) => !m.is_read).length,
+    unreadMessages: messages.filter(
+      (m) => !m.is_read && m.direction === "received"
+    ).length,
   };
 
   const getStatusColor = (status) => {

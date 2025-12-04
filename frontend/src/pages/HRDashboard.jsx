@@ -168,7 +168,9 @@ export default function HRDashboard() {
           <div className="stat-card stat-card-warning">
             <div className="stat-card-content">
               <div className="stat-card-info">
-                <p className="stat-card-label">Total Tasks</p>
+                <p className="stat-card-label">
+                  Total <br /> Tasks
+                </p>
                 <p className="stat-card-value">{stats.totalTasks}</p>
               </div>
               <div className="stat-card-icon stat-card-icon-orange">

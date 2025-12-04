@@ -154,7 +154,7 @@ export default function HRDashboard() {
           <div className="stat-card stat-card-success">
             <div className="stat-card-content">
               <div className="stat-card-info">
-                <p className="stat-card-label">Active Today</p>
+                <p className="stat-card-label">Active Employees</p>
                 <p className="stat-card-value stat-card-value-success">
                   {stats.activeToday}
                 </p>

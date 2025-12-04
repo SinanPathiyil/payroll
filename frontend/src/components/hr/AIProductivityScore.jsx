@@ -57,7 +57,6 @@ export default function AIProductivityScore({ employeeId, onScoreUpdate }) {
         <div className="flex items-center gap-2">
           <Brain className="w-5 h-5 text-purple-600" />
           <h3 className="employee-activity-title">AI Productivity Analysis</h3>
-          <Sparkles className="w-4 h-4 text-yellow-500" />
         </div>
         {analyzed && <span className="text-xs text-gray-500 font-medium">{period}</span>}
       </div>

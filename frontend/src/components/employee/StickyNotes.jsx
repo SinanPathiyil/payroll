@@ -1,20 +1,55 @@
 import { useState, useEffect } from "react";
-import { getNotes, createNote, updateNote, deleteNote, togglePinNote } from "../../services/api";
+import {
+  getNotes,
+  createNote,
+  updateNote,
+  deleteNote,
+  togglePinNote,
+} from "../../services/api";
 import { Plus, X, Edit2, Pin, Check, Trash2, StickyNote } from "lucide-react";
 
 const COLORS = [
-  { name: "yellow", bg: "bg-yellow-100", border: "border-yellow-300", hover: "hover:bg-yellow-200" },
-  { name: "blue", bg: "bg-blue-100", border: "border-blue-300", hover: "hover:bg-blue-200" },
-  { name: "green", bg: "bg-green-100", border: "border-green-300", hover: "hover:bg-green-200" },
-  { name: "pink", bg: "bg-pink-100", border: "border-pink-300", hover: "hover:bg-pink-200" },
-  { name: "purple", bg: "bg-purple-100", border: "border-purple-300", hover: "hover:bg-purple-200" },
+  {
+    name: "yellow",
+    bg: "bg-yellow-100",
+    border: "border-yellow-300",
+    hover: "hover:bg-yellow-200",
+  },
+  {
+    name: "blue",
+    bg: "bg-blue-100",
+    border: "border-blue-300",
+    hover: "hover:bg-blue-200",
+  },
+  {
+    name: "green",
+    bg: "bg-green-100",
+    border: "border-green-300",
+    hover: "hover:bg-green-200",
+  },
+  {
+    name: "pink",
+    bg: "bg-pink-100",
+    border: "border-pink-300",
+    hover: "hover:bg-pink-200",
+  },
+  {
+    name: "purple",
+    bg: "bg-purple-100",
+    border: "border-purple-300",
+    hover: "hover:bg-purple-200",
+  },
 ];
 
 export default function StickyNotes() {
   const [notes, setNotes] = useState([]);
   const [isCreating, setIsCreating] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [newNote, setNewNote] = useState({ title: "", content: "", color: "yellow" });
+  const [newNote, setNewNote] = useState({
+    title: "",
+    content: "",
+    color: "yellow",
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -48,7 +83,9 @@ export default function StickyNotes() {
   const handleUpdate = async (noteId, updatedData) => {
     try {
       const response = await updateNote(noteId, updatedData);
-      setNotes(notes.map(note => note.id === noteId ? response.data.note : note));
+      setNotes(
+        notes.map((note) => (note.id === noteId ? response.data.note : note))
+      );
       setEditingId(null);
     } catch (error) {
       console.error("Failed to update note:", error);
@@ -60,7 +97,7 @@ export default function StickyNotes() {
 
     try {
       await deleteNote(noteId);
-      setNotes(notes.filter(note => note.id !== noteId));
+      setNotes(notes.filter((note) => note.id !== noteId));
     } catch (error) {
       console.error("Failed to delete note:", error);
     }
@@ -69,9 +106,13 @@ export default function StickyNotes() {
   const handleTogglePin = async (noteId) => {
     try {
       const response = await togglePinNote(noteId);
-      setNotes(notes.map(note => 
-        note.id === noteId ? { ...note, is_pinned: response.data.is_pinned } : note
-      ));
+      setNotes(
+        notes.map((note) =>
+          note.id === noteId
+            ? { ...note, is_pinned: response.data.is_pinned }
+            : note
+        )
+      );
       loadNotes();
     } catch (error) {
       console.error("Failed to toggle pin:", error);
@@ -79,7 +120,7 @@ export default function StickyNotes() {
   };
 
   const getColorClasses = (colorName) => {
-    return COLORS.find(c => c.name === colorName) || COLORS[0];
+    return COLORS.find((c) => c.name === colorName) || COLORS[0];
   };
 
   if (loading) {
@@ -99,9 +140,16 @@ export default function StickyNotes() {
 
   return (
     <div className="task-list-card">
-      {/* Header - Universal Structure */}
-      <div className="task-list-header">
-        <h2 className="task-list-title">📝 My Sticky Notes</h2>
+      {/* Header with inline flex */}
+      <div
+        className="task-list-header"
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        <h2 className="task-list-title">My Sticky Notes</h2>
         <button
           onClick={() => setIsCreating(!isCreating)}
           className="btn btn-primary btn-sm"
@@ -133,29 +181,39 @@ export default function StickyNotes() {
               type="text"
               placeholder="Title (optional)"
               value={newNote.title}
-              onChange={(e) => setNewNote({ ...newNote, title: e.target.value })}
+              onChange={(e) =>
+                setNewNote({ ...newNote, title: e.target.value })
+              }
               className="input input-sm w-full mb-2"
             />
             <textarea
               placeholder="Write your note..."
               value={newNote.content}
-              onChange={(e) => setNewNote({ ...newNote, content: e.target.value })}
+              onChange={(e) =>
+                setNewNote({ ...newNote, content: e.target.value })
+              }
               className="input w-full mb-2 min-h-[80px] resize-none"
               rows="3"
               autoFocus
             />
-            
+
             {/* Color Picker */}
             <div className="mb-3">
-              <label className="text-sm text-gray-600 mb-2 block">Choose Color:</label>
+              <label className="text-sm text-gray-600 mb-2 block">
+                Choose Color:
+              </label>
               <div className="flex gap-2">
                 {COLORS.map((color) => (
                   <button
                     key={color.name}
                     type="button"
-                    onClick={() => setNewNote({ ...newNote, color: color.name })}
+                    onClick={() =>
+                      setNewNote({ ...newNote, color: color.name })
+                    }
                     className={`w-8 h-8 rounded-lg ${color.bg} ${color.border} border-2 transition-all ${
-                      newNote.color === color.name ? "ring-2 ring-offset-2 ring-blue-500 scale-110" : ""
+                      newNote.color === color.name
+                        ? "ring-2 ring-offset-2 ring-blue-500 scale-110"
+                        : ""
                     }`}
                     title={color.name}
                   />
@@ -186,17 +244,19 @@ export default function StickyNotes() {
           <div className="task-list-empty">
             <StickyNote className="task-list-empty-icon" />
             <p className="task-list-empty-text">No sticky notes yet</p>
-            <p className="text-sm text-gray-500 mt-2">Create your first sticky note to get started!</p>
+            <p className="text-sm text-gray-500 mt-2">
+              Create your first sticky note to get started!
+            </p>
           </div>
         ) : (
           /* Notes Masonry Layout - YOUR EXACT STRUCTURE */
-          <div 
+          <div
             className="masonry-grid"
             style={{
-              columnCount: 'auto',
-              columnFill: 'balance',
-              columnGap: '1rem',
-              columnWidth: '250px'
+              columnCount: "auto",
+              columnFill: "balance",
+              columnGap: "1rem",
+              columnWidth: "250px",
             }}
           >
             {notes.map((note) => {
@@ -208,9 +268,9 @@ export default function StickyNotes() {
                   key={note.id}
                   className="masonry-item"
                   style={{
-                    breakInside: 'avoid',
-                    marginBottom: '1rem',
-                    pageBreakInside: 'avoid'
+                    breakInside: "avoid",
+                    marginBottom: "1rem",
+                    pageBreakInside: "avoid",
                   }}
                 >
                   <div
@@ -229,13 +289,17 @@ export default function StickyNotes() {
                         <input
                           type="text"
                           defaultValue={note.title}
-                          onBlur={(e) => handleUpdate(note.id, { title: e.target.value })}
+                          onBlur={(e) =>
+                            handleUpdate(note.id, { title: e.target.value })
+                          }
                           className="input input-sm w-full mb-2 bg-white"
                           placeholder="Title"
                         />
                         <textarea
                           defaultValue={note.content}
-                          onBlur={(e) => handleUpdate(note.id, { content: e.target.value })}
+                          onBlur={(e) =>
+                            handleUpdate(note.id, { content: e.target.value })
+                          }
                           className="input w-full mb-2 bg-white min-h-[80px] resize-none"
                           rows="3"
                         />
@@ -254,17 +318,20 @@ export default function StickyNotes() {
                             {note.title}
                           </h3>
                         )}
-                        <p className="text-gray-800 text-sm whitespace-pre-wrap mb-4 leading-relaxed break-words overflow-hidden" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                        <p
+                          className="text-gray-800 text-sm whitespace-pre-wrap mb-4 leading-relaxed break-words overflow-hidden"
+                          style={{ maxHeight: "300px", overflowY: "auto" }}
+                        >
                           {note.content}
                         </p>
-                        
+
                         {/* Timestamp */}
                         <div className="text-xs text-gray-600 mb-3 italic border-t border-gray-300 pt-2">
-                          {new Date(note.updated_at).toLocaleString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
+                          {new Date(note.updated_at).toLocaleString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
                           })}
                         </div>
 
@@ -281,8 +348,8 @@ export default function StickyNotes() {
                           <button
                             onClick={() => handleTogglePin(note.id)}
                             className={`btn btn-sm flex-1 ${
-                              note.is_pinned 
-                                ? "bg-red-500 hover:bg-red-600 text-white border-red-600" 
+                              note.is_pinned
+                                ? "bg-red-500 hover:bg-red-600 text-white border-red-600"
                                 : "btn-secondary"
                             }`}
                             title={note.is_pinned ? "Unpin" : "Pin"}

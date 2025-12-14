@@ -271,10 +271,15 @@ export default function StickyNotes() {
                     breakInside: "avoid",
                     marginBottom: "1rem",
                     pageBreakInside: "avoid",
+                    padding: "0.4rem", // ✅ Add padding to contain the badge
+                    position: "relative", // ✅ Create positioning context
                   }}
                 >
                   <div
                     className={`relative p-4 rounded-lg border-2 ${colorClasses.bg} ${colorClasses.border} shadow-md ${colorClasses.hover} transition-all duration-200 transform hover:scale-105 hover:shadow-xl`}
+                    style={{
+                      isolation: "isolate", // ✅ Prevent column break
+                    }}
                   >
                     {/* Pin Badge */}
                     {note.is_pinned && (

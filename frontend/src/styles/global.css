@@ -3764,6 +3764,17 @@ select:focus-visible {
   flex-direction: column;
 }
 
+/* Prevent pin badge from breaking across columns */
+.masonry-item {
+  position: relative;
+  isolation: isolate;
+  contain: layout style;
+}
+
+.masonry-grid {
+  position: relative;
+}
+
 /* ============================================
    DARK MODE SUPPORT (Future Enhancement)
    ============================================ */

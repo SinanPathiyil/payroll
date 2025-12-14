@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.database import connect_to_mongo, close_mongo_connection
 from app.api.routes import auth, hr, employee, tasks, messages
-from app.api.routes import auth, hr, employee, tasks, messages, agent
+from app.api.routes import auth, hr, employee, tasks, messages, agent, notes
 app = FastAPI(title="Employee Tracker API")
 
 # CORS
@@ -44,6 +44,7 @@ app.include_router(employee.router, prefix="/api/employee", tags=["employee"])
 app.include_router(tasks.router, prefix="/api/tasks", tags=["tasks"])
 app.include_router(messages.router, prefix="/api/messages", tags=["messages"])
 app.include_router(agent.router, prefix="/api/agent", tags=["agent"])
+app.include_router(notes.router, prefix="/api/notes", tags=["notes"])
 @app.get("/")
 async def root():
     return {"message": "Employee Tracker API"}

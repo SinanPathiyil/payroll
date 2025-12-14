@@ -83,3 +83,10 @@ export const sendMessage = (messageData) => api.post('/messages/send', messageDa
 export const getUnreadCount = () => api.get('/messages/unread-count');
 
 export default api;
+
+// NOTES API
+export const getNotes = () => api.get('/notes/');
+export const createNote = (noteData) => api.post('/notes/', noteData);
+export const updateNote = (noteId, noteData) => api.put(`/notes/${noteId}`, noteData);
+export const deleteNote = (noteId) => api.delete(`/notes/${noteId}`);
+export const togglePinNote = (noteId) => api.patch(`/notes/${noteId}/pin`);

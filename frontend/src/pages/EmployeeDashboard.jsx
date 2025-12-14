@@ -5,6 +5,8 @@ import Clock from "../components/common/Clock";
 import TaskList from "../components/employee/TaskList";
 import MessageBoard from "../components/employee/MessageBoard";
 import TimeTracker from "../components/employee/TimeTracker";
+import StickyNotes from "../components/employee/StickyNotes";
+
 import {
   getEmployeeStatus,
   getMyTasks,
@@ -215,6 +217,9 @@ export default function EmployeeDashboard() {
               onStatusChange={loadData}
               activityStats={activityStats}
             />
+
+            {/* sticky note */}
+            <StickyNotes />
 
             {/* Tasks */}
             <TaskList

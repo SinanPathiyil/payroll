@@ -3643,6 +3643,127 @@ select:focus-visible {
 }
 
 
+/* ========================================
+   STICKY NOTES MASONRY LAYOUT
+======================================== */
+
+.notes-masonry-container {
+  column-count: 1;
+  column-gap: 1rem;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .notes-masonry-container {
+    column-count: 2;
+  }
+}
+
+@media (min-width: 1024px) {
+  .notes-masonry-container {
+    column-count: 3;
+  }
+}
+
+@media (min-width: 1536px) {
+  .notes-masonry-container {
+    column-count: 4;
+  }
+}
+
+.notes-masonry-item {
+  break-inside: avoid;
+  page-break-inside: avoid;
+  margin-bottom: 1rem;
+  display: inline-block;
+  width: 100%;
+}
+
+.note-card {
+  position: relative;
+  border-width: 2px;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  transition: all 0.2s;
+  overflow: hidden;
+}
+
+.note-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.note-pin-badge {
+  position: absolute;
+  top: -0.5rem;
+  right: -0.5rem;
+  background-color: #ef4444;
+  color: white;
+  border-radius: 9999px;
+  padding: 0.375rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+}
+
+.note-card-content {
+  padding: 1rem;
+}
+
+.note-title {
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.note-content {
+  color: #1f2937;
+  font-size: 0.875rem;
+  white-space: pre-wrap;
+  margin-bottom: 0.75rem;
+  line-height: 1.5;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.note-content::-webkit-scrollbar {
+  width: 4px;
+}
+
+.note-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.note-content::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 2px;
+}
+
+.note-timestamp {
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-style: italic;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  margin-bottom: 0.75rem;
+}
+
+.note-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.note-edit-mode {
+  display: flex;
+  flex-direction: column;
+}
+
 /* ============================================
    DARK MODE SUPPORT (Future Enhancement)
    ============================================ */

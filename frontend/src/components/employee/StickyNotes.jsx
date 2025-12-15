@@ -127,7 +127,7 @@ export default function StickyNotes() {
     return (
       <div className="task-list-card">
         <div className="task-list-header">
-          <h2 className="task-list-title">📝 My Sticky Notes</h2>
+          <h2 className="task-list-title">Sticky Notes</h2>
         </div>
         <div className="task-list-body">
           <div className="flex justify-center items-center h-32">
@@ -149,7 +149,7 @@ export default function StickyNotes() {
           alignItems: "center",
         }}
       >
-        <h2 className="task-list-title">My Sticky Notes</h2>
+        <h2 className="task-list-title">Sticky Notes</h2>
         <button
           onClick={() => setIsCreating(!isCreating)}
           className="btn btn-primary btn-sm"
@@ -271,19 +271,14 @@ export default function StickyNotes() {
                     breakInside: "avoid",
                     marginBottom: "1rem",
                     pageBreakInside: "avoid",
-                    padding: "0.4rem", // ✅ Add padding to contain the badge
-                    position: "relative", // ✅ Create positioning context
                   }}
                 >
                   <div
                     className={`relative p-4 rounded-lg border-2 ${colorClasses.bg} ${colorClasses.border} shadow-md ${colorClasses.hover} transition-all duration-200 transform hover:scale-105 hover:shadow-xl`}
-                    style={{
-                      isolation: "isolate", // ✅ Prevent column break
-                    }}
                   >
-                    {/* Pin Badge */}
+                    {/* Pin Badge - FIXED VERSION */}
                     {note.is_pinned && (
-                      <div className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1.5 shadow-lg">
+                      <div className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1.5 shadow-lg z-10">
                         <Pin className="w-3 h-3 fill-white" />
                       </div>
                     )}

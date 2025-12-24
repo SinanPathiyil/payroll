@@ -12,13 +12,19 @@ import BAMeetings from "./pages/BAMeetings";
 import TLDashboard from "./pages/TLDashboard";
 import TLRequirements from "./pages/TLRequirements";
 
+// ✅ NEW: Import Employee Pages
+import EmployeeTasks from "./pages/EmployeeTasks";
+import EmployeeMessages from "./pages/EmployeeMessages";
+import EmployeeNotes from "./pages/EmployeeNotes";
+import EmployeeTimeTracking from "./pages/EmployeeTimeTracking";
+
 function App() {
   return (
     <AuthProvider>
       <Routes>
         <Route path="/" element={<Login />} />
 
-        {/* 👇 ADD THIS BA ROUTE */}
+        {/* Business Analyst Routes */}
         <Route
           path="/ba-dashboard"
           element={
@@ -27,7 +33,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
         <Route
           path="/ba/clients"
           element={
@@ -36,7 +41,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
         <Route
           path="/ba/projects"
           element={
@@ -45,7 +49,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
         <Route
           path="/ba/payments"
           element={
@@ -54,7 +57,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
         <Route
           path="/ba/meetings"
           element={
@@ -64,6 +66,7 @@ function App() {
           }
         />
 
+        {/* Team Lead Routes */}
         <Route
           path="/tl-dashboard"
           element={
@@ -72,7 +75,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
         <Route
           path="/tl/requirements"
           element={
@@ -82,6 +84,7 @@ function App() {
           }
         />
 
+        {/* HR Routes */}
         <Route
           path="/hr-dashboard"
           element={
@@ -90,6 +93,8 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* ✅ Employee Routes */}
         <Route
           path="/employee-dashboard"
           element={
@@ -98,6 +103,39 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/employee/tasks"
+          element={
+            <ProtectedRoute role="employee">
+              <EmployeeTasks />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/employee/messages"
+          element={
+            <ProtectedRoute role="employee">
+              <EmployeeMessages />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/employee/notes"
+          element={
+            <ProtectedRoute role="employee">
+              <EmployeeNotes />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/employee/time-tracking"
+          element={
+            <ProtectedRoute role="employee">
+              <EmployeeTimeTracking />
+            </ProtectedRoute>
+          }
+        />
+
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </AuthProvider>

@@ -1,6 +1,6 @@
 import { useState, useEffect, useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
-import Navbar from "../components/common/Navbar";
+import Layout from "../components/common/Layout";
 import Clock from "../components/common/Clock";
 import TaskList from "../components/employee/TaskList";
 import MessageBoard from "../components/employee/MessageBoard";
@@ -19,6 +19,10 @@ import {
   MessageSquare,
   Activity,
   CheckCircle,
+  Mouse,
+  Keyboard,
+  Timer,
+  Coffee,
 } from "lucide-react";
 
 export default function EmployeeDashboard() {
@@ -103,143 +107,268 @@ export default function EmployeeDashboard() {
     unreadMessages: messages.filter((m) => !m.is_read).length,
   };
 
+  const formatTime = (seconds) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    return `${hours}h ${minutes}m`;
+  };
+
   if (loading) {
     return (
-      <div className="dashboard-loading">
-        <div className="spinner spinner-lg"></div>
-        <p className="dashboard-loading-text">Loading Dashboard...</p>
-      </div>
+      <Layout>
+        <div className="layout-loading">
+          <div className="spinner spinner-lg"></div>
+          <p className="layout-loading-text">Loading Dashboard...</p>
+        </div>
+      </Layout>
     );
   }
 
   if (error) {
     return (
-      <div className="dashboard-container">
-        <Navbar />
-        <div className="dashboard-content">
-          <div className="error-card">
-            <h2 className="error-card-title">Error Loading Dashboard</h2>
-            <p className="error-card-text">{error}</p>
-            <button onClick={loadData} className="btn btn-danger">
-              Retry
-            </button>
+      <Layout>
+        <div className="ba-dashboard">
+          <div className="ba-card">
+            <div className="ba-card-body">
+              <div className="ba-empty-state">
+                <Activity className="ba-empty-icon" style={{ color: '#ef4444' }} />
+                <h2 style={{ fontSize: '1.25rem', fontWeight: '600', marginTop: '1rem' }}>
+                  Error Loading Dashboard
+                </h2>
+                <p style={{ color: '#6b7280', marginTop: '0.5rem' }}>{error}</p>
+                <button onClick={loadData} className="btn btn-primary" style={{ marginTop: '1rem' }}>
+                  Retry
+                </button>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      </Layout>
     );
   }
 
   return (
-    <div className="dashboard-container">
-      <Navbar />
-
-      <div className="dashboard-content">
+    <Layout>
+      <div className="ba-dashboard">
         {/* Header */}
-        <div className="dashboard-header">
+        <div className="ba-dashboard-header">
           <div>
-            <h1 className="dashboard-title">Employee Dashboard</h1>
-            <p className="dashboard-subtitle">
+            <h1 className="ba-dashboard-title">Employee Dashboard</h1>
+            <p className="ba-dashboard-subtitle">
               Welcome back, <strong>{user?.full_name}</strong>
             </p>
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="stats-grid stats-grid-4">
-          <div className="stat-card stat-card-primary">
-            <div className="stat-card-content">
-              <div className="stat-card-info">
-                <p className="stat-card-label">Today's Hours</p>
-                <p className="stat-card-value stat-card-value-primary">
+        {/* Stats Cards - 4 Column Grid */}
+        <div className="ba-stats-grid">
+          {/* Today's Hours Card */}
+          <div className="ba-stat-card">
+            <div className="ba-stat-content">
+              <div className="ba-stat-info">
+                <p className="ba-stat-label">Today's Hours</p>
+                <p className="ba-stat-value">
                   {status.today_total_hours?.toFixed(2) || "0.00"}
                 </p>
-                <p className="stat-card-hint">
-                  {status.is_clocked_in
-                    ? "Real-time tracking"
-                    : ""}
+                <p className="ba-stat-hint">
+                  <span className={`ba-stat-badge ${status.is_clocked_in ? 'success' : 'secondary'}`}>
+                    {status.is_clocked_in ? "Clocked In" : "Clocked Out"}
+                  </span>
                 </p>
               </div>
-              <div className="stat-card-icon stat-card-icon-blue">
-                <ClockIcon className="w-7 h-7" />
+              <div className="ba-stat-icon ba-stat-icon-blue">
+                <ClockIcon className="w-8 h-8" />
               </div>
+            </div>
+            <div className="ba-stat-footer">
+              <span>Real-time tracking</span>
             </div>
           </div>
 
-          <div className="stat-card stat-card-warning">
-            <div className="stat-card-content">
-              <div className="stat-card-info">
-                <p className="stat-card-label">Pending Tasks</p>
-                <p className="stat-card-value stat-card-value-warning">
-                  {stats.pendingTasks}
+          {/* Pending Tasks Card */}
+          <div className="ba-stat-card">
+            <div className="ba-stat-content">
+              <div className="ba-stat-info">
+                <p className="ba-stat-label">Pending Tasks</p>
+                <p className="ba-stat-value">{stats.pendingTasks}</p>
+                <p className="ba-stat-hint">
+                  <span className="ba-stat-badge warning">
+                    {stats.totalTasks} total
+                  </span>
                 </p>
               </div>
-              <div className="stat-card-icon stat-card-icon-orange">
-                <ListTodo className="w-7 h-7" />
+              <div className="ba-stat-icon ba-stat-icon-orange">
+                <ListTodo className="w-8 h-8" />
               </div>
+            </div>
+            <div className="ba-stat-footer">
+              <span>View all tasks</span>
             </div>
           </div>
 
-          <div className="stat-card stat-card-success">
-            <div className="stat-card-content">
-              <div className="stat-card-info">
-                <p className="stat-card-label">Completed Tasks</p>
-                <p className="stat-card-value stat-card-value-success">
-                  {stats.completedTasks}
+          {/* Completed Tasks Card */}
+          <div className="ba-stat-card">
+            <div className="ba-stat-content">
+              <div className="ba-stat-info">
+                <p className="ba-stat-label">Completed Tasks</p>
+                <p className="ba-stat-value">{stats.completedTasks}</p>
+                <p className="ba-stat-hint">
+                  <span className="ba-stat-badge success">
+                    {stats.totalTasks > 0 
+                      ? `${Math.round((stats.completedTasks / stats.totalTasks) * 100)}%` 
+                      : '0%'} complete
+                  </span>
                 </p>
               </div>
-              <div className="stat-card-icon stat-card-icon-green">
-                <CheckCircle className="w-7 h-7" />
+              <div className="ba-stat-icon ba-stat-icon-green">
+                <CheckCircle className="w-8 h-8" />
               </div>
+            </div>
+            <div className="ba-stat-footer">
+              <span>Keep up the good work!</span>
             </div>
           </div>
 
-          <div className="stat-card stat-card-info">
-            <div className="stat-card-content">
-              <div className="stat-card-info">
-                <p className="stat-card-label">New Messages</p>
-                <p className="stat-card-value stat-card-value-info">
-                  {stats.unreadMessages}
+          {/* Unread Messages Card */}
+          <div className="ba-stat-card">
+            <div className="ba-stat-content">
+              <div className="ba-stat-info">
+                <p className="ba-stat-label">New Messages</p>
+                <p className="ba-stat-value">{stats.unreadMessages}</p>
+                <p className="ba-stat-hint">
+                  <span className="ba-stat-badge info">
+                    {messages.length} total
+                  </span>
                 </p>
               </div>
-              <div className="stat-card-icon stat-card-icon-purple">
-                <MessageSquare className="w-7 h-7" />
+              <div className="ba-stat-icon ba-stat-icon-purple">
+                <MessageSquare className="w-8 h-8" />
+              </div>
+            </div>
+            <div className="ba-stat-footer">
+              <span>Check your inbox</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Time Tracker Section */}
+        <TimeTracker
+          status={status}
+          onStatusChange={loadData}
+          activityStats={activityStats}
+        />
+
+        {/* Activity Stats Overview */}
+        <div className="ba-card ba-performance-card">
+          <div className="ba-card-header">
+            <div className="ba-card-title">
+              <Activity className="w-5 h-5" />
+              <span>Today's Activity Overview</span>
+            </div>
+          </div>
+          <div className="ba-card-body">
+            <div className="ba-performance-grid">
+              <div className="ba-performance-item">
+                <div className="ba-performance-label">
+                  <Mouse className="w-4 h-4" style={{ display: 'inline', marginRight: '0.5rem' }} />
+                  Mouse Events
+                </div>
+                <div className="ba-performance-value">
+                  {activityStats.mouseEvents.toLocaleString()}
+                </div>
+              </div>
+              <div className="ba-performance-item">
+                <div className="ba-performance-label">
+                  <Keyboard className="w-4 h-4" style={{ display: 'inline', marginRight: '0.5rem' }} />
+                  Keyboard Events
+                </div>
+                <div className="ba-performance-value">
+                  {activityStats.keyboardEvents.toLocaleString()}
+                </div>
+              </div>
+              <div className="ba-performance-item">
+                <div className="ba-performance-label">
+                  <Timer className="w-4 h-4" style={{ display: 'inline', marginRight: '0.5rem' }} />
+                  Active Time
+                </div>
+                <div className="ba-performance-value">
+                  {formatTime(activityStats.activeTime)}
+                </div>
+              </div>
+              <div className="ba-performance-item">
+                <div className="ba-performance-label">
+                  <Coffee className="w-4 h-4" style={{ display: 'inline', marginRight: '0.5rem' }} />
+                  Idle Time
+                </div>
+                <div className="ba-performance-value">
+                  {formatTime(activityStats.idleTime)}
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="dashboard-grid">
-          {/* Main Content */}
-          <div className="dashboard-main">
-            {/* Time Tracker */}
-            <TimeTracker
-              status={status}
-              onStatusChange={loadData}
-              activityStats={activityStats}
-            />
-
-            {/* sticky note */}
-            <StickyNotes />
-
-            {/* Tasks */}
-            <TaskList
-              tasks={tasks}
-              onTaskUpdate={loadData}
-              highlightTaskId={highlightTaskId}
-            />
+        {/* Main Content Grid - 2 Columns */}
+        <div className="ba-content-grid">
+          {/* Tasks Section */}
+          <div className="ba-card">
+            <div className="ba-card-header">
+              <div className="ba-card-title">
+                <ListTodo className="w-5 h-5" />
+                <span>My Tasks</span>
+              </div>
+              <span className="ba-stat-badge info">{tasks.length}</span>
+            </div>
+            <div className="ba-card-body" style={{ padding: 0 }}>
+              <TaskList
+                tasks={tasks}
+                onTaskUpdate={loadData}
+                highlightTaskId={highlightTaskId}
+              />
+            </div>
           </div>
 
-          {/* Sidebar */}
-          <div className="dashboard-sidebar">
+          {/* Messages Section */}
+          <div className="ba-card">
+            <div className="ba-card-header">
+              <div className="ba-card-title">
+                <MessageSquare className="w-5 h-5" />
+                <span>Messages</span>
+              </div>
+              {stats.unreadMessages > 0 && (
+                <span className="ba-stat-badge warning">{stats.unreadMessages} new</span>
+              )}
+            </div>
+            <div className="ba-card-body" style={{ padding: 0 }}>
+              <MessageBoard
+                messages={messages}
+                onMessageRead={loadData}
+                onTaskMessageClick={setHighlightTaskId}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Sticky Notes Section */}
+        <div className="ba-card">
+          <div className="ba-card-header">
+            <div className="ba-card-title">
+              <Activity className="w-5 h-5" />
+              <span>Quick Notes</span>
+            </div>
+          </div>
+          <div className="ba-card-body">
+            <StickyNotes />
+          </div>
+        </div>
+
+        {/* Clock Widget - Bottom */}
+        <div className="ba-card">
+          <div className="ba-card-body">
             <Clock />
-            <MessageBoard
-              messages={messages}
-              onMessageRead={loadData}
-              onTaskMessageClick={setHighlightTaskId}
-            />
           </div>
         </div>
       </div>
-    </div>
+    </Layout>
   );
 }

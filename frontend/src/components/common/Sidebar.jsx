@@ -60,8 +60,10 @@ export default function Sidebar() {
       case 'employee':
         return [
           { path: '/employee-dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-          { path: '/employee/tasks', icon: FileText, label: 'My Tasks' },
+          { path: '/employee/time-tracking', icon: Calendar, label: 'Time Tracking' },
+          { path: '/employee/tasks', icon: CheckSquare, label: 'My Tasks' },
           { path: '/employee/messages', icon: MessageSquare, label: 'Messages' },
+          { path: '/employee/notes', icon: FileText, label: 'My Notes' },
         ];
       
       default:

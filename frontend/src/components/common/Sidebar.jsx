@@ -67,6 +67,15 @@ export default function Sidebar() {
           { path: '/employee/messages', icon: MessageSquare, label: 'Messages' },
           { path: '/employee/notes', icon: FileText, label: 'My Notes' },
         ];
+
+      case 'super_admin':
+        return [
+          { path: '/super-admin-dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+          { path: '/super-admin/users', icon: Users, label: 'User Management' },
+          { path: '/super-admin/override-requests', icon: CheckSquare, label: 'Override Requests' },
+          { path: '/super-admin/audit-logs', icon: FileText, label: 'Audit Logs' },
+          { path: '/super-admin/system-stats', icon: BarChart3, label: 'System Stats' }
+        ];
       
       default:
         return [];

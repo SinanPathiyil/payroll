@@ -28,6 +28,13 @@ import HRMessages from "./pages/HRMessages";
 import HRReports from "./pages/HRReports";
 import HREmployeeActivityBreakdown from "./pages/HREmployeeActivityBreakdown";
 
+// Import Super Admin Pages
+import SuperAdminDashboard from "./pages/SuperAdminDashboard";
+import SuperAdminUsers from "./pages/SuperAdminUsers";
+import SuperAdminOverrideRequests from "./pages/SuperAdminOverrideRequests";
+import SuperAdminAuditLogs from "./pages/SuperAdminAuditLogs";
+import SuperAdminSystemStats from "./pages/SuperAdminSystemStats";  // ADD THIS
+
 function App() {
   return (
     <AuthProvider>
@@ -164,7 +171,7 @@ function App() {
             </ProtectedRoute>
           }
         />
-        {/* ✅ Employee Routes */}
+        {/*  Employee Routes */}
         <Route
           path="/employee-dashboard"
           element={
@@ -205,6 +212,49 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* Super Admin Routes */}
+        <Route
+          path="/super-admin-dashboard"
+          element={
+            <ProtectedRoute role="super_admin">
+              <SuperAdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/super-admin/users"
+          element={
+            <ProtectedRoute role="super_admin">
+              <SuperAdminUsers />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/super-admin/override-requests"
+          element={
+            <ProtectedRoute role="super_admin">
+              <SuperAdminOverrideRequests />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/super-admin/audit-logs"
+          element={
+            <ProtectedRoute role="super_admin">
+              <SuperAdminAuditLogs />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/super-admin/system-stats"
+          element={
+            <ProtectedRoute role="super_admin">
+              <SuperAdminSystemStats />
+            </ProtectedRoute>
+          }
+        />
+        
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </AuthProvider>

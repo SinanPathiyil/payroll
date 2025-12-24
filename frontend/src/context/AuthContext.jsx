@@ -36,13 +36,13 @@ export const AuthProvider = ({ children }) => {
       setUser(userData);
 
       // Navigate based on role
-      if (userData.role === "hr") {
+      if (userData.role === "super_admin") {
+        navigate("/super-admin-dashboard");
+      } else if (userData.role === "hr") {
         navigate("/hr-dashboard");
       } else if (userData.role === "business_analyst") {
-        // 👈 ADD THIS
         navigate("/ba-dashboard");
       } else if (userData.role === "team_lead") {
-        // 👈 ADD THIS
         navigate("/tl-dashboard");
       } else {
         navigate("/employee-dashboard");

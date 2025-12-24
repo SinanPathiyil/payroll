@@ -16,3 +16,5 @@ venv/
 # Node modules
 frontend/node_modules/
 desktop-agent/node_modules/
+
+frontend/src/styles/globalcss_temp.css

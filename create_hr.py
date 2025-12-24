@@ -3,7 +3,7 @@ from passlib.context import CryptContext
 from datetime import datetime
 from os import getenv
 
-# Optional: load .env if python-dotenv is installed (pip install python-dotenv)
+# Optional: load .env if python-dotenv is installed
 try:
     from dotenv import load_dotenv
     load_dotenv()
@@ -12,10 +12,11 @@ except Exception:
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# Read from environment (fallbacks provided for local/dev)
+# Read from environment
 MONGODB_URL = getenv("MONGODB_URL") or getenv("MONGO_URL")
 DATABASE_NAME = getenv("MONGODB_DB") or getenv("DATABASE_NAME")
-def create_hr_user():
+
+def create_all_users():
     try:
         print("🔄 Connecting to MongoDB...")
         client = MongoClient(MONGODB_URL)
@@ -26,59 +27,77 @@ def create_hr_user():
         
         db = client[DATABASE_NAME]
         
-        # Create HR user
-        existing = db.users.find_one({"email": "hr@company.com"})
-        
-        if not existing:
-            hr_user = {
+        # Define all users to create
+        users_to_create = [
+            {
                 "email": "hr@company.com",
                 "full_name": "HR Admin",
                 "role": "hr",
-                "hashed_password": pwd_context.hash("password123"),
-                "is_active": True,
-                "created_at": datetime.now(),
-                "office_hours": {"start": "09:00", "end": "18:00"},
-                "required_hours": 8.0
-            }
-            
-            result = db.users.insert_one(hr_user)
-            print(f"✅ HR user created! ID: {result.inserted_id}")
-        else:
-            print("⚠️  HR user already exists")
-        
-        # Create test employee
-        existing_emp = db.users.find_one({"email": "employee@company.com"})
-        
-        if not existing_emp:
-            employee_user = {
+                "password": "password123"
+            },
+            {
                 "email": "employee@company.com",
                 "full_name": "John Doe",
                 "role": "employee",
-                "hashed_password": pwd_context.hash("password123"),
-                "is_active": True,
-                "created_by": None,
-                "created_at": datetime.now(),
-                "office_hours": {"start": "09:00", "end": "18:00"},
-                "required_hours": 8.0
+                "password": "password123"
+            },
+            {
+                "email": "tl@company.com",
+                "full_name": "Team Lead",
+                "role": "team_lead",
+                "password": "password123"
+            },
+            {
+                "email": "ba@company.com",
+                "full_name": "Business Analyst",
+                "role": "business_analyst",
+                "password": "password123"
+            },
+            {
+                "email": "admin@company.com",
+                "full_name": "Super Admin",
+                "role": "super_admin",
+                "password": "password123"
             }
+        ]
+        
+        print("\n" + "="*50)
+        print("👥 Creating Users...")
+        print("="*50 + "\n")
+        
+        for user_data in users_to_create:
+            existing = db.users.find_one({"email": user_data["email"]})
             
-            result = db.users.insert_one(employee_user)
-            print(f"✅ Employee user created! ID: {result.inserted_id}")
-        else:
-            print("⚠️  Employee user already exists")
+            if not existing:
+                user = {
+                    "email": user_data["email"],
+                    "full_name": user_data["full_name"],
+                    "role": user_data["role"],
+                    "hashed_password": pwd_context.hash(user_data["password"]),
+                    "is_active": True,
+                    "created_at": datetime.now(),
+                    "office_hours": {"start": "09:00", "end": "18:00"},
+                    "required_hours": 8.0,
+                    "base_salary": 50000.0 if user_data["role"] == "employee" else 0.0
+                }
+                
+                result = db.users.insert_one(user)
+                print(f"✅ {user_data['role'].upper():<15} created! ({user_data['email']})")
+            else:
+                print(f"⚠️  {user_data['role'].upper():<15} already exists ({user_data['email']})")
         
         client.close()
         
         print("\n" + "="*50)
         print("🎉 Setup Complete!")
         print("="*50)
-        print("\n📋 Login Credentials:")
-        print("   HR Portal:")
-        print("   └─ Email: hr@company.com")
-        print("   └─ Password: password123")
-        print("\n   Employee Portal:")
-        print("   └─ Email: employee@company.com")
-        print("   └─ Password: password123")
+        print("\n📋 Login Credentials (All passwords: password123):")
+        print("="*50)
+        
+        for user_data in users_to_create:
+            print(f"\n   {user_data['role'].upper().replace('_', ' ')}:")
+            print(f"   └─ Email: {user_data['email']}")
+        
         print("\n" + "="*50)
         
     except Exception as e:
@@ -89,4 +108,4 @@ def create_hr_user():
         print("   3. Ensure username/password are correct")
 
 if __name__ == "__main__":
-    create_hr_user()
+    create_all_users()

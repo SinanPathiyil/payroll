@@ -1,5 +1,13 @@
 @import './styles/global.css';
-
+@import './styles/sidebar.css';
+@import './styles/layout.css';      
+@import './styles/ba-dashboard.css';
+@import './styles/ba-clients.css'; 
+@import './styles/ba-projects.css';
+@import './styles/ba-payments.css';
+@import './styles/ba-meetings.css';
+@import './styles/tl-dashboard.css';
+@import './styles/tl-requirements.css';
 
 
 /* ============================================

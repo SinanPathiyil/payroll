@@ -1,11 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from typing import List, Optional
 from app.core.database import get_database
 from app.api.deps import get_current_hr
 from app.core.security import get_password_hash
 from app.schemas.user import UserCreate, UserResponse
-from app.services.activity_tracker import ActivityTrackerService  # <<< ADD THIS IMPORT
+from app.schemas.override_request import OverrideRequestCreate, OverrideRequestResponse
+from app.services.activity_tracker import ActivityTrackerService  
 from bson import ObjectId
 from datetime import datetime, timedelta, date  # <<< ADD 'date' to imports
+
 
 # ============================================
 # TIERED SALARY CALCULATION SYSTEM
@@ -482,3 +485,213 @@ async def get_employee_ai_productivity(
             "total_hours": total_hours
          }
     }
+    
+# ============= OVERRIDE REQUEST ENDPOINTS (NEW) =============
+
+@router.post("/override-requests", response_model=OverrideRequestResponse, status_code=status.HTTP_201_CREATED)
+async def create_override_request(
+    request_data: OverrideRequestCreate,
+    current_user: dict = Depends(get_current_hr),
+    db = Depends(get_database)
+):
+    """
+    HR can submit override requests to Super Admin
+    Types: role_change, project_extension, employee_exception, policy_override
+    """
+    
+    # Validate request type
+    valid_types = ["role_change", "project_extension", "employee_exception", "policy_override"]
+    if request_data.request_type not in valid_types:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid request type. Must be one of: {', '.join(valid_types)}"
+        )
+    
+    # Additional validation for role_change requests
+    if request_data.request_type == "role_change":
+        user_id = request_data.details.get("user_id")
+        requested_role = request_data.details.get("requested_role")
+        
+        if not user_id or not requested_role:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="role_change requires 'user_id' and 'requested_role' in details"
+            )
+        
+        # Verify user exists
+        try:
+            target_user = await db.users.find_one({"_id": ObjectId(user_id)})
+            if not target_user:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Target user not found"
+                )
+            
+            # Store current role in details
+            request_data.details["current_role"] = target_user["role"]
+            
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid user_id"
+            )
+    
+    # Create override request
+    new_request = {
+        "request_type": request_data.request_type,
+        "requested_by": str(current_user["_id"]),
+        "reason": request_data.reason,
+        "details": request_data.details,
+        "status": "pending",
+        "reviewed_by": None,
+        "review_notes": None,
+        "created_at": datetime.now(),
+        "reviewed_at": None
+    }
+    
+    result = await db.override_requests.insert_one(new_request)
+    new_request["_id"] = result.inserted_id
+    
+    return OverrideRequestResponse(
+        id=str(new_request["_id"]),
+        request_type=new_request["request_type"],
+        requested_by=new_request["requested_by"],
+        requested_by_name=current_user["full_name"],
+        reason=new_request["reason"],
+        details=new_request["details"],
+        status=new_request["status"],
+        reviewed_by=new_request.get("reviewed_by"),
+        reviewer_name=None,
+        review_notes=new_request.get("review_notes"),
+        created_at=new_request["created_at"],
+        reviewed_at=new_request.get("reviewed_at")
+    )
+
+@router.get("/override-requests", response_model=List[OverrideRequestResponse])
+async def get_my_override_requests(
+    status_filter: Optional[str] = None,
+    current_user: dict = Depends(get_current_hr),
+    db = Depends(get_database)
+):
+    """Get all override requests created by current HR user"""
+    
+    query = {"requested_by": str(current_user["_id"])}
+    if status_filter:
+        query["status"] = status_filter
+    
+    requests = await db.override_requests.find(query).sort("created_at", -1).to_list(length=None)
+    
+    result = []
+    for req in requests:
+        # Get reviewer details if reviewed
+        reviewer_name = None
+        if req.get("reviewed_by"):
+            reviewer = await db.users.find_one({"_id": ObjectId(req["reviewed_by"])})
+            reviewer_name = reviewer["full_name"] if reviewer else "Unknown"
+        
+        result.append(OverrideRequestResponse(
+            id=str(req["_id"]),
+            request_type=req["request_type"],
+            requested_by=req["requested_by"],
+            requested_by_name=current_user["full_name"],
+            reason=req["reason"],
+            details=req["details"],
+            status=req["status"],
+            reviewed_by=req.get("reviewed_by"),
+            reviewer_name=reviewer_name,
+            review_notes=req.get("review_notes"),
+            created_at=req["created_at"],
+            reviewed_at=req.get("reviewed_at")
+        ))
+    
+    return result
+
+@router.get("/override-requests/{request_id}", response_model=OverrideRequestResponse)
+async def get_override_request(
+    request_id: str,
+    current_user: dict = Depends(get_current_hr),
+    db = Depends(get_database)
+):
+    """Get specific override request details"""
+    
+    try:
+        request = await db.override_requests.find_one({"_id": ObjectId(request_id)})
+    except:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid request ID"
+        )
+    
+    if not request:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Request not found"
+        )
+    
+    # Verify ownership
+    if request["requested_by"] != str(current_user["_id"]):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to view this request"
+        )
+    
+    # Get reviewer details if reviewed
+    reviewer_name = None
+    if request.get("reviewed_by"):
+        reviewer = await db.users.find_one({"_id": ObjectId(request["reviewed_by"])})
+        reviewer_name = reviewer["full_name"] if reviewer else "Unknown"
+    
+    return OverrideRequestResponse(
+        id=str(request["_id"]),
+        request_type=request["request_type"],
+        requested_by=request["requested_by"],
+        requested_by_name=current_user["full_name"],
+        reason=request["reason"],
+        details=request["details"],
+        status=request["status"],
+        reviewed_by=request.get("reviewed_by"),
+        reviewer_name=reviewer_name,
+        review_notes=request.get("review_notes"),
+        created_at=request["created_at"],
+        reviewed_at=request.get("reviewed_at")
+    )
+
+@router.delete("/override-requests/{request_id}")
+async def cancel_override_request(
+    request_id: str,
+    current_user: dict = Depends(get_current_hr),
+    db = Depends(get_database)
+):
+    """Cancel a pending override request"""
+    
+    try:
+        request = await db.override_requests.find_one({"_id": ObjectId(request_id)})
+    except:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid request ID"
+        )
+    
+    if not request:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Request not found"
+        )
+    
+    # Verify ownership
+    if request["requested_by"] != str(current_user["_id"]):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to cancel this request"
+        )
+    
+    # Can only cancel pending requests
+    if request["status"] != "pending":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Can only cancel pending requests"
+        )
+    
+    await db.override_requests.delete_one({"_id": ObjectId(request_id)})
+    
+    return {"message": "Override request cancelled successfully"}

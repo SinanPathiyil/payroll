@@ -3,30 +3,31 @@ from exceptiongroup import catch
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.database import connect_to_mongo, close_mongo_connection
-from app.api.routes import auth, hr, employee, tasks, messages
 from app.api.routes import auth, hr, employee, tasks, messages, agent, notes
+from app.api.routes import super_admin, teams, projects, clients, ba_projects, team_lead, payments, meetings, ba_dashboard # NEW IMPORT
+
 app = FastAPI(title="Employee Tracker API")
 
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[ "https://payroll-frontend-boehm.netlify.app",
-                   "http://localhost:3000",
-           "http://localhost:5173",
-           "http://127.0.0.1:3000",
-           "http://127.0.0.1:5173",
-           "http://127.0.0.1:8000",],  # your frontend origins
+    allow_origins=[
+        "https://payroll-frontend-boehm.netlify.app",
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:8000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-
 )
 
 try:
     conn = connect_to_mongo()
 except:
-    print("Execption db connection unsuccessfull")
-
+    print("Exception db connection unsuccessful")
 
 # Events
 @app.on_event("startup")
@@ -39,12 +40,22 @@ async def shutdown_db_client():
 
 # Routes
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
+app.include_router(super_admin.router, prefix="/api", tags=["super-admin"])
+app.include_router(clients.router, prefix="/api", tags=["ba-clients"]) 
+app.include_router(ba_projects.router, prefix="/api", tags=["ba-projects"])
+app.include_router(team_lead.router, prefix="/api/team-lead", tags=["team-lead"])
+app.include_router(payments.router, prefix="/api", tags=["ba-payments"])
+app.include_router(meetings.router, prefix="/api", tags=["ba-meetings"])
+app.include_router(ba_dashboard.router, prefix="/api", tags=["ba-dashboard"])
+app.include_router(teams.router, prefix="/api/teams", tags=["teams"])
+app.include_router(projects.router, prefix="/api/projects", tags=["projects"])
 app.include_router(hr.router, prefix="/api/hr", tags=["hr"])
 app.include_router(employee.router, prefix="/api/employee", tags=["employee"])
 app.include_router(tasks.router, prefix="/api/tasks", tags=["tasks"])
 app.include_router(messages.router, prefix="/api/messages", tags=["messages"])
 app.include_router(agent.router, prefix="/api/agent", tags=["agent"])
 app.include_router(notes.router, prefix="/api/notes", tags=["notes"])
+
 @app.get("/")
 async def root():
     return {"message": "Employee Tracker API"}

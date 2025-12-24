@@ -1,6 +1,6 @@
-import { createContext, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import * as api from '../services/api';
+import { createContext, useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import * as api from "../services/api";
 
 export const AuthContext = createContext();
 
@@ -11,16 +11,16 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     // Check if user is already logged in
-    const token = localStorage.getItem('token');
-    const userData = localStorage.getItem('user');
+    const token = localStorage.getItem("token");
+    const userData = localStorage.getItem("user");
 
     if (token && userData) {
       try {
         setUser(JSON.parse(userData));
       } catch (error) {
-        console.error('Failed to parse user data:', error);
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        console.error("Failed to parse user data:", error);
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
       }
     }
     setLoading(false);
@@ -31,24 +31,29 @@ export const AuthProvider = ({ children }) => {
       const response = await api.login(credentials);
       const { access_token, user: userData } = response.data;
 
-      // Store token and user data
-      localStorage.setItem('token', access_token);
-      localStorage.setItem('user', JSON.stringify(userData));
+      localStorage.setItem("token", access_token);
+      localStorage.setItem("user", JSON.stringify(userData));
       setUser(userData);
 
       // Navigate based on role
-      if (userData.role === 'hr') {
-        navigate('/hr-dashboard');
+      if (userData.role === "hr") {
+        navigate("/hr-dashboard");
+      } else if (userData.role === "business_analyst") {
+        // 👈 ADD THIS
+        navigate("/ba-dashboard");
+      } else if (userData.role === "team_lead") {
+        // 👈 ADD THIS
+        navigate("/tl-dashboard");
       } else {
-        navigate('/employee-dashboard');
+        navigate("/employee-dashboard");
       }
 
       return { success: true };
     } catch (error) {
-      console.error('Login error:', error);
-      return { 
-        success: false, 
-        error: error.response?.data?.detail || 'Login failed' 
+      console.error("Login error:", error);
+      return {
+        success: false,
+        error: error.response?.data?.detail || "Login failed",
       };
     }
   };
@@ -57,13 +62,13 @@ export const AuthProvider = ({ children }) => {
     try {
       await api.logout();
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error("Logout error:", error);
     } finally {
       // Clear storage and state
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
       setUser(null);
-      navigate('/');
+      navigate("/");
     }
   };
 

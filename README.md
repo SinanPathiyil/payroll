@@ -8,11 +8,20 @@ payroll
 │  │  │  └─ routes
 │  │  │     ├─ agent.py
 │  │  │     ├─ auth.py
+│  │  │     ├─ ba_dashboard.py
+│  │  │     ├─ ba_projects.py
+│  │  │     ├─ clients.py
 │  │  │     ├─ employee.py
 │  │  │     ├─ hr.py
+│  │  │     ├─ meetings.py
 │  │  │     ├─ messages.py
 │  │  │     ├─ notes.py
+│  │  │     ├─ payments.py
+│  │  │     ├─ projects.py
+│  │  │     ├─ super_admin.py
 │  │  │     ├─ tasks.py
+│  │  │     ├─ teams.py
+│  │  │     ├─ team_lead.py
 │  │  │     └─ __init__.py
 │  │  ├─ core
 │  │  │  ├─ config.py
@@ -22,16 +31,29 @@ payroll
 │  │  ├─ models
 │  │  │  ├─ activity.py
 │  │  │  ├─ attendance.py
+│  │  │  ├─ audit_log.py
+│  │  │  ├─ client.py
+│  │  │  ├─ meeting.py
 │  │  │  ├─ message.py
 │  │  │  ├─ note.py
+│  │  │  ├─ override_request.py
+│  │  │  ├─ project.py
 │  │  │  ├─ task.py
+│  │  │  ├─ team.py
 │  │  │  └─ user.py
 │  │  ├─ schemas
 │  │  │  ├─ activity.py
 │  │  │  ├─ attendance.py
+│  │  │  ├─ audit_log.py
+│  │  │  ├─ client.py
+│  │  │  ├─ meeting.py
 │  │  │  ├─ message.py
 │  │  │  ├─ note.py
+│  │  │  ├─ override_request.py
+│  │  │  ├─ payment.py
+│  │  │  ├─ project.py
 │  │  │  ├─ task.py
+│  │  │  ├─ team.py
 │  │  │  └─ user.py
 │  │  ├─ services
 │  │  │  ├─ activity_tracker.py
@@ -92,6 +114,7 @@ payroll
 │  │  ├─ components
 │  │  │  ├─ common
 │  │  │  │  ├─ Clock.jsx
+│  │  │  │  ├─ Layout.jsx
 │  │  │  │  ├─ Loader.jsx
 │  │  │  │  ├─ Navbar.jsx
 │  │  │  │  └─ Sidebar.jsx
@@ -123,14 +146,30 @@ payroll
 │  │  ├─ index.css
 │  │  ├─ main.jsx
 │  │  ├─ pages
+│  │  │  ├─ BAClients.jsx
+│  │  │  ├─ BADashboard.jsx
+│  │  │  ├─ BAMeetings.jsx
+│  │  │  ├─ BAPayments.jsx
+│  │  │  ├─ BAProjects.jsx
 │  │  │  ├─ EmployeeDashboard.jsx
 │  │  │  ├─ HRDashboard.jsx
-│  │  │  └─ Login.jsx
+│  │  │  ├─ Login.jsx
+│  │  │  ├─ TLDashboard.jsx
+│  │  │  └─ TLRequirements.jsx
 │  │  ├─ services
 │  │  │  ├─ api.js
 │  │  │  └─ websocket.js
 │  │  ├─ styles
-│  │  │  └─ global.css
+│  │  │  ├─ ba-clients.css
+│  │  │  ├─ ba-dashboard.css
+│  │  │  ├─ ba-meetings.css
+│  │  │  ├─ ba-payments.css
+│  │  │  ├─ ba-projects.css
+│  │  │  ├─ global.css
+│  │  │  ├─ Layout.css
+│  │  │  ├─ sidebar.css
+│  │  │  ├─ tl-dashboard.css
+│  │  │  └─ tl-requirements.css
 │  │  └─ utils
 │  │     ├─ constants.js
 │  │     ├─ electron.js

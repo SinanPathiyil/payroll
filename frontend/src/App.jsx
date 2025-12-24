@@ -12,18 +12,27 @@ import BAMeetings from "./pages/BAMeetings";
 import TLDashboard from "./pages/TLDashboard";
 import TLRequirements from "./pages/TLRequirements";
 
-// ✅ NEW: Import Employee Pages
+//Import Employee Pages
 import EmployeeTasks from "./pages/EmployeeTasks";
 import EmployeeMessages from "./pages/EmployeeMessages";
 import EmployeeNotes from "./pages/EmployeeNotes";
 import EmployeeTimeTracking from "./pages/EmployeeTimeTracking";
+
+//Import HR Pages
+import HREmployees from "./pages/HREmployees";
+import HREmployeeDetails from "./pages/HREmployeeDetails";
+import HRCreateEmployee from "./pages/HRCreateEmployee";
+import HRTasks from "./pages/HRTasks";
+import HRAttendance from "./pages/HRAttendance";
+import HRMessages from "./pages/HRMessages";
+import HRReports from "./pages/HRReports";
+import HREmployeeActivityBreakdown from "./pages/HREmployeeActivityBreakdown";
 
 function App() {
   return (
     <AuthProvider>
       <Routes>
         <Route path="/" element={<Login />} />
-
         {/* Business Analyst Routes */}
         <Route
           path="/ba-dashboard"
@@ -65,7 +74,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
         {/* Team Lead Routes */}
         <Route
           path="/tl-dashboard"
@@ -83,7 +91,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
         {/* HR Routes */}
         <Route
           path="/hr-dashboard"
@@ -93,7 +100,70 @@ function App() {
             </ProtectedRoute>
           }
         />
-
+        <Route
+          path="/hr/employees"
+          element={
+            <ProtectedRoute role="hr">
+              <HREmployees />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/hr/employees/:employeeId"
+          element={
+            <ProtectedRoute role="hr">
+              <HREmployeeDetails />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/hr/employees/:employeeId/activity-breakdown"
+          element={
+            <ProtectedRoute role="hr">
+              <HREmployeeActivityBreakdown />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/hr/employees/create"
+          element={
+            <ProtectedRoute role="hr">
+              <HRCreateEmployee />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/hr/tasks"
+          element={
+            <ProtectedRoute role="hr">
+              <HRTasks />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/hr/attendance"
+          element={
+            <ProtectedRoute role="hr">
+              <HRAttendance />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/hr/messages"
+          element={
+            <ProtectedRoute role="hr">
+              <HRMessages />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/hr/reports"
+          element={
+            <ProtectedRoute role="hr">
+              <HRReports />
+            </ProtectedRoute>
+          }
+        />
         {/* ✅ Employee Routes */}
         <Route
           path="/employee-dashboard"
@@ -135,7 +205,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </AuthProvider>

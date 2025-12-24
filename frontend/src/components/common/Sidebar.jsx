@@ -53,8 +53,10 @@ export default function Sidebar() {
         return [
           { path: '/hr-dashboard', icon: LayoutDashboard, label: 'Dashboard' },
           { path: '/hr/employees', icon: Users, label: 'Employees' },
+          { path: '/hr/tasks', icon: CheckSquare, label: 'Tasks' },
           { path: '/hr/attendance', icon: Calendar, label: 'Attendance' },
           { path: '/hr/messages', icon: MessageSquare, label: 'Messages' },
+          { path: '/hr/reports', icon: BarChart3, label: 'Reports' },
         ];
       
       case 'employee':

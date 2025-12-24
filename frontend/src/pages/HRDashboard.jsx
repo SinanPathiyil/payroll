@@ -1,67 +1,44 @@
-import { useState, useEffect, useContext, useRef } from "react";
+import { useState, useEffect, useContext } from "react";
+import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
-import Navbar from "../components/common/Navbar";
-import Clock from "../components/common/Clock";
-import CreateUserModal from "../components/hr/CreateUserModal";
-import CreateTaskModal from "../components/hr/CreateTaskModal";
-import EmployeeStatsModal from "../components/hr/EmployeeStatsModal";
-import HRMessageBoard from "../components/hr/HRMessageBoard";
-import { getEmployees, getAllTasks, getMyMessages } from "../services/api";
+import Layout from "../components/common/Layout";
 import {
   Users,
   UserPlus,
-  Clock as ClockIcon,
   CheckCircle,
   ListTodo,
-  Plus,
   MessageSquare,
   TrendingUp,
-  User,
+  Clock,
   Calendar,
+  Activity,
+  ArrowUpRight,
   AlertCircle,
 } from "lucide-react";
-import { formatDateTime } from "../utils/helpers";
+import { getEmployees, getAllTasks, getMyMessages } from "../services/api";
 
 export default function HRDashboard() {
-  const [messages, setMessages] = useState([]);
-  const [highlightTaskId, setHighlightTaskId] = useState(null);
   const { user } = useContext(AuthContext);
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
   const [employees, setEmployees] = useState([]);
   const [tasks, setTasks] = useState([]);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showTaskModal, setShowTaskModal] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const taskRefs = useRef({});
+  const [messages, setMessages] = useState([]);
 
   useEffect(() => {
     loadData();
   }, []);
 
-  useEffect(() => {
-    if (highlightTaskId && taskRefs.current[highlightTaskId]) {
-      taskRefs.current[highlightTaskId].scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-      });
-
-      taskRefs.current[highlightTaskId].classList.add("highlight-task");
-
-      setTimeout(() => {
-        taskRefs.current[highlightTaskId]?.classList.remove("highlight-task");
-      }, 3000);
-    }
-  }, [highlightTaskId, tasks]);
-
   const loadData = async () => {
     try {
+      setLoading(true);
       const [employeesRes, tasksRes, messagesRes] = await Promise.all([
         getEmployees(),
         getAllTasks(),
         getMyMessages(),
       ]);
-      setEmployees(employeesRes.data);
-      setTasks(tasksRes.data);
+      setEmployees(employeesRes.data || []);
+      setTasks(tasksRes.data || []);
       setMessages(messagesRes.data || []);
     } catch (error) {
       console.error("Failed to load data:", error);
@@ -75,330 +52,284 @@ export default function HRDashboard() {
     activeToday: employees.filter((e) => e.today_status === "active").length,
     totalTasks: tasks.length,
     completedTasks: tasks.filter((t) => t.status === "completed").length,
-    unreadMessages: messages.filter(
-      (m) => !m.is_read && m.direction === "received"
-    ).length,
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "completed":
-        return "status-chip success";
-      case "in_progress":
-        return "status-chip info";
-      default:
-        return "status-chip warning";
-    }
-  };
-
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case "completed":
-        return <CheckCircle className="w-5 h-5" />;
-      case "in_progress":
-        return <ClockIcon className="w-5 h-5" />;
-      default:
-        return <AlertCircle className="w-5 h-5" />;
-    }
-  };
-
-  const getStatusClass = (status) => {
-    switch (status) {
-      case "completed":
-        return "task-status-completed";
-      case "in_progress":
-        return "task-status-progress";
-      default:
-        return "task-status-pending";
-    }
+    pendingTasks: tasks.filter((t) => t.status === "pending").length,
+    unreadMessages: messages.filter((m) => !m.is_read).length,
   };
 
   if (loading) {
     return (
-      <div className="dashboard-loading">
-        <div className="spinner spinner-lg"></div>
-        <p className="dashboard-loading-text">Loading Dashboard...</p>
-      </div>
+      <Layout>
+        <div className="layout-loading">
+          <div className="spinner spinner-lg"></div>
+          <p className="layout-loading-text">Loading Dashboard...</p>
+        </div>
+      </Layout>
     );
   }
 
   return (
-    <div className="dashboard-container">
-      <Navbar />
-
-      <div className="dashboard-content">
+    <Layout>
+      <div className="ba-dashboard">
         {/* Header */}
-        <div className="dashboard-header">
+        <div className="ba-dashboard-header">
           <div>
-            <h1 className="dashboard-title">HR Dashboard</h1>
-            <p className="dashboard-subtitle">
+            <h1 className="ba-dashboard-title">HR Dashboard</h1>
+            <p className="ba-dashboard-subtitle">
               Welcome back, <strong>{user?.full_name}</strong>
             </p>
+          </div>
+          <div className="ba-dashboard-actions">
+            <button
+              className="btn btn-secondary"
+              onClick={() => navigate("/hr/tasks")}
+            >
+              <ListTodo className="w-4 h-4" />
+              <span>Assign Task</span>
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={() => navigate("/hr/employees/create")}
+            >
+              <UserPlus className="w-4 h-4" />
+              <span>Add Employee</span>
+            </button>
           </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="stats-grid">
-          <div className="stat-card stat-card-primary">
-            <div className="stat-card-content">
-              <div className="stat-card-info">
-                <p className="stat-card-label">Total Employees</p>
-                <p className="stat-card-value">{stats.totalEmployees}</p>
+        <div className="ba-stats-grid">
+          {/* Total Employees */}
+          <div className="ba-stat-card" onClick={() => navigate("/hr/employees")}>
+            <div className="ba-stat-content">
+              <div className="ba-stat-info">
+                <p className="ba-stat-label">Total Employees</p>
+                <p className="ba-stat-value">{stats.totalEmployees}</p>
+                <p className="ba-stat-hint">
+                  <span className="ba-stat-badge success">
+                    {stats.activeToday} active today
+                  </span>
+                </p>
               </div>
-              <div className="stat-card-icon stat-card-icon-blue">
-                <Users className="w-7 h-7" />
+              <div className="ba-stat-icon ba-stat-icon-blue">
+                <Users className="w-8 h-8" />
               </div>
+            </div>
+            <div className="ba-stat-footer">
+              <span>View all employees</span>
+              <ArrowUpRight className="w-4 h-4" />
             </div>
           </div>
 
-          <div className="stat-card stat-card-success">
-            <div className="stat-card-content">
-              <div className="stat-card-info">
-                <p className="stat-card-label">Active Employees</p>
-                <p className="stat-card-value stat-card-value-success">
-                  {stats.activeToday}
+          {/* Tasks */}
+          <div className="ba-stat-card" onClick={() => navigate("/hr/tasks")}>
+            <div className="ba-stat-content">
+              <div className="ba-stat-info">
+                <p className="ba-stat-label">Total Tasks</p>
+                <p className="ba-stat-value">{stats.totalTasks}</p>
+                <p className="ba-stat-hint">
+                  <span className="ba-stat-badge warning">
+                    {stats.pendingTasks} pending
+                  </span>
+                  <span className="ba-stat-badge success">
+                    {stats.completedTasks} completed
+                  </span>
                 </p>
               </div>
-              <div className="stat-card-icon stat-card-icon-green">
-                <CheckCircle className="w-7 h-7" />
+              <div className="ba-stat-icon ba-stat-icon-purple">
+                <ListTodo className="w-8 h-8" />
               </div>
+            </div>
+            <div className="ba-stat-footer">
+              <span>Manage tasks</span>
+              <ArrowUpRight className="w-4 h-4" />
             </div>
           </div>
 
-          <div className="stat-card stat-card-warning">
-            <div className="stat-card-content">
-              <div className="stat-card-info">
-                <p className="stat-card-label">
-                  Total <br /> Tasks
+          {/* Attendance */}
+          <div className="ba-stat-card" onClick={() => navigate("/hr/attendance")}>
+            <div className="ba-stat-content">
+              <div className="ba-stat-info">
+                <p className="ba-stat-label">Active Today</p>
+                <p className="ba-stat-value">{stats.activeToday}</p>
+                <p className="ba-stat-hint">
+                  <span className="ba-stat-badge info">
+                    {stats.totalEmployees - stats.activeToday} offline
+                  </span>
                 </p>
-                <p className="stat-card-value">{stats.totalTasks}</p>
               </div>
-              <div className="stat-card-icon stat-card-icon-orange">
-                <ListTodo className="w-7 h-7" />
+              <div className="ba-stat-icon ba-stat-icon-green">
+                <CheckCircle className="w-8 h-8" />
               </div>
+            </div>
+            <div className="ba-stat-footer">
+              <span>View attendance</span>
+              <ArrowUpRight className="w-4 h-4" />
             </div>
           </div>
 
-          <div className="stat-card stat-card-success">
-            <div className="stat-card-content">
-              <div className="stat-card-info">
-                <p className="stat-card-label">Completed Tasks</p>
-                <p className="stat-card-value stat-card-value-success">
-                  {stats.completedTasks}
+          {/* Messages */}
+          <div className="ba-stat-card" onClick={() => navigate("/hr/messages")}>
+            <div className="ba-stat-content">
+              <div className="ba-stat-info">
+                <p className="ba-stat-label">New Messages</p>
+                <p className="ba-stat-value">{stats.unreadMessages}</p>
+                <p className="ba-stat-hint">
+                  <span className="ba-stat-badge info">
+                    {messages.length} total
+                  </span>
                 </p>
               </div>
-              <div className="stat-card-icon stat-card-icon-green">
-                <TrendingUp className="w-7 h-7" />
+              <div className="ba-stat-icon ba-stat-icon-orange">
+                <MessageSquare className="w-8 h-8" />
               </div>
             </div>
-          </div>
-
-          <div className="stat-card stat-card-info">
-            <div className="stat-card-content">
-              <div className="stat-card-info">
-                <p className="stat-card-label">New Notifications</p>
-                <p className="stat-card-value stat-card-value-info">
-                  {stats.unreadMessages}
-                </p>
-              </div>
-              <div className="stat-card-icon stat-card-icon-purple">
-                <MessageSquare className="w-7 h-7" />
-              </div>
+            <div className="ba-stat-footer">
+              <span>View messages</span>
+              <ArrowUpRight className="w-4 h-4" />
             </div>
           </div>
         </div>
 
-        <div className="dashboard-grid">
-          {/* Main Content */}
-          <div className="dashboard-main">
-            {/* Employees Table */}
-            <div className="dashboard-card">
-              <div className="dashboard-card-header">
-                <h2 className="dashboard-card-title">Employees</h2>
-                <button
-                  onClick={() => setShowCreateModal(true)}
-                  className="btn btn-primary"
-                >
-                  <UserPlus className="w-4 h-4" />
-                  <span>Add Employee</span>
-                </button>
+        {/* Main Content Grid */}
+        <div className="ba-content-grid">
+          {/* Recent Employees */}
+          <div className="ba-card">
+            <div className="ba-card-header">
+              <div className="ba-card-title">
+                <Users className="w-5 h-5" />
+                <span>Active Employees Today</span>
               </div>
-              <div className="dashboard-table-wrapper">
-                <table className="dashboard-table">
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Email</th>
-                      <th>Status</th>
-                      <th>Hours Today</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {employees.map((employee) => (
-                      <tr key={employee.id}>
-                        <td>
-                          <div className="employee-name">
-                            {employee.full_name}
-                          </div>
-                        </td>
-                        <td className="employee-email">{employee.email}</td>
-                        <td>
-                          <span
-                            className={
-                              employee.today_status === "active"
-                                ? "status-chip active"
-                                : "status-chip inactive"
-                            }
-                          >
-                            {employee.today_status === "active"
-                              ? "Active"
-                              : "Offline"}
-                          </span>
-                        </td>
-                        <td className="employee-hours">
-                          {employee.today_hours?.toFixed(2) || "0.00"} hrs
-                        </td>
-                        <td>
-                          <button
-                            onClick={() => setSelectedEmployee(employee)}
-                            className="btn-link"
-                          >
-                            View Stats
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <button 
+                className="btn btn-secondary btn-sm"
+                onClick={() => navigate("/hr/employees")}
+              >
+                View All
+              </button>
             </div>
-
-            {/* Tasks List */}
-            <div className="task-list-card">
-              <div className="dashboard-card-header">
-                <h2 className="dashboard-card-title">
-                  <ListTodo className="w-5 h-5" />
-                  <span>All Tasks</span>
-                </h2>
-                <button
-                  onClick={() => setShowTaskModal(true)}
-                  className="btn btn-success"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Assign Task</span>
-                </button>
-              </div>
-              <div className="task-list-body">
-                {tasks.length === 0 ? (
-                  <div className="task-list-empty">
-                    <AlertCircle className="task-list-empty-icon" />
-                    <p className="task-list-empty-text">
-                      No tasks assigned yet
-                    </p>
-                  </div>
-                ) : (
-                  <div className="task-list-content">
-                    {tasks.map((task) => (
-                      <div
-                        key={task.id}
-                        ref={(el) => (taskRefs.current[task.id] = el)}
-                        className={`task-item ${getStatusClass(task.status)}`}
+            <div className="ba-card-body">
+              {employees.filter(e => e.today_status === "active").length === 0 ? (
+                <div className="ba-empty-state">
+                  <Clock className="ba-empty-icon" />
+                  <p>No active employees today</p>
+                </div>
+              ) : (
+                <div className="ba-activity-list">
+                  {employees
+                    .filter((e) => e.today_status === "active")
+                    .slice(0, 5)
+                    .map((employee) => (
+                      <div 
+                        key={employee.id} 
+                        className="ba-activity-item"
+                        onClick={() => navigate(`/hr/employees/${employee.id}`)}
+                        style={{ cursor: 'pointer' }}
                       >
-                        <div className="task-item-content">
-                          <div className="task-item-main">
-                            <div className="task-item-header">
-                              <div className="task-item-icon">
-                                {getStatusIcon(task.status)}
-                              </div>
-                              <h3 className="task-item-title">{task.title}</h3>
-                            </div>
-                            <p className="task-item-description">
-                              {task.description}
-                            </p>
-                            <div className="task-item-meta">
-                              <span className="task-meta-item">
-                                <User className="w-4 h-4" />
-                                <span>{task.employee_name}</span>
-                              </span>
-                              <span className="task-meta-item">
-                                <Calendar className="w-4 h-4" />
-                                <span>
-                                  Created: {formatDateTime(task.created_at)}
-                                </span>
-                              </span>
-                              {task.due_date && (
-                                <span className="task-meta-item">
-                                  <ClockIcon className="w-4 h-4" />
-                                  <span>
-                                    Due: {formatDateTime(task.due_date)}
-                                  </span>
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="task-item-badge">
-                            <span
-                              className={`status-chip ${
-                                task.status === "completed"
-                                  ? "success"
-                                  : task.status === "in_progress"
-                                    ? "info"
-                                    : "warning"
-                              }`}
-                            >
-                              {task.status.replace("_", " ")}
-                            </span>
-                          </div>
+                        <div className="ba-activity-indicator" style={{ backgroundColor: '#10b981' }} />
+                        <div className="ba-activity-content">
+                          <p className="ba-activity-message">
+                            <strong>{employee.full_name}</strong>
+                          </p>
+                          <p className="ba-activity-time">
+                            {employee.today_hours?.toFixed(2) || "0.00"} hours today
+                          </p>
                         </div>
                       </div>
                     ))}
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Sidebar */}
-          <div className="dashboard-sidebar">
-            <Clock />
-            <HRMessageBoard
-              messages={messages}
-              onMessageRead={loadData}
-              onTaskMessageClick={setHighlightTaskId}
-            />
+          {/* Recent Tasks */}
+          <div className="ba-card">
+            <div className="ba-card-header">
+              <div className="ba-card-title">
+                <ListTodo className="w-5 h-5" />
+                <span>Recent Tasks</span>
+              </div>
+              <button 
+                className="btn btn-secondary btn-sm"
+                onClick={() => navigate("/hr/tasks")}
+              >
+                View All
+              </button>
+            </div>
+            <div className="ba-card-body">
+              {tasks.length === 0 ? (
+                <div className="ba-empty-state">
+                  <ListTodo className="ba-empty-icon" />
+                  <p>No tasks assigned yet</p>
+                </div>
+              ) : (
+                <div className="ba-activity-list">
+                  {tasks.slice(0, 5).map((task) => (
+                    <div key={task.id} className="ba-activity-item">
+                      <div 
+                        className="ba-activity-indicator" 
+                        style={{ 
+                          backgroundColor: 
+                            task.status === 'completed' ? '#10b981' : 
+                            task.status === 'in_progress' ? '#3b82f6' : '#f59e0b' 
+                        }} 
+                      />
+                      <div className="ba-activity-content">
+                        <p className="ba-activity-message">
+                          <strong>{task.title}</strong>
+                        </p>
+                        <p className="ba-activity-time">
+                          Assigned to: {task.employee_name} | Status: {task.status}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="ba-card">
+          <div className="ba-card-header">
+            <div className="ba-card-title">
+              <TrendingUp className="w-5 h-5" />
+              <span>Quick Actions</span>
+            </div>
+          </div>
+          <div className="ba-card-body">
+            <div className="ba-quick-actions">
+              <button
+                className="ba-quick-action-btn"
+                onClick={() => navigate("/hr/employees/create")}
+              >
+                <UserPlus className="w-5 h-5" />
+                <span>Add New Employee</span>
+              </button>
+              <button
+                className="ba-quick-action-btn"
+                onClick={() => navigate("/hr/tasks")}
+              >
+                <ListTodo className="w-5 h-5" />
+                <span>Assign Task</span>
+              </button>
+              <button
+                className="ba-quick-action-btn"
+                onClick={() => navigate("/hr/attendance")}
+              >
+                <Calendar className="w-5 h-5" />
+                <span>View Attendance</span>
+              </button>
+              <button
+                className="ba-quick-action-btn"
+                onClick={() => navigate("/hr/reports")}
+              >
+                <Activity className="w-5 h-5" />
+                <span>Generate Report</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
-
-      {/* Modals */}
-      {showCreateModal && (
-        <CreateUserModal
-          onClose={() => setShowCreateModal(false)}
-          onSuccess={() => {
-            setShowCreateModal(false);
-            loadData();
-          }}
-        />
-      )}
-
-      {showTaskModal && (
-        <CreateTaskModal
-          employees={employees}
-          onClose={() => setShowTaskModal(false)}
-          onSuccess={() => {
-            setShowTaskModal(false);
-            loadData();
-          }}
-        />
-      )}
-
-      {selectedEmployee && (
-        <EmployeeStatsModal
-          employee={selectedEmployee}
-          onClose={() => setSelectedEmployee(null)}
-        />
-      )}
-    </div>
+    </Layout>
   );
 }

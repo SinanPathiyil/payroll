@@ -163,7 +163,7 @@ export const getTeamMembersList = (teamId) => api.get(`/teams/${teamId}/members`
 export const createUser = (userData) => api.post('/hr/employees/create', userData);
 export const getEmployees = (params) => api.get('/hr/employees', { params });
 export const getEmployee = (employeeId) => api.get(`/hr/employees/${employeeId}`);
-export const getEmployeeStats = (employeeId) => api.get(`/hr/activities/${employeeId}`);
+export const getEmployeeStats = (employeeId) => api.get(`/hr/employee/${employeeId}/stats`);
 export const getEmployeeAppBreakdown = (employeeId, startDate, endDate) =>
   api.get(`/hr/employee/${employeeId}/app-breakdown`, {
     params: {

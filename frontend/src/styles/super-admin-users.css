@@ -411,3 +411,204 @@
     min-width: 800px;
   }
 }
+/* Modal Styles */
+.sau-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(11, 11, 13, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+.sau-modal {
+  background: white;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 60px rgba(11, 11, 13, 0.3);
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow: auto;
+  animation: slideUp 0.3s ease;
+}
+
+.sau-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px;
+  border-bottom: 1px solid rgba(11, 11, 13, 0.1);
+}
+
+.sau-modal-header h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.sau-modal-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  background: rgba(11, 11, 13, 0.05);
+  color: rgba(11, 11, 13, 0.7);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sau-modal-close:hover {
+  background: rgba(11, 11, 13, 0.1);
+}
+
+.sau-modal-body {
+  padding: 24px;
+}
+
+.sau-modal-info {
+  background: rgba(11, 11, 13, 0.05);
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  margin-bottom: 20px;
+  font-size: 0.95rem;
+  line-height: 1.8;
+}
+
+.sau-modal-warning {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.1), rgba(220, 38, 38, 0.15));
+  border: 1px solid rgba(220, 38, 38, 0.3);
+  border-radius: var(--radius-lg);
+  margin-bottom: 20px;
+  color: rgba(220, 38, 38, 0.9);
+  font-weight: 600;
+}
+
+.sau-modal-text {
+  font-size: 1rem;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+  line-height: 1.6;
+}
+
+.sau-form-group {
+  margin-bottom: 20px;
+}
+
+.sau-form-group label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.sau-input,
+.sau-textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid rgba(11, 11, 13, 0.2);
+  border-radius: var(--radius-lg);
+  font-size: 0.95rem;
+  font-family: inherit;
+  color: var(--text-primary);
+  transition: all 0.3s ease;
+}
+
+.sau-input:focus,
+.sau-textarea:focus {
+  outline: none;
+  border-color: rgba(11, 11, 13, 0.4);
+  box-shadow: 0 0 0 3px rgba(11, 11, 13, 0.05);
+}
+
+.sau-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.sau-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 20px 24px;
+  border-top: 1px solid rgba(11, 11, 13, 0.1);
+}
+
+.sau-btn-primary,
+.sau-btn-secondary,
+.sau-btn-danger {
+  padding: 10px 20px;
+  border-radius: var(--radius-lg);
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 1px solid;
+}
+
+.sau-btn-primary {
+  background: linear-gradient(135deg, rgba(11, 11, 13, 0.08), rgba(11, 11, 13, 0.12));
+  border-color: rgba(11, 11, 13, 0.2);
+  color: rgba(11, 11, 13, 0.9);
+}
+
+.sau-btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(11, 11, 13, 0.12), rgba(11, 11, 13, 0.16));
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(11, 11, 13, 0.15);
+}
+
+.sau-btn-secondary {
+  background: white;
+  border-color: rgba(11, 11, 13, 0.2);
+  color: rgba(11, 11, 13, 0.7);
+}
+
+.sau-btn-secondary:hover {
+  background: rgba(11, 11, 13, 0.05);
+}
+
+.sau-btn-danger {
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.1), rgba(220, 38, 38, 0.15));
+  border-color: rgba(220, 38, 38, 0.3);
+  color: rgba(220, 38, 38, 0.9);
+}
+
+.sau-btn-danger:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.2), rgba(220, 38, 38, 0.25));
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
+}
+
+.sau-btn-primary:disabled,
+.sau-btn-danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

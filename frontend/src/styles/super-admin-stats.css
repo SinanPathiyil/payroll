@@ -327,28 +327,13 @@
   padding: 20px;
   border-radius: var(--radius-lg);
   border: 1px solid rgba(11, 11, 13, 0.1);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(248, 248, 248, 0.9));
   transition: all 0.3s ease;
 }
 
 .sass-health-item:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(11, 11, 13, 0.1);
-}
-
-.sass-health-success {
-  background: linear-gradient(135deg, rgba(0, 200, 83, 0.05), rgba(0, 200, 83, 0.08));
-}
-
-.sass-health-info {
-  background: linear-gradient(135deg, rgba(0, 102, 204, 0.05), rgba(0, 102, 204, 0.08));
-}
-
-.sass-health-warning {
-  background: linear-gradient(135deg, rgba(255, 179, 0, 0.05), rgba(255, 179, 0, 0.08));
-}
-
-.sass-health-primary {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(99, 102, 241, 0.08));
 }
 
 .sass-health-icon {
@@ -359,26 +344,27 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  border: 1px solid rgba(11, 11, 13, 0.1);
 }
 
 .sass-health-success .sass-health-icon {
-  background: linear-gradient(135deg, rgba(0, 200, 83, 0.15), rgba(0, 200, 83, 0.2));
-  color: rgba(0, 200, 83, 0.9);
+  background: linear-gradient(135deg, rgba(0, 200, 83, 0.1), rgba(0, 200, 83, 0.15));
+  color: rgba(0, 200, 83, 0.8);
 }
 
 .sass-health-info .sass-health-icon {
-  background: linear-gradient(135deg, rgba(0, 102, 204, 0.15), rgba(0, 102, 204, 0.2));
-  color: rgba(0, 102, 204, 0.9);
+  background: linear-gradient(135deg, rgba(0, 102, 204, 0.1), rgba(0, 102, 204, 0.15));
+  color: rgba(0, 102, 204, 0.8);
 }
 
 .sass-health-warning .sass-health-icon {
-  background: linear-gradient(135deg, rgba(255, 179, 0, 0.15), rgba(255, 179, 0, 0.2));
-  color: rgba(255, 179, 0, 0.9);
+  background: linear-gradient(135deg, rgba(255, 179, 0, 0.1), rgba(255, 179, 0, 0.15));
+  color: rgba(255, 179, 0, 0.8);
 }
 
 .sass-health-primary .sass-health-icon {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(99, 102, 241, 0.2));
-  color: rgba(99, 102, 241, 0.9);
+  background: linear-gradient(135deg, rgba(11, 11, 13, 0.08), rgba(11, 11, 13, 0.12));
+  color: rgba(11, 11, 13, 0.7);
 }
 
 .sass-health-info {
@@ -402,13 +388,6 @@
 .sass-health-status {
   font-size: 0.85rem;
   color: rgba(11, 11, 13, 0.6);
-}
-
-/* Empty State */
-.sass-empty-state {
-  text-align: center;
-  padding: 32px;
-  color: rgba(11, 11, 13, 0.5);
 }
 
 /* Loading */

@@ -13,9 +13,9 @@ import {
   Calendar,
   Activity,
   ArrowUpRight,
-  AlertCircle,
 } from "lucide-react";
 import { getEmployees, getAllTasks, getMyMessages } from "../services/api";
+import '../styles/hr-dashboard.css';
 
 export default function HRDashboard() {
   const { user } = useContext(AuthContext);
@@ -69,16 +69,16 @@ export default function HRDashboard() {
 
   return (
     <Layout>
-      <div className="ba-dashboard">
+      <div className="hr-dashboard">
         {/* Header */}
-        <div className="ba-dashboard-header">
+        <div className="hr-dashboard-header">
           <div>
-            <h1 className="ba-dashboard-title">HR Dashboard</h1>
-            <p className="ba-dashboard-subtitle">
+            <h1 className="hr-dashboard-title">HR Dashboard</h1>
+            <p className="hr-dashboard-subtitle">
               Welcome back, <strong>{user?.full_name}</strong>
             </p>
           </div>
-          <div className="ba-dashboard-actions">
+          <div className="hr-dashboard-actions">
             <button
               className="btn btn-secondary"
               onClick={() => navigate("/hr/tasks")}
@@ -97,93 +97,93 @@ export default function HRDashboard() {
         </div>
 
         {/* Stats Cards */}
-        <div className="ba-stats-grid">
+        <div className="hr-stats-grid">
           {/* Total Employees */}
-          <div className="ba-stat-card" onClick={() => navigate("/hr/employees")}>
-            <div className="ba-stat-content">
-              <div className="ba-stat-info">
-                <p className="ba-stat-label">Total Employees</p>
-                <p className="ba-stat-value">{stats.totalEmployees}</p>
-                <p className="ba-stat-hint">
-                  <span className="ba-stat-badge success">
+          <div className="hr-stat-card" onClick={() => navigate("/hr/employees")}>
+            <div className="hr-stat-content">
+              <div className="hr-stat-info">
+                <p className="hr-stat-label">Total Employees</p>
+                <p className="hr-stat-value">{stats.totalEmployees}</p>
+                <p className="hr-stat-hint">
+                  <span className="hr-stat-badge success">
                     {stats.activeToday} active today
                   </span>
                 </p>
               </div>
-              <div className="ba-stat-icon ba-stat-icon-blue">
+              <div className="hr-stat-icon hr-stat-icon-blue">
                 <Users className="w-8 h-8" />
               </div>
             </div>
-            <div className="ba-stat-footer">
+            <div className="hr-stat-footer">
               <span>View all employees</span>
               <ArrowUpRight className="w-4 h-4" />
             </div>
           </div>
 
           {/* Tasks */}
-          <div className="ba-stat-card" onClick={() => navigate("/hr/tasks")}>
-            <div className="ba-stat-content">
-              <div className="ba-stat-info">
-                <p className="ba-stat-label">Total Tasks</p>
-                <p className="ba-stat-value">{stats.totalTasks}</p>
-                <p className="ba-stat-hint">
-                  <span className="ba-stat-badge warning">
+          <div className="hr-stat-card" onClick={() => navigate("/hr/tasks")}>
+            <div className="hr-stat-content">
+              <div className="hr-stat-info">
+                <p className="hr-stat-label">Total Tasks</p>
+                <p className="hr-stat-value">{stats.totalTasks}</p>
+                <p className="hr-stat-hint">
+                  <span className="hr-stat-badge warning">
                     {stats.pendingTasks} pending
                   </span>
-                  <span className="ba-stat-badge success">
+                  <span className="hr-stat-badge success">
                     {stats.completedTasks} completed
                   </span>
                 </p>
               </div>
-              <div className="ba-stat-icon ba-stat-icon-purple">
+              <div className="hr-stat-icon hr-stat-icon-purple">
                 <ListTodo className="w-8 h-8" />
               </div>
             </div>
-            <div className="ba-stat-footer">
+            <div className="hr-stat-footer">
               <span>Manage tasks</span>
               <ArrowUpRight className="w-4 h-4" />
             </div>
           </div>
 
           {/* Attendance */}
-          <div className="ba-stat-card" onClick={() => navigate("/hr/attendance")}>
-            <div className="ba-stat-content">
-              <div className="ba-stat-info">
-                <p className="ba-stat-label">Active Today</p>
-                <p className="ba-stat-value">{stats.activeToday}</p>
-                <p className="ba-stat-hint">
-                  <span className="ba-stat-badge info">
+          <div className="hr-stat-card" onClick={() => navigate("/hr/attendance")}>
+            <div className="hr-stat-content">
+              <div className="hr-stat-info">
+                <p className="hr-stat-label">Active Today</p>
+                <p className="hr-stat-value">{stats.activeToday}</p>
+                <p className="hr-stat-hint">
+                  <span className="hr-stat-badge info">
                     {stats.totalEmployees - stats.activeToday} offline
                   </span>
                 </p>
               </div>
-              <div className="ba-stat-icon ba-stat-icon-green">
+              <div className="hr-stat-icon hr-stat-icon-green">
                 <CheckCircle className="w-8 h-8" />
               </div>
             </div>
-            <div className="ba-stat-footer">
+            <div className="hr-stat-footer">
               <span>View attendance</span>
               <ArrowUpRight className="w-4 h-4" />
             </div>
           </div>
 
           {/* Messages */}
-          <div className="ba-stat-card" onClick={() => navigate("/hr/messages")}>
-            <div className="ba-stat-content">
-              <div className="ba-stat-info">
-                <p className="ba-stat-label">New Messages</p>
-                <p className="ba-stat-value">{stats.unreadMessages}</p>
-                <p className="ba-stat-hint">
-                  <span className="ba-stat-badge info">
+          <div className="hr-stat-card" onClick={() => navigate("/hr/messages")}>
+            <div className="hr-stat-content">
+              <div className="hr-stat-info">
+                <p className="hr-stat-label">New Messages</p>
+                <p className="hr-stat-value">{stats.unreadMessages}</p>
+                <p className="hr-stat-hint">
+                  <span className="hr-stat-badge info">
                     {messages.length} total
                   </span>
                 </p>
               </div>
-              <div className="ba-stat-icon ba-stat-icon-orange">
+              <div className="hr-stat-icon hr-stat-icon-orange">
                 <MessageSquare className="w-8 h-8" />
               </div>
             </div>
-            <div className="ba-stat-footer">
+            <div className="hr-stat-footer">
               <span>View messages</span>
               <ArrowUpRight className="w-4 h-4" />
             </div>
@@ -191,11 +191,11 @@ export default function HRDashboard() {
         </div>
 
         {/* Main Content Grid */}
-        <div className="ba-content-grid">
+        <div className="hr-content-grid">
           {/* Recent Employees */}
-          <div className="ba-card">
-            <div className="ba-card-header">
-              <div className="ba-card-title">
+          <div className="hr-card">
+            <div className="hr-card-header">
+              <div className="hr-card-title">
                 <Users className="w-5 h-5" />
                 <span>Active Employees Today</span>
               </div>
@@ -206,30 +206,30 @@ export default function HRDashboard() {
                 View All
               </button>
             </div>
-            <div className="ba-card-body">
+            <div className="hr-card-body">
               {employees.filter(e => e.today_status === "active").length === 0 ? (
-                <div className="ba-empty-state">
-                  <Clock className="ba-empty-icon" />
+                <div className="hr-empty-state">
+                  <Clock className="hr-empty-icon" />
                   <p>No active employees today</p>
                 </div>
               ) : (
-                <div className="ba-activity-list">
+                <div className="hr-activity-list">
                   {employees
                     .filter((e) => e.today_status === "active")
                     .slice(0, 5)
                     .map((employee) => (
                       <div 
                         key={employee.id} 
-                        className="ba-activity-item"
+                        className="hr-activity-item"
                         onClick={() => navigate(`/hr/employees/${employee.id}`)}
                         style={{ cursor: 'pointer' }}
                       >
-                        <div className="ba-activity-indicator" style={{ backgroundColor: '#10b981' }} />
-                        <div className="ba-activity-content">
-                          <p className="ba-activity-message">
+                        <div className="hr-activity-indicator" style={{ backgroundColor: '#10b981' }} />
+                        <div className="hr-activity-content">
+                          <p className="hr-activity-message">
                             <strong>{employee.full_name}</strong>
                           </p>
-                          <p className="ba-activity-time">
+                          <p className="hr-activity-time">
                             {employee.today_hours?.toFixed(2) || "0.00"} hours today
                           </p>
                         </div>
@@ -241,9 +241,9 @@ export default function HRDashboard() {
           </div>
 
           {/* Recent Tasks */}
-          <div className="ba-card">
-            <div className="ba-card-header">
-              <div className="ba-card-title">
+          <div className="hr-card">
+            <div className="hr-card-header">
+              <div className="hr-card-title">
                 <ListTodo className="w-5 h-5" />
                 <span>Recent Tasks</span>
               </div>
@@ -254,29 +254,29 @@ export default function HRDashboard() {
                 View All
               </button>
             </div>
-            <div className="ba-card-body">
+            <div className="hr-card-body">
               {tasks.length === 0 ? (
-                <div className="ba-empty-state">
-                  <ListTodo className="ba-empty-icon" />
+                <div className="hr-empty-state">
+                  <ListTodo className="hr-empty-icon" />
                   <p>No tasks assigned yet</p>
                 </div>
               ) : (
-                <div className="ba-activity-list">
+                <div className="hr-activity-list">
                   {tasks.slice(0, 5).map((task) => (
-                    <div key={task.id} className="ba-activity-item">
+                    <div key={task.id} className="hr-activity-item">
                       <div 
-                        className="ba-activity-indicator" 
+                        className="hr-activity-indicator" 
                         style={{ 
                           backgroundColor: 
                             task.status === 'completed' ? '#10b981' : 
                             task.status === 'in_progress' ? '#3b82f6' : '#f59e0b' 
                         }} 
                       />
-                      <div className="ba-activity-content">
-                        <p className="ba-activity-message">
+                      <div className="hr-activity-content">
+                        <p className="hr-activity-message">
                           <strong>{task.title}</strong>
                         </p>
-                        <p className="ba-activity-time">
+                        <p className="hr-activity-time">
                           Assigned to: {task.employee_name} | Status: {task.status}
                         </p>
                       </div>
@@ -289,38 +289,38 @@ export default function HRDashboard() {
         </div>
 
         {/* Quick Actions */}
-        <div className="ba-card">
-          <div className="ba-card-header">
-            <div className="ba-card-title">
+        <div className="hr-card">
+          <div className="hr-card-header">
+            <div className="hr-card-title">
               <TrendingUp className="w-5 h-5" />
               <span>Quick Actions</span>
             </div>
           </div>
-          <div className="ba-card-body">
-            <div className="ba-quick-actions">
+          <div className="hr-card-body">
+            <div className="hr-quick-actions">
               <button
-                className="ba-quick-action-btn"
+                className="hr-quick-action-btn"
                 onClick={() => navigate("/hr/employees/create")}
               >
                 <UserPlus className="w-5 h-5" />
                 <span>Add New Employee</span>
               </button>
               <button
-                className="ba-quick-action-btn"
+                className="hr-quick-action-btn"
                 onClick={() => navigate("/hr/tasks")}
               >
                 <ListTodo className="w-5 h-5" />
                 <span>Assign Task</span>
               </button>
               <button
-                className="ba-quick-action-btn"
+                className="hr-quick-action-btn"
                 onClick={() => navigate("/hr/attendance")}
               >
                 <Calendar className="w-5 h-5" />
                 <span>View Attendance</span>
               </button>
               <button
-                className="ba-quick-action-btn"
+                className="hr-quick-action-btn"
                 onClick={() => navigate("/hr/reports")}
               >
                 <Activity className="w-5 h-5" />

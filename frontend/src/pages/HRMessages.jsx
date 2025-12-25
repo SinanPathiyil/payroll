@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
 import Layout from "../components/common/Layout";
 import HRMessageBoard from "../components/hr/HRMessageBoard";
+import SendMessageModal from "../components/hr/SendMessageModal";
 import { getMyMessages } from "../services/api";
-import { MessageSquare, Mail, MailOpen } from "lucide-react";
+import { MessageSquare, Mail, MailOpen, Send } from "lucide-react";
 
 export default function HRMessages() {
   const [loading, setLoading] = useState(true);
   const [messages, setMessages] = useState([]);
+  const [showSendModal, setShowSendModal] = useState(false); // ← MOVED HERE
 
   useEffect(() => {
     loadMessages();
@@ -52,6 +54,13 @@ export default function HRMessages() {
               View and manage employee messages
             </p>
           </div>
+          <button
+            onClick={() => setShowSendModal(true)}
+            className="btn btn-primary"
+          >
+            <Send className="w-4 h-4" />
+            <span>Send Message</span>
+          </button>
         </div>
 
         {/* Stats */}
@@ -109,6 +118,17 @@ export default function HRMessages() {
           </div>
         </div>
       </div>
+
+      {/* Modal at Page Level */}
+      {showSendModal && (
+        <SendMessageModal
+          onClose={() => setShowSendModal(false)}
+          onSuccess={() => {
+            setShowSendModal(false);
+            loadMessages();
+          }}
+        />
+      )}
     </Layout>
   );
 }

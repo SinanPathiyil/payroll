@@ -9,8 +9,14 @@ import BAClients from "./pages/BAClients";
 import BAProjects from "./pages/BAProjects";
 import BAPayments from "./pages/BAPayments";
 import BAMeetings from "./pages/BAMeetings";
+
+//Import TL Pages
 import TLDashboard from "./pages/TLDashboard";
+import TLProjects from "./pages/TLProjects";
 import TLRequirements from "./pages/TLRequirements";
+import TLTasks from "./pages/TLTasks";
+import TLMessages from "./pages/TLMessages";
+import TLTeam from "./pages/TLTeam";
 
 //Import Employee Pages
 import EmployeeTasks from "./pages/EmployeeTasks";
@@ -33,7 +39,7 @@ import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import SuperAdminUsers from "./pages/SuperAdminUsers";
 import SuperAdminOverrideRequests from "./pages/SuperAdminOverrideRequests";
 import SuperAdminAuditLogs from "./pages/SuperAdminAuditLogs";
-import SuperAdminSystemStats from "./pages/SuperAdminSystemStats";  // ADD THIS
+import SuperAdminSystemStats from "./pages/SuperAdminSystemStats"; // ADD THIS
 
 function App() {
   return (
@@ -91,10 +97,50 @@ function App() {
           }
         />
         <Route
+          path="/tl/projects"
+          element={
+            <ProtectedRoute role="team_lead">
+              <TLProjects />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/tl/requirements"
           element={
             <ProtectedRoute role="team_lead">
               <TLRequirements />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tl/tasks"
+          element={
+            <ProtectedRoute role="team_lead">
+              <TLTasks />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tl/messages"
+          element={
+            <ProtectedRoute role="team_lead">
+              <TLMessages />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tl/messages"
+          element={
+            <ProtectedRoute role="team_lead">
+              <TLMessages />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tl/team"
+          element={
+            <ProtectedRoute role="team_lead">
+              <TLTeam />
             </ProtectedRoute>
           }
         />
@@ -254,7 +300,7 @@ function App() {
             </ProtectedRoute>
           }
         />
-        
+
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </AuthProvider>

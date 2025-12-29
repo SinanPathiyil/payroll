@@ -47,6 +47,7 @@ export default function Sidebar() {
           { path: '/tl/requirements', icon: CheckSquare, label: 'Requirements' },
           { path: '/tl/team', icon: Users, label: 'My Team' },
           { path: '/tl/tasks', icon: FileText, label: 'Tasks' },
+          { path: '/tl/messages', icon: MessageSquare, label: 'Messages' },
         ];
       
       case 'hr':

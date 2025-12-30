@@ -173,6 +173,7 @@ payroll
 │  │  │  ├─ SuperAdminUsers.jsx
 │  │  │  ├─ TLDashboard.jsx
 │  │  │  ├─ TLMessages.jsx
+│  │  │  ├─ TLProjects.jsx
 │  │  │  ├─ TLRequirements.jsx
 │  │  │  ├─ TLTasks.jsx
 │  │  │  └─ TLTeam.jsx

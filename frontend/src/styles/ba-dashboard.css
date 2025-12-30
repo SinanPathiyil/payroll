@@ -109,6 +109,8 @@
 }
 
 .ba-stat-card {
+  display: flex; 
+  flex-direction: column; 
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(248, 248, 248, 0.9));
   backdrop-filter: blur(20px);
   border: 1px solid rgba(11, 11, 13, 0.1);
@@ -117,6 +119,7 @@
   transition: all 0.3s ease;
   cursor: pointer;
   box-shadow: 0 4px 16px rgba(11, 11, 13, 0.06);
+  height: 100%; 
 }
 
 .ba-stat-card:hover {
@@ -131,6 +134,7 @@
   justify-content: space-between;
   gap: 16px;
   padding: 24px;
+  flex: 1; 
 }
 
 .ba-stat-info {
@@ -236,6 +240,7 @@
   font-size: 0.85rem;
   font-weight: 600;
   color: rgba(11, 11, 13, 0.7);
+  margin-top: auto; 
 }
 
 /* Content Grid */

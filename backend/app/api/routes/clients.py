@@ -79,14 +79,7 @@ async def create_client(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Client with this company name already exists in your portfolio"
         )
-    
-    # Validate status
-    if client_data.status and client_data.status not in ["active", "inactive", "on_hold"]:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid status. Must be: active, inactive, or on_hold"
-        )
-    
+     
     # Create client
     new_client = {
         "company_name": client_data.company_name,

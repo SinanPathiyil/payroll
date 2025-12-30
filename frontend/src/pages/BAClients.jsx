@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "../components/common/Layout";
+import AddClientModal from "../components/ba/AddClientModal";
+import EditClientModal from "../components/ba/EditClientModal";
+import DeleteClientModal from "../components/ba/DeleteClientModal";
 import {
   Users,
   Plus,
@@ -35,6 +38,8 @@ export default function BAClients() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
   const [showActionMenu, setShowActionMenu] = useState(null);
 
@@ -233,7 +238,7 @@ export default function BAClients() {
                       <div className="ba-client-action-menu">
                         <button
                           onClick={() => {
-                            setSelectedClient(client);
+                            navigate(`/ba/clients/${client.id}`);
                             setShowActionMenu(null);
                           }}
                         >
@@ -242,7 +247,8 @@ export default function BAClients() {
                         </button>
                         <button
                           onClick={() => {
-                            // Edit logic
+                            setSelectedClient(client);
+                            setShowEditModal(true);
                             setShowActionMenu(null);
                           }}
                         >
@@ -252,7 +258,8 @@ export default function BAClients() {
                         <button
                           className="danger"
                           onClick={() => {
-                            // Delete logic
+                            setSelectedClient(client);
+                            setShowDeleteModal(true);
                             setShowActionMenu(null);
                           }}
                         >
@@ -271,31 +278,42 @@ export default function BAClients() {
 
                   {/* Primary Contact */}
                   <div className="ba-client-contact">
-                    <div className="ba-client-contact-item">
-                      <Users className="w-4 h-4" />
-                      <div>
-                        <p className="ba-client-contact-name">
-                          {client.primary_contact.name}
-                        </p>
-                        <p className="ba-client-contact-role">
-                          {client.primary_contact.designation}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="ba-client-contact-links">
-                      <a
-                        href={`mailto:${client.primary_contact.email}`}
-                        className="ba-client-contact-link"
-                      >
-                        <Mail className="w-4 h-4" />
-                      </a>
-                      <a
-                        href={`tel:${client.primary_contact.phone}`}
-                        className="ba-client-contact-link"
-                      >
-                        <Phone className="w-4 h-4" />
-                      </a>
-                    </div>
+                    {(() => {
+                      const primaryContact =
+                        client.contacts?.find((c) => c.is_primary) ||
+                        client.contacts?.[0];
+                      if (!primaryContact) return null;
+
+                      return (
+                        <>
+                          <div className="ba-client-contact-item">
+                            <Users className="w-4 h-4" />
+                            <div>
+                              <p className="ba-client-contact-name">
+                                {primaryContact.name}
+                              </p>
+                              <p className="ba-client-contact-role">
+                                {primaryContact.designation}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="ba-client-contact-links">
+                            <a
+                              href={`mailto:${primaryContact.email}`}
+                              className="ba-client-contact-link"
+                            >
+                              <Mail className="w-4 h-4" />
+                            </a>
+                            <a
+                              href={`tel:${primaryContact.phone}`}
+                              className="ba-client-contact-link"
+                            >
+                              <Phone className="w-4 h-4" />
+                            </a>
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
 
                   {/* Location */}
@@ -325,7 +343,7 @@ export default function BAClients() {
                   </div>
                   <button
                     className="ba-client-view-btn"
-                    onClick={() => setSelectedClient(client)}
+                    onClick={() => navigate(`/ba/clients/${client.id}`)}
                   >
                     View Details
                   </button>
@@ -334,6 +352,41 @@ export default function BAClients() {
             ))}
           </div>
         )}
+
+        {/* Add Client Modal */}
+        <AddClientModal
+          isOpen={showAddModal}
+          onClose={() => setShowAddModal(false)}
+          onSuccess={loadClients}
+        />
+
+        {/* Edit Client Modal */}
+        <EditClientModal
+          isOpen={showEditModal}
+          onClose={() => {
+            setShowEditModal(false);
+            setSelectedClient(null);
+          }}
+          onSuccess={() => {
+            loadClients();
+            setSelectedClient(null);
+          }}
+          client={selectedClient}
+        />
+
+        {/* Delete Client Modal */}
+        <DeleteClientModal
+          isOpen={showDeleteModal}
+          onClose={() => {
+            setShowDeleteModal(false);
+            setSelectedClient(null);
+          }}
+          onSuccess={() => {
+            loadClients();
+            setSelectedClient(null);
+          }}
+          client={selectedClient}
+        />
       </div>
     </Layout>
   );

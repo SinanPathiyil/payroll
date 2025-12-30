@@ -5,10 +5,14 @@ import HRDashboard from "./pages/HRDashboard";
 import EmployeeDashboard from "./pages/EmployeeDashboard";
 import BADashboard from "./pages/BADashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
+
+//Import BA Pages
 import BAClients from "./pages/BAClients";
+import BAClientDetails from "./pages/BAClientDetails";
 import BAProjects from "./pages/BAProjects";
 import BAPayments from "./pages/BAPayments";
 import BAMeetings from "./pages/BAMeetings";
+
 
 //Import TL Pages
 import TLDashboard from "./pages/TLDashboard";
@@ -39,8 +43,7 @@ import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import SuperAdminUsers from "./pages/SuperAdminUsers";
 import SuperAdminOverrideRequests from "./pages/SuperAdminOverrideRequests";
 import SuperAdminAuditLogs from "./pages/SuperAdminAuditLogs";
-import SuperAdminSystemStats from "./pages/SuperAdminSystemStats"; // ADD THIS
-
+import SuperAdminSystemStats from "./pages/SuperAdminSystemStats"; 
 function App() {
   return (
     <AuthProvider>
@@ -60,6 +63,14 @@ function App() {
           element={
             <ProtectedRoute role="business_analyst">
               <BAClients />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/ba/clients/:clientId"
+          element={
+            <ProtectedRoute allowedRoles={["business_analyst"]}>
+              <BAClientDetails />
             </ProtectedRoute>
           }
         />

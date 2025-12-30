@@ -57,7 +57,7 @@ export const getBAAlerts = () => api.get('/ba/dashboard/alerts');
 // ============================================
 export const getClients = (params) => api.get('/ba/clients', { params });
 export const getClient = (clientId) => api.get(`/ba/clients/${clientId}`);
-export const createClient = (clientData) => api.post('/ba/clients', clientData);
+export const createClient = (clientData) => api.post('/ba/clients/', clientData);
 export const updateClient = (clientId, clientData) => api.patch(`/ba/clients/${clientId}`, clientData);
 export const deleteClient = (clientId) => api.delete(`/ba/clients/${clientId}`);
 export const getClientStats = (clientId) => api.get(`/ba/clients/${clientId}/stats`);

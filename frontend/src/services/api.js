@@ -51,6 +51,7 @@ export const getBADashboardSummary = () => api.get('/ba/dashboard/summary');
 export const getBARevenueAnalytics = (params) => api.get('/ba/dashboard/revenue-analytics', { params });
 export const getBAProjectAnalytics = (params) => api.get('/ba/dashboard/project-analytics', { params });
 export const getBAAlerts = () => api.get('/ba/dashboard/alerts');
+export const getTeamLeads = () => api.get('/ba/dashboard/team-leads');
 
 // ============================================
 // BUSINESS ANALYST - CLIENTS
@@ -66,12 +67,13 @@ export const logClientCommunication = (clientId, data) =>
 export const getClientCommunications = (clientId) => 
   api.get(`/ba/clients/${clientId}/communications`);
 
+
 // ============================================
 // BUSINESS ANALYST - PROJECTS
 // ============================================
 export const getBAProjects = (params) => api.get('/ba/projects', { params });
 export const getBAProject = (projectId) => api.get(`/ba/projects/${projectId}`);
-export const createBAProject = (projectData) => api.post('/ba/projects', projectData);
+export const createBAProject = (projectData) => api.post('/ba/projects/', projectData);
 export const updateBAProject = (projectId, projectData) => 
   api.patch(`/ba/projects/${projectId}`, projectData);
 export const getBAProjectStats = (projectId) => api.get(`/ba/projects/${projectId}/stats`);
@@ -87,6 +89,16 @@ export const getProjectMilestones = (projectId) =>
   api.get(`/ba/projects/${projectId}/milestones`);
 export const updateMilestone = (projectId, milestoneId, data) => 
   api.patch(`/ba/projects/${projectId}/milestones/${milestoneId}`, data);
+
+export const uploadRequirementDocument = async (projectId, version, file, notes) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  return api.post(`/ba/projects/${projectId}/requirements/upload?version=${version}${notes ? `&notes=${notes}` : ''}`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+};
+
+export const deleteBAProject = (projectId) => api.delete(`/ba/projects/${projectId}`);
 
 // ============================================
 // BUSINESS ANALYST - PAYMENTS

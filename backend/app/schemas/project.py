@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
+from app.schemas.payment import MilestoneResponse
 
 # ============= PROJECT DOCUMENT SCHEMAS =============
 
@@ -56,7 +57,7 @@ class ProjectResponse(BaseModel):
     description: Optional[str] = None
     assigned_to_team_lead: str
     team_lead_name: Optional[str] = None  # For display
-    team_id: str
+    team_id: Optional[str] = None
     team_name: Optional[str] = None  # For display
     created_by: str
     created_by_name: Optional[str] = None  # For display
@@ -71,8 +72,15 @@ class ProjectResponse(BaseModel):
     completion_date: Optional[datetime] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
+    estimated_budget: Optional[float] = None  
+    total_contract_value: Optional[float] = None
 
 class ProjectDetailResponse(ProjectResponse):
     documents: List[ProjectDocumentResponse] = []
+    requirement_documents: List[dict] = [] 
+    milestones: List[MilestoneResponse] = []  
     team_lead_details: Optional[dict] = None  # Full team lead info
     team_details: Optional[dict] = None  # Full team info
+    client_details: Optional[dict] = None  
+    project_id: Optional[str] = None  
+    project_name_display: Optional[str] = None

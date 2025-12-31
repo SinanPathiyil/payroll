@@ -112,6 +112,14 @@ payroll
 │  │  │  ├─ boehm-logo.png
 │  │  │  └─ logo.svg
 │  │  ├─ components
+│  │  │  ├─ ba
+│  │  │  │  ├─ AddClientModal.jsx
+│  │  │  │  ├─ AddProjectModal.jsx
+│  │  │  │  ├─ DeleteClientModal.jsx
+│  │  │  │  ├─ DeleteProjectModal.jsx
+│  │  │  │  ├─ EditClientModal.jsx
+│  │  │  │  ├─ EditProjectModal.jsx
+│  │  │  │  └─ RequirementsModal.jsx
 │  │  │  ├─ common
 │  │  │  │  ├─ Clock.jsx
 │  │  │  │  ├─ Layout.jsx
@@ -146,10 +154,12 @@ payroll
 │  │  ├─ index.css
 │  │  ├─ main.jsx
 │  │  ├─ pages
+│  │  │  ├─ BAClientDetails.jsx
 │  │  │  ├─ BAClients.jsx
 │  │  │  ├─ BADashboard.jsx
 │  │  │  ├─ BAMeetings.jsx
 │  │  │  ├─ BAPayments.jsx
+│  │  │  ├─ BAProjectDetails.jsx
 │  │  │  ├─ BAProjects.jsx
 │  │  │  ├─ EmployeeDashboard.jsx
 │  │  │  ├─ EmployeeMessages.jsx
@@ -181,10 +191,13 @@ payroll
 │  │  │  ├─ api.js
 │  │  │  └─ websocket.js
 │  │  ├─ styles
+│  │  │  ├─ ba-client-details.css
 │  │  │  ├─ ba-clients.css
 │  │  │  ├─ ba-dashboard.css
 │  │  │  ├─ ba-meetings.css
+│  │  │  ├─ ba-modal.css
 │  │  │  ├─ ba-payments.css
+│  │  │  ├─ ba-project-details.css
 │  │  │  ├─ ba-projects.css
 │  │  │  ├─ global.css
 │  │  │  ├─ hr-dashboard.css

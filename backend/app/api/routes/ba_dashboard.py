@@ -325,3 +325,26 @@ async def get_ba_alerts(
         "high_priority": len([a for a in alerts if a["severity"] == "high"]),
         "alerts": alerts
     }
+    
+@router.get("/team-leads")
+async def get_team_leads_for_ba(
+    current_user: dict = Depends(get_current_ba),
+    db = Depends(get_database)
+):
+    """Get all team leads available for project assignment"""
+    
+    # Fetch all users with team_lead role
+    team_leads = await db.users.find({
+        "role": "team_lead"
+    }).to_list(length=None)
+    
+    result = []
+    for tl in team_leads:
+        result.append({
+            "id": str(tl["_id"]),
+            "full_name": tl["full_name"],
+            "email": tl["email"],
+            "team_id": tl.get("team_id")
+        })
+    
+    return result

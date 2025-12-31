@@ -329,7 +329,9 @@ async def get_ba_projects(
             due_date=project.get("due_date"),
             completion_date=project.get("completion_date"),
             created_at=project["created_at"],
-            updated_at=project.get("updated_at")
+            updated_at=project.get("updated_at"),
+            estimated_budget=project.get("estimated_budget"), 
+            total_contract_value=project.get("total_contract_value")
         ))
     
     return result
@@ -392,6 +394,7 @@ async def get_ba_project_details(
             "doc_id": doc["doc_id"],
             "version": doc["version"],
             "filename": doc["filename"],
+            "file_path": doc.get("file_path"),
             "file_size": doc.get("file_size"),
             "uploaded_at": doc["uploaded_at"],
             "shared_with_team_lead": doc.get("shared_with_team_lead", False),
@@ -537,7 +540,7 @@ async def update_ba_project(
             "requirement_gathering", "requirement_uploaded", 
             "on_hold", "cancelled", "completed"
         ]
-        if project_data.status not in ba_allowed_statuses:
+        if project_data.status not in ba_allowed_statuses: #project_data.status != project["status"] and use this when editing neeed to be done in all statuses
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"BA can only set status to: {', '.join(ba_allowed_statuses)}"
@@ -594,6 +597,74 @@ async def update_ba_project(
         created_at=updated_project["created_at"],
         updated_at=updated_project.get("updated_at")
     )
+    
+@router.delete("/{project_id}")
+async def delete_ba_project(
+    project_id: str,
+    current_user: dict = Depends(get_current_ba),
+    db = Depends(get_database)
+):
+    """Delete (cancel) a project (BA only)"""
+    
+    try:
+        project = await db.projects.find_one({"_id": ObjectId(project_id)})
+    except:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid project ID"
+        )
+    
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found"
+        )
+    
+    # Verify BA owns this project
+    if project.get("managed_by_ba") != str(current_user["_id"]):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to delete this project"
+        )
+    
+    # Don't actually delete - just set status to cancelled
+    await db.projects.update_one(
+        {"_id": ObjectId(project_id)},
+        {
+            "$set": {
+                "status": "cancelled",
+                "updated_at": datetime.now()
+            }
+        }
+    )
+    
+    # Notify Team Lead
+    notification = {
+        "from_user": str(current_user["_id"]),
+        "to_user": project["assigned_to_team_lead"],
+        "content": f"Project '{project['project_name']}' has been cancelled by Business Analyst.",
+        "project_id": project_id,
+        "is_read": False,
+        "created_at": datetime.now()
+    }
+    await db.messages.insert_one(notification)
+    
+    # Create audit log
+    await db.audit_logs.insert_one({
+        "action_type": "ba_project_cancelled",
+        "performed_by": str(current_user["_id"]),
+        "user_role": current_user["role"],
+        "details": {
+            "project_id": project_id,
+            "project_name": project["project_name"]
+        },
+        "timestamp": datetime.now()
+    })
+    
+    return {
+        "message": "Project cancelled successfully",
+        "project_id": project_id
+    }
 
 # ============= REQUIREMENT DOCUMENT MANAGEMENT =============
 

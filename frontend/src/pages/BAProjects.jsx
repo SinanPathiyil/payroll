@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "../components/common/Layout";
+import AddProjectModal from "../components/ba/AddProjectModal";
+import EditProjectModal from "../components/ba/EditProjectModal";
+import RequirementsModal from "../components/ba/RequirementsModal";
+import DeleteProjectModal from "../components/ba/DeleteProjectModal";
 import {
   Briefcase,
   Plus,
@@ -38,6 +42,9 @@ export default function BAProjects() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterPriority, setFilterPriority] = useState("all");
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showRequirementsModal, setShowRequirementsModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedProject, setSelectedProject] = useState(null);
   const [showActionMenu, setShowActionMenu] = useState(null);
 
@@ -51,6 +58,7 @@ export default function BAProjects() {
 
       // Real API call
       const response = await getBAProjects();
+      console.log("📊 Projects loaded:", response.data);
       setProjects(response.data);
 
       setLoading(false);
@@ -62,8 +70,10 @@ export default function BAProjects() {
 
   const filteredProjects = projects.filter((project) => {
     const matchesSearch =
-      project.project_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.client_name.toLowerCase().includes(searchTerm.toLowerCase());
+      project.project_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      project.project_name_display
+        ?.toLowerCase()
+        .includes(searchTerm.toLowerCase());
     const matchesStatus =
       filterStatus === "all" || project.status === filterStatus;
     const matchesPriority =
@@ -72,6 +82,7 @@ export default function BAProjects() {
   });
 
   const formatCurrency = (amount) => {
+    if (!amount) return "$0";
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",
@@ -81,6 +92,7 @@ export default function BAProjects() {
   };
 
   const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
@@ -93,7 +105,11 @@ export default function BAProjects() {
       in_progress: "info",
       completed: "success",
       pending_approval: "warning",
+      pending_tl_approval: "warning",
+      requirement_gathering: "info",
+      requirement_uploaded: "info",
       on_hold: "inactive",
+      cancelled: "inactive",
     };
     return colors[status] || "inactive";
   };
@@ -103,14 +119,19 @@ export default function BAProjects() {
       in_progress: "In Progress",
       completed: "Completed",
       pending_approval: "Pending Approval",
+      pending_tl_approval: "Pending TL Approval",
+      requirement_gathering: "Requirement Gathering",
+      requirement_uploaded: "Requirement Uploaded",
       on_hold: "On Hold",
+      cancelled: "Cancelled",
     };
-    return labels[status] || status;
+    return labels[status] || status.replace(/_/g, " ").toUpperCase();
   };
 
   const getPriorityColor = (priority) => {
     const colors = {
       high: "danger",
+      critical: "danger",
       medium: "warning",
       low: "info",
     };
@@ -119,11 +140,22 @@ export default function BAProjects() {
 
   const stats = {
     total: projects.length,
-    active: projects.filter((p) => p.status === "in_progress").length,
+    active: projects.filter(
+      (p) =>
+        p.status === "in_progress" ||
+        p.status === "requirement_gathering" ||
+        p.status === "requirement_uploaded" ||
+        p.status === "pending_tl_approval"
+    ).length,
     completed: projects.filter((p) => p.status === "completed").length,
-    pending_approval: projects.filter((p) => p.status === "pending_approval")
-      .length,
-    total_value: projects.reduce((sum, p) => sum + p.total_contract_value, 0),
+    pending_approval: projects.filter(
+      (p) =>
+        p.status === "pending_approval" || p.status === "pending_tl_approval"
+    ).length,
+    total_value: projects.reduce(
+      (sum, p) => sum + (p.total_contract_value || 0),
+      0
+    ),
   };
 
   if (loading) {
@@ -204,7 +236,7 @@ export default function BAProjects() {
             <Search className="ba-search-icon" />
             <input
               type="text"
-              placeholder="Search projects by name or client..."
+              placeholder="Search projects by name..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="ba-search-input"
@@ -218,10 +250,15 @@ export default function BAProjects() {
               className="ba-filter-select"
             >
               <option value="all">All Status</option>
+              <option value="requirement_gathering">
+                Requirement Gathering
+              </option>
+              <option value="requirement_uploaded">Requirement Uploaded</option>
+              <option value="pending_tl_approval">Pending TL Approval</option>
               <option value="in_progress">In Progress</option>
               <option value="completed">Completed</option>
-              <option value="pending_approval">Pending Approval</option>
               <option value="on_hold">On Hold</option>
+              <option value="cancelled">Cancelled</option>
             </select>
           </div>
           <div className="ba-filter-group">
@@ -232,6 +269,7 @@ export default function BAProjects() {
               className="ba-filter-select"
             >
               <option value="all">All Priority</option>
+              <option value="critical">Critical</option>
               <option value="high">High</option>
               <option value="medium">Medium</option>
               <option value="low">Low</option>
@@ -275,7 +313,9 @@ export default function BAProjects() {
                       <h3 className="ba-project-name">
                         {project.project_name}
                       </h3>
-                      <p className="ba-project-client">{project.client_name}</p>
+                      <p className="ba-project-client">
+                        {project.project_name_display || "N/A"}
+                      </p>
                     </div>
                   </div>
                   <div className="ba-project-header-right">
@@ -285,9 +325,9 @@ export default function BAProjects() {
                       {getStatusLabel(project.status)}
                     </span>
                     <span
-                      className={`ba-project-priority priority-${project.priority}`}
+                      className={`ba-project-priority priority-${project.priority || "medium"}`}
                     >
-                      {project.priority}
+                      {(project.priority || "medium").toUpperCase()}
                     </span>
                     <div className="ba-project-actions">
                       <button
@@ -304,7 +344,7 @@ export default function BAProjects() {
                         <div className="ba-project-action-menu">
                           <button
                             onClick={() => {
-                              setSelectedProject(project);
+                              navigate(`/ba/projects/${project.id}`);
                               setShowActionMenu(null);
                             }}
                           >
@@ -313,7 +353,8 @@ export default function BAProjects() {
                           </button>
                           <button
                             onClick={() => {
-                              // Edit logic
+                              setSelectedProject(project);
+                              setShowEditModal(true);
                               setShowActionMenu(null);
                             }}
                           >
@@ -322,7 +363,8 @@ export default function BAProjects() {
                           </button>
                           <button
                             onClick={() => {
-                              // Requirements logic
+                              setSelectedProject(project);
+                              setShowRequirementsModal(true);
                               setShowActionMenu(null);
                             }}
                           >
@@ -332,7 +374,8 @@ export default function BAProjects() {
                           <button
                             className="danger"
                             onClick={() => {
-                              // Delete logic
+                              setSelectedProject(project);
+                              setShowDeleteModal(true);
                               setShowActionMenu(null);
                             }}
                           >
@@ -347,9 +390,11 @@ export default function BAProjects() {
 
                 {/* Card Body */}
                 <div className="ba-project-card-body">
-                  <p className="ba-project-description">
-                    {project.description}
-                  </p>
+                  {project.description && (
+                    <p className="ba-project-description">
+                      {project.description}
+                    </p>
+                  )}
 
                   {/* Progress Bar */}
                   <div className="ba-project-progress">
@@ -358,44 +403,16 @@ export default function BAProjects() {
                         Overall Progress
                       </span>
                       <span className="ba-project-progress-value">
-                        {project.progress}%
+                        {project.progress_percentage || 0}%
                       </span>
                     </div>
                     <div className="ba-project-progress-bar">
                       <div
                         className="ba-project-progress-fill"
-                        style={{ width: `${project.progress}%` }}
+                        style={{
+                          width: `${project.progress_percentage || 0}%`,
+                        }}
                       />
-                    </div>
-                  </div>
-
-                  {/* Milestones */}
-                  <div className="ba-project-milestones">
-                    <div className="ba-project-milestones-header">
-                      <Target className="w-4 h-4" />
-                      <span>Milestones ({project.milestones.length})</span>
-                    </div>
-                    <div className="ba-project-milestones-list">
-                      {project.milestones.map((milestone) => (
-                        <div
-                          key={milestone.id}
-                          className="ba-project-milestone"
-                        >
-                          <div className="ba-project-milestone-info">
-                            <span className="ba-project-milestone-name">
-                              {milestone.name}
-                            </span>
-                            <span className="ba-project-milestone-amount">
-                              {formatCurrency(milestone.amount)}
-                            </span>
-                          </div>
-                          <span
-                            className={`status-chip ${getStatusColor(milestone.status)}`}
-                          >
-                            {getStatusLabel(milestone.status)}
-                          </span>
-                        </div>
-                      ))}
                     </div>
                   </div>
 
@@ -406,16 +423,16 @@ export default function BAProjects() {
                       <div>
                         <p className="ba-project-info-label">Team Lead</p>
                         <p className="ba-project-info-value">
-                          {project.assigned_to_team_lead}
+                          {project.team_lead_name || "Not Assigned"}
                         </p>
                       </div>
                     </div>
                     <div className="ba-project-info-item">
-                      <Users className="w-4 h-4" />
+                      <FileText className="w-4 h-4" />
                       <div>
-                        <p className="ba-project-info-label">Team Size</p>
+                        <p className="ba-project-info-label">Documents</p>
                         <p className="ba-project-info-value">
-                          {project.team_size} members
+                          {project.document_count || 0} files
                         </p>
                       </div>
                     </div>
@@ -443,18 +460,22 @@ export default function BAProjects() {
                 {/* Card Footer */}
                 <div className="ba-project-card-footer">
                   <div className="ba-project-footer-dates">
-                    <div className="ba-project-footer-date">
-                      <Calendar className="w-3.5 h-3.5" />
-                      <span>Started: {formatDate(project.start_date)}</span>
-                    </div>
-                    <div className="ba-project-footer-date">
-                      <Clock className="w-3.5 h-3.5" />
-                      <span>Due: {formatDate(project.due_date)}</span>
-                    </div>
+                    {project.start_date && (
+                      <div className="ba-project-footer-date">
+                        <Calendar className="w-3.5 h-3.5" />
+                        <span>Started: {formatDate(project.start_date)}</span>
+                      </div>
+                    )}
+                    {project.due_date && (
+                      <div className="ba-project-footer-date">
+                        <Clock className="w-3.5 h-3.5" />
+                        <span>Due: {formatDate(project.due_date)}</span>
+                      </div>
+                    )}
                   </div>
                   <button
                     className="ba-project-view-btn"
-                    onClick={() => setSelectedProject(project)}
+                    onClick={() => navigate(`/ba/projects/${project.id}`)}
                   >
                     View Details
                   </button>
@@ -463,6 +484,55 @@ export default function BAProjects() {
             ))}
           </div>
         )}
+
+        {/* Add Project Modal */}
+        <AddProjectModal
+          isOpen={showAddModal}
+          onClose={() => setShowAddModal(false)}
+          onSuccess={loadProjects}
+        />
+
+        {/* Edit Project Modal */}
+        <EditProjectModal
+          isOpen={showEditModal}
+          onClose={() => {
+            setShowEditModal(false);
+            setSelectedProject(null);
+          }}
+          onSuccess={() => {
+            loadProjects();
+            setSelectedProject(null);
+          }}
+          project={selectedProject}
+        />
+
+        {/* Requirements Modal */}
+        <RequirementsModal
+          isOpen={showRequirementsModal}
+          onClose={() => {
+            setShowRequirementsModal(false);
+            setSelectedProject(null);
+          }}
+          onSuccess={() => {
+            loadProjects();
+            setSelectedProject(null);
+          }}
+          project={selectedProject}
+        />
+
+        {/* Delete Project Modal */}
+        <DeleteProjectModal
+          isOpen={showDeleteModal}
+          onClose={() => {
+            setShowDeleteModal(false);
+            setSelectedProject(null);
+          }}
+          onSuccess={() => {
+            loadProjects();
+            setSelectedProject(null);
+          }}
+          project={selectedProject}
+        />
       </div>
     </Layout>
   );

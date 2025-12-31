@@ -10,9 +10,9 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import BAClients from "./pages/BAClients";
 import BAClientDetails from "./pages/BAClientDetails";
 import BAProjects from "./pages/BAProjects";
+import BAProjectDetails from "./pages/BAProjectDetails";
 import BAPayments from "./pages/BAPayments";
 import BAMeetings from "./pages/BAMeetings";
-
 
 //Import TL Pages
 import TLDashboard from "./pages/TLDashboard";
@@ -43,7 +43,7 @@ import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import SuperAdminUsers from "./pages/SuperAdminUsers";
 import SuperAdminOverrideRequests from "./pages/SuperAdminOverrideRequests";
 import SuperAdminAuditLogs from "./pages/SuperAdminAuditLogs";
-import SuperAdminSystemStats from "./pages/SuperAdminSystemStats"; 
+import SuperAdminSystemStats from "./pages/SuperAdminSystemStats";
 function App() {
   return (
     <AuthProvider>
@@ -79,6 +79,22 @@ function App() {
           element={
             <ProtectedRoute role="business_analyst">
               <BAProjects />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/ba/projects"
+          element={
+            <ProtectedRoute allowedRoles={["business_analyst"]}>
+              <BAProjects />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/ba/projects/:projectId"
+          element={
+            <ProtectedRoute allowedRoles={["business_analyst"]}>
+              <BAProjectDetails />
             </ProtectedRoute>
           }
         />
@@ -269,7 +285,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
         {/* Super Admin Routes */}
         <Route
           path="/super-admin-dashboard"
@@ -311,7 +326,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </AuthProvider>

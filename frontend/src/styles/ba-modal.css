@@ -41,6 +41,8 @@
   display: flex;
   flex-direction: column;
   animation: slideUp 0.3s ease;
+  overflow: hidden;
+  position: relative; /* ADD THIS */
 }
 
 @keyframes slideUp {
@@ -54,14 +56,17 @@
   }
 }
 
-/* Modal Header */
+/* Modal Header - FIXED */
 .ba-modal-header {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 24px 32px;
   border-bottom: 1px solid rgba(11, 11, 13, 0.1);
   background: linear-gradient(135deg, rgba(248, 248, 248, 0.6), rgba(240, 240, 240, 0.5));
+  flex-shrink: 0; /* NEVER shrink */
+  z-index: 10; /* Stay on top */
 }
 
 .ba-modal-header-content {
@@ -98,11 +103,12 @@
   color: rgba(11, 11, 13, 0.9);
 }
 
-/* Modal Body */
+/* Modal Body - SCROLLABLE */
 .ba-modal-body {
   padding: 32px;
-  overflow-y: auto;
-  flex: 1;
+  overflow-y: auto; /* Make it scrollable */
+  flex: 1; /* Take remaining space between header and footer */
+  min-height: 0; /* IMPORTANT: Allow flexbox to shrink properly */
 }
 
 /* Custom Scrollbar */
@@ -319,15 +325,19 @@
   color: rgba(11, 11, 13, 0.9);
 }
 
-/* Modal Footer */
+/* Modal Footer - FIXED */
 .ba-modal-footer {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 12px;
-  padding: 24px 32px;
+  padding: 20px 32px; /* Slightly reduced padding */
   border-top: 1px solid rgba(11, 11, 13, 0.1);
-  background: linear-gradient(135deg, rgba(248, 248, 248, 0.6), rgba(240, 240, 240, 0.5));
+  background: linear-gradient(135deg, rgba(248, 248, 248, 0.95), rgba(240, 240, 240, 0.9));
+  flex-shrink: 0; /* NEVER shrink */
+  z-index: 10; /* Stay on top */
+  backdrop-filter: blur(10px); /* ADD BLUR for better visibility */
 }
 
 /* Responsive */
@@ -662,4 +672,179 @@
   background: linear-gradient(135deg, rgba(0, 200, 83, 0.1), rgba(0, 200, 83, 0.15));
   border-color: rgba(0, 200, 83, 0.3);
   color: rgba(0, 200, 83, 0.9);
+}
+/* ============================================
+   EXPORT BUTTON STYLES
+   ============================================ */
+
+.ba-export-btn {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: white;
+  border: 2px solid rgba(11, 11, 13, 0.15);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  width: 100%;
+}
+
+.ba-export-btn:hover {
+  border-color: rgba(59, 130, 246, 0.5);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(59, 130, 246, 0.08));
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.ba-export-btn:active {
+  transform: translateY(0);
+}
+
+.ba-export-btn svg {
+  flex-shrink: 0;
+  color: rgba(59, 130, 246, 0.8);
+}
+
+.ba-export-btn p {
+  margin: 0;
+}
+
+.ba-export-btn p:first-of-type {
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+}
+
+.ba-export-btn p:last-of-type {
+  font-size: 0.875rem;
+  color: rgba(11, 11, 13, 0.6);
+}
+/* ============================================
+   SCROLLABLE BODY IMPROVEMENTS
+   ============================================ */
+
+/* Ensure proper scrolling behavior */
+.ba-modal-body {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(11, 11, 13, 0.2) rgba(11, 11, 13, 0.05);
+}
+
+/* Better scroll experience */
+.ba-modal-body::-webkit-scrollbar {
+  width: 10px;
+}
+
+.ba-modal-body::-webkit-scrollbar-track {
+  background: rgba(11, 11, 13, 0.05);
+  border-radius: 4px;
+  margin: 4px 0;
+}
+
+.ba-modal-body::-webkit-scrollbar-thumb {
+  background: rgba(11, 11, 13, 0.2);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.ba-modal-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(11, 11, 13, 0.3);
+  background-clip: padding-box;
+}
+
+/* Add slight shadow when scrolled */
+.ba-modal-header::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background: linear-gradient(180deg, rgba(11, 11, 13, 0.05) 0%, transparent 100%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.ba-modal-footer::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background: linear-gradient(0deg, rgba(11, 11, 13, 0.05) 0%, transparent 100%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+/* Ensure modal sizes work properly */
+.ba-modal-small {
+  max-width: 500px;
+}
+
+.ba-modal-large {
+  max-width: 1000px;
+}
+
+/* ============================================
+   MODAL LAYOUT FIX - PREVENT FOOTER OVERLAP
+   ============================================ */
+
+/* Ensure proper spacing in form */
+.ba-form-grid {
+  margin-bottom: 20px; /* Add bottom margin to form grid */
+}
+
+.ba-form-group:last-child {
+  margin-bottom: 0; /* Remove bottom margin from last form group */
+}
+
+/* Responsive modal heights */
+@media (max-height: 800px) {
+  .ba-modal-container {
+    max-height: 95vh;
+  }
+  
+  .ba-modal-body {
+    max-height: calc(95vh - 150px);
+    padding: 24px;
+  }
+  
+  .ba-modal-header,
+  .ba-modal-footer {
+    padding: 16px 24px;
+  }
+}
+
+@media (max-height: 600px) {
+  .ba-modal-container {
+    max-height: 98vh;
+  }
+  
+  .ba-modal-body {
+    max-height: calc(98vh - 130px);
+    padding: 20px;
+  }
+  
+  .ba-modal-header,
+  .ba-modal-footer {
+    padding: 12px 20px;
+  }
+}
+
+/* Ensure form doesn't overflow */
+form {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+/* Make sure button container is visible */
+.ba-modal-footer button {
+  flex-shrink: 0; /* Buttons should never shrink */
 }

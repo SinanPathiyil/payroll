@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "../components/common/Layout";
+import RecordPaymentModal from "../components/ba/RecordPaymentModal";
+import ExportModal from "../components/ba/ExportModal";
 import {
   DollarSign,
   Plus,
@@ -30,6 +32,7 @@ export default function BAPayments() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterPeriod, setFilterPeriod] = useState("all");
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState(null);
 
   useEffect(() => {
@@ -155,6 +158,15 @@ export default function BAPayments() {
       default:
         return <Clock className="w-5 h-5" />;
     }
+  };
+
+  // Modal handlers
+  const handleExport = () => {
+    setShowExportModal(true);
+  };
+
+  const handlePaymentSuccess = () => {
+    loadData(); // Reload payments after successful recording
   };
 
   if (loading) {
@@ -285,7 +297,7 @@ export default function BAPayments() {
               <option value="this_year">This Year</option>
             </select>
           </div>
-          <button className="btn btn-secondary">
+          <button className="btn btn-secondary" onClick={handleExport}>
             <Download className="w-4 h-4" />
             <span>Export</span>
           </button>
@@ -515,6 +527,22 @@ export default function BAPayments() {
             </div>
           </div>
         )}
+        {/* DEBUG: Log projects data */}
+        {showAddModal && console.log("🎯 Projects data being passed:", projects)}
+        
+        {/* Modals */}
+        <RecordPaymentModal
+          isOpen={showAddModal}
+          onClose={() => setShowAddModal(false)}
+          projects={projects}
+          onSuccess={handlePaymentSuccess}
+        />
+
+        <ExportModal
+          isOpen={showExportModal}
+          onClose={() => setShowExportModal(false)}
+          payments={filteredPayments}
+        />
       </div>
     </Layout>
   );

@@ -72,6 +72,7 @@ export const getClientCommunications = (clientId) =>
 // BUSINESS ANALYST - PROJECTS
 // ============================================
 export const getBAProjects = (params) => api.get('/ba/projects', { params });
+export const getBAProjectDetails = (projectId) => api.get(`/ba/projects/${projectId}`);
 export const getBAProject = (projectId) => api.get(`/ba/projects/${projectId}`);
 export const createBAProject = (projectData) => api.post('/ba/projects/', projectData);
 export const updateBAProject = (projectId, projectData) => 

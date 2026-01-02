@@ -13,7 +13,7 @@ class MeetingAttendeeResponse(BaseModel):
     name: str
     email: str
     role: str
-    attended: bool
+    attended: bool = False
 
 # ============= AGENDA & ACTION ITEMS =============
 

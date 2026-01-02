@@ -112,8 +112,8 @@ async def schedule_meeting(
         "duration_minutes": meeting_data.duration_minutes,
         "meeting_link": meeting_data.meeting_link,
         "location": meeting_data.location,
-        "attendees": [attendee.dict() for attendee in meeting_data.attendees],
-        "agenda": [item.dict() for item in meeting_data.agenda],
+        "attendees": [{**attendee.dict(), "attended": False} for attendee in meeting_data.attendees],
+        "agenda": [{**item.dict(), "completed": False, "notes": None} for item in meeting_data.agenda],
         "status": "scheduled",
         "meeting_notes": None,
         "action_items": [],
@@ -299,11 +299,26 @@ async def get_meeting_details(
         completer = await get_user_details(meeting["completed_by"], db)
         completed_by_name = completer["full_name"] if completer else "Unknown"
     
-    # Convert attendees
-    attendees = [MeetingAttendeeResponse(**att) for att in meeting.get("attendees", [])]
+    # Convert attendees - Add defaults for missing fields
+    attendees = []
+    for att in meeting.get("attendees", []):
+        attendee_data = {
+            "name": att.get("name", ""),
+            "email": att.get("email", ""),
+            "role": att.get("role", ""),
+            "attended": att.get("attended", False)
+        }
+        attendees.append(MeetingAttendeeResponse(**attendee_data))
     
-    # Convert agenda
-    agenda = [AgendaItemResponse(**item) for item in meeting.get("agenda", [])]
+    # Convert agenda - Add defaults for missing fields
+    agenda = []
+    for item in meeting.get("agenda", []):
+        agenda_data = {
+            "item": item.get("item", ""),
+            "completed": item.get("completed", False),
+            "notes": item.get("notes", None)
+        }
+        agenda.append(AgendaItemResponse(**agenda_data))
     
     # Convert action items
     action_items = [ActionItemResponse(**item) for item in meeting.get("action_items", [])]

@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "../components/common/Layout";
+import ScheduleMeetingModal from "../components/ba/ScheduleMeetingModal";
+import MeetingDetailsModal from "../components/ba/MeetingDetailsModal";
+import EditMeetingModal from "../components/ba/EditMeetingModal";
+import DeleteMeetingModal from "../components/ba/DeleteMeetingModal";
 import {
   Calendar,
   Plus,
@@ -23,6 +27,7 @@ import {
 
 import {
   getMeetings,
+  getMeeting,
   scheduleMeeting,
   updateMeeting,
   completeMeeting,
@@ -40,6 +45,10 @@ export default function BAMeetings() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedMeeting, setSelectedMeeting] = useState(null);
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [meetingToEdit, setMeetingToEdit] = useState(null);
+  const [meetingToDelete, setMeetingToDelete] = useState(null);
 
   useEffect(() => {
     loadMeetings();
@@ -60,11 +69,26 @@ export default function BAMeetings() {
     }
   };
 
+  const loadMeetingDetails = async (meetingId) => {
+    try {
+      const response = await getMeeting(meetingId);
+      setSelectedMeeting(response.data);
+    } catch (error) {
+      console.error("Failed to load meeting details:", error);
+    }
+  };
+
   const filteredMeetings = meetings.filter((meeting) => {
     const matchesSearch =
-      meeting.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      meeting.project_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      meeting.client_name.toLowerCase().includes(searchTerm.toLowerCase());
+      (meeting.project_name || "")
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      (meeting.client_name || "")
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      getMeetingTypeLabel(meeting.meeting_type)
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
     const matchesStatus =
       filterStatus === "all" || meeting.status === filterStatus;
     const matchesType =
@@ -237,8 +261,11 @@ export default function BAMeetings() {
             <div className="ba-meetings-upcoming-content">
               <p className="ba-meetings-upcoming-title">Next Meeting</p>
               <p className="ba-meetings-upcoming-info">
-                <strong>{upcomingMeetings[0].title}</strong> with{" "}
-                {upcomingMeetings[0].client_name} at{" "}
+                <strong>
+                  {getMeetingTypeLabel(upcomingMeetings[0].meeting_type)} -{" "}
+                  {upcomingMeetings[0].project_name}
+                </strong>{" "}
+                with {upcomingMeetings[0].client_name} at{" "}
                 {formatDateTime(upcomingMeetings[0].scheduled_at)}
               </p>
             </div>
@@ -336,7 +363,10 @@ export default function BAMeetings() {
                       )}
                     </div>
                     <div className="ba-meeting-header-info">
-                      <h3 className="ba-meeting-title">{meeting.title}</h3>
+                      <h3 className="ba-meeting-title">
+                        {getMeetingTypeLabel(meeting.meeting_type)} -{" "}
+                        {meeting.project_name}
+                      </h3>
                       <div className="ba-meeting-meta">
                         <span className="ba-meeting-project">
                           {meeting.project_name}
@@ -388,36 +418,7 @@ export default function BAMeetings() {
                     </div>
                   </div>
 
-                  {/* Attendees */}
-                  <div className="ba-meeting-attendees">
-                    <Users className="w-4 h-4" />
-                    <div className="ba-meeting-attendees-list">
-                      {meeting.attendees.map((attendee, index) => (
-                        <span key={index} className="ba-meeting-attendee">
-                          {attendee.name} ({attendee.role})
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Agenda */}
-                  {meeting.agenda && meeting.agenda.length > 0 && (
-                    <div className="ba-meeting-agenda">
-                      <FileText className="w-4 h-4" />
-                      <div className="ba-meeting-agenda-list">
-                        {meeting.agenda.map((item, index) => (
-                          <div key={index} className="ba-meeting-agenda-item">
-                            <span className="ba-meeting-agenda-number">
-                              {index + 1}.
-                            </span>
-                            <span>{item.item}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Notes */}
+                  {/* Notes - Only show if exists */}
                   {meeting.notes && (
                     <div className="ba-meeting-notes">
                       <p className="ba-meeting-notes-label">Notes:</p>
@@ -429,7 +430,7 @@ export default function BAMeetings() {
                 {/* Card Footer */}
                 <div className="ba-meeting-card-footer">
                   <div className="ba-meeting-footer-info">
-                    <span>Created by {meeting.created_by}</span>
+                    {/* Removed "Created by" - Only BA creates meetings */}
                   </div>
                   <div className="ba-meeting-footer-actions">
                     {meeting.meeting_link &&
@@ -448,17 +449,29 @@ export default function BAMeetings() {
                       )}
                     <button
                       className="btn btn-secondary btn-sm"
-                      onClick={() => setSelectedMeeting(meeting)}
+                      onClick={() => loadMeetingDetails(meeting.id)}
                     >
                       <FileText className="w-4 h-4" />
                       <span>Details</span>
                     </button>
                     {meeting.status === "scheduled" && isUpcoming(meeting) && (
                       <>
-                        <button className="btn btn-secondary btn-sm">
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => {
+                            setMeetingToEdit(meeting);
+                            setShowEditModal(true);
+                          }}
+                        >
                           <Edit className="w-4 h-4" />
                         </button>
-                        <button className="btn btn-secondary btn-sm">
+                        <button
+                          className="btn btn-danger btn-sm"
+                          onClick={() => {
+                            setMeetingToDelete(meeting);
+                            setShowDeleteModal(true);
+                          }}
+                        >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </>
@@ -470,185 +483,52 @@ export default function BAMeetings() {
           </div>
         )}
 
+        {/* Schedule Meeting Modal */}
+        <ScheduleMeetingModal
+          show={showAddModal}
+          onClose={() => setShowAddModal(false)}
+          onSuccess={loadMeetings}
+        />
         {/* Meeting Details Modal */}
         {selectedMeeting && (
-          <div
-            className="modal-backdrop"
-            onClick={() => setSelectedMeeting(null)}
-          >
-            <div
-              className="modal-container modal-lg"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="modal-header">
-                <div className="modal-header-content">
-                  <Calendar className="modal-header-icon" />
-                  <h2 className="modal-title">Meeting Details</h2>
-                </div>
-                <button
-                  className="modal-close-btn"
-                  onClick={() => setSelectedMeeting(null)}
-                >
-                  ×
-                </button>
-              </div>
-              <div className="modal-body">
-                <div className="ba-meeting-details">
-                  {/* Status Banner */}
-                  <div
-                    className={`ba-meeting-details-banner banner-${selectedMeeting.status}`}
-                  >
-                    {getStatusIcon(selectedMeeting.status)}
-                    <span>{selectedMeeting.status.toUpperCase()}</span>
-                  </div>
+          <MeetingDetailsModal
+            meeting={selectedMeeting}
+            onClose={() => setSelectedMeeting(null)}
+            getMeetingTypeLabel={getMeetingTypeLabel}
+            getMeetingTypeColor={getMeetingTypeColor}
+            formatDateTime={formatDateTime}
+            getStatusIcon={getStatusIcon}
+          />
+        )}
+        {/* Edit Meeting Modal */}
+        <EditMeetingModal
+          show={showEditModal}
+          meeting={meetingToEdit}
+          onClose={() => {
+            setShowEditModal(false);
+            setMeetingToEdit(null);
+          }}
+          onSuccess={() => {
+            loadMeetings();
+            setShowEditModal(false);
+            setMeetingToEdit(null);
+          }}
+        />
 
-                  {/* Title & Type */}
-                  <div className="ba-meeting-details-header">
-                    <h3 className="ba-meeting-details-title">
-                      {selectedMeeting.title}
-                    </h3>
-                    <span
-                      className={`ba-meeting-type-badge badge-${getMeetingTypeColor(selectedMeeting.meeting_type)}`}
-                    >
-                      {getMeetingTypeLabel(selectedMeeting.meeting_type)}
-                    </span>
-                  </div>
-
-                  {/* Details Grid */}
-                  <div className="ba-meeting-details-grid">
-                    <div className="ba-meeting-detail-item">
-                      <p className="ba-meeting-detail-label">Project</p>
-                      <p className="ba-meeting-detail-value">
-                        {selectedMeeting.project_name}
-                      </p>
-                    </div>
-                    <div className="ba-meeting-detail-item">
-                      <p className="ba-meeting-detail-label">Client</p>
-                      <p className="ba-meeting-detail-value">
-                        {selectedMeeting.client_name}
-                      </p>
-                    </div>
-                    <div className="ba-meeting-detail-item">
-                      <p className="ba-meeting-detail-label">Date & Time</p>
-                      <p className="ba-meeting-detail-value">
-                        {formatDateTime(selectedMeeting.scheduled_at)}
-                      </p>
-                    </div>
-                    <div className="ba-meeting-detail-item">
-                      <p className="ba-meeting-detail-label">Duration</p>
-                      <p className="ba-meeting-detail-value">
-                        {selectedMeeting.duration_minutes} minutes
-                      </p>
-                    </div>
-                    <div className="ba-meeting-detail-item">
-                      <p className="ba-meeting-detail-label">Location</p>
-                      <p className="ba-meeting-detail-value">
-                        {selectedMeeting.location}
-                      </p>
-                    </div>
-                    {selectedMeeting.milestone_name && (
-                      <div className="ba-meeting-detail-item">
-                        <p className="ba-meeting-detail-label">Milestone</p>
-                        <p className="ba-meeting-detail-value">
-                          {selectedMeeting.milestone_name}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Meeting Link */}
-                  {selectedMeeting.meeting_link && (
-                    <div className="ba-meeting-details-link">
-                      <p className="ba-meeting-details-link-label">
-                        Meeting Link
-                      </p>
-                      <a
-                        href={selectedMeeting.meeting_link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="ba-meeting-details-link-url"
-                      >
-                        {selectedMeeting.meeting_link}
-                        <ExternalLink className="w-4 h-4" />
-                      </a>
-                    </div>
-                  )}
-
-                  {/* Attendees */}
-                  <div className="ba-meeting-details-section">
-                    <h4 className="ba-meeting-details-section-title">
-                      <Users className="w-4 h-4" />
-                      Attendees ({selectedMeeting.attendees.length})
-                    </h4>
-                    <div className="ba-meeting-details-attendees">
-                      {selectedMeeting.attendees.map((attendee, index) => (
-                        <div
-                          key={index}
-                          className="ba-meeting-details-attendee"
-                        >
-                          <div className="ba-meeting-details-attendee-avatar">
-                            {attendee.name.charAt(0)}
-                          </div>
-                          <div>
-                            <p className="ba-meeting-details-attendee-name">
-                              {attendee.name}
-                            </p>
-                            <p className="ba-meeting-details-attendee-email">
-                              {attendee.email}
-                            </p>
-                            <span className="ba-meeting-details-attendee-role">
-                              {attendee.role}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Agenda */}
-                  {selectedMeeting.agenda &&
-                    selectedMeeting.agenda.length > 0 && (
-                      <div className="ba-meeting-details-section">
-                        <h4 className="ba-meeting-details-section-title">
-                          <FileText className="w-4 h-4" />
-                          Agenda
-                        </h4>
-                        <div className="ba-meeting-details-agenda">
-                          {selectedMeeting.agenda.map((item, index) => (
-                            <div
-                              key={index}
-                              className="ba-meeting-details-agenda-item"
-                            >
-                              <span className="ba-meeting-details-agenda-number">
-                                {index + 1}
-                              </span>
-                              <span>{item.item}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                  {/* Notes */}
-                  {selectedMeeting.notes && (
-                    <div className="ba-meeting-details-section">
-                      <h4 className="ba-meeting-details-section-title">
-                        Notes
-                      </h4>
-                      <p className="ba-meeting-details-notes">
-                        {selectedMeeting.notes}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Footer */}
-                  <div className="ba-meeting-details-footer">
-                    <p>Created by {selectedMeeting.created_by}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+        {/* Delete Meeting Modal */}
+        {meetingToDelete && (
+          <DeleteMeetingModal
+            meeting={meetingToDelete}
+            onClose={() => {
+              setShowDeleteModal(false);
+              setMeetingToDelete(null);
+            }}
+            onSuccess={() => {
+              loadMeetings();
+              setShowDeleteModal(false);
+              setMeetingToDelete(null);
+            }}
+          />
         )}
       </div>
     </Layout>

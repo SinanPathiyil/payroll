@@ -848,3 +848,114 @@ form {
 .ba-modal-footer button {
   flex-shrink: 0; /* Buttons should never shrink */
 }
+/* ============================================
+   SCHEDULE MEETING MODAL
+   ============================================ */
+
+.form-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.form-list-item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.form-list-fields {
+  display: flex;
+  gap: 12px;
+  flex: 1;
+  flex-wrap: wrap;
+}
+
+.form-list-fields .form-input {
+  flex: 1;
+  min-width: 150px;
+}
+
+.btn-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-group .btn {
+  flex: 1;
+  min-width: 120px;
+  justify-content: center;
+}
+
+.alert {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: var(--radius-md);
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.alert-danger {
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.1), rgba(220, 38, 38, 0.15));
+  border: 1px solid rgba(220, 38, 38, 0.3);
+  color: rgba(220, 38, 38, 0.9);
+}
+
+.alert svg {
+  flex-shrink: 0;
+}
+
+.form-label.required::after {
+  content: " *";
+  color: rgba(220, 38, 38, 0.8);
+  font-weight: 700;
+}
+
+.form-select.error,
+.form-input.error {
+  border-color: rgba(220, 38, 38, 0.5);
+  background: rgba(220, 38, 38, 0.05);
+}
+
+.form-error {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.85rem;
+  color: rgba(220, 38, 38, 0.9);
+  font-weight: 600;
+}
+
+.spinner-sm {
+  width: 16px;
+  height: 16px;
+  border-width: 2px;
+}
+
+/* Form Row for side-by-side inputs */
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .form-list-fields {
+    flex-direction: column;
+  }
+
+  .form-list-fields .form-input {
+    min-width: 100%;
+  }
+
+  .btn-group .btn {
+    min-width: 100%;
+  }
+}

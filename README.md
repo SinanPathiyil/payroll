@@ -119,6 +119,8 @@ payroll
 │  │  │  │  ├─ DeleteProjectModal.jsx
 │  │  │  │  ├─ EditClientModal.jsx
 │  │  │  │  ├─ EditProjectModal.jsx
+│  │  │  │  ├─ ExportModal.jsx
+│  │  │  │  ├─ RecordPaymentModal.jsx
 │  │  │  │  └─ RequirementsModal.jsx
 │  │  │  ├─ common
 │  │  │  │  ├─ Clock.jsx

@@ -22,6 +22,7 @@ import {
 
 import {
   getTLPendingApprovalProjects,
+  getTLActiveProjects,
   getTLRequirements,
   approveRequirement,
   rejectRequirement,
@@ -59,21 +60,69 @@ export default function TLRequirements() {
     try {
       setLoading(true);
 
-      // Real API call - Get all projects first to get requirements from each
-      const projectsResponse = await getTLPendingApprovalProjects();
+      // Get all active projects
+      const projectsResponse = await getTLActiveProjects();
       const projects = projectsResponse.data;
 
-      // Get requirements for all pending projects
-      const requirementsPromises = projects.map((project) =>
-        getTLRequirements(project.id)
-      );
+      // Get requirements for all projects
+      const allRequirements = [];
 
-      const requirementsResponses = await Promise.all(requirementsPromises);
+      for (const project of projects) {
+        try {
+          const requirementsResponse = await getTLRequirements(project.id);
+          const projectRequirements = requirementsResponse.data || [];
 
-      // Flatten all requirements into one array
-      const allRequirements = requirementsResponses.flatMap(
-        (res) => res.data || []
-      );
+          // Add project context to each requirement
+          projectRequirements.forEach((req) => {
+            allRequirements.push({
+              id: req.doc_id,
+              doc_id: req.doc_id,
+              document_name: req.filename,
+              project_id: project.id,
+              project_name: project.project_name,
+              client_name:
+                project.project_name_display?.split("(")[1]?.replace(")", "") ||
+                "Unknown Client",
+              uploaded_by: req.uploaded_by,
+              uploaded_by_role: "Business Analyst",
+              uploaded_at: req.uploaded_at,
+              shared_at: req.shared_at,
+              approval_deadline: req.shared_at, // Use shared_at as placeholder
+              file_size: req.file_size
+                ? `${(req.file_size / 1024 / 1024).toFixed(2)} MB`
+                : "Unknown",
+              document_url: req.file_path || "#",
+              version: req.version,
+              is_latest: req.is_latest,
+
+              // Determine status
+              status: req.team_lead_approved
+                ? "approved"
+                : req.team_lead_approved === false
+                  ? "rejected"
+                  : "pending",
+
+              // Approval/rejection info
+              approved_by: req.team_lead_approved ? "You" : null,
+              approved_at: req.approved_at,
+              approval_notes: req.approval_notes,
+              rejected_by: req.team_lead_approved === false ? "You" : null,
+              rejected_at: req.approved_at,
+              rejection_notes: req.approval_notes,
+
+              // Additional fields
+              description: `Requirement document v${req.version} for ${project.project_name}`,
+              sections: [], // Can be populated if backend provides it
+            });
+          });
+        } catch (error) {
+          console.error(
+            `Failed to load requirements for project ${project.id}:`,
+            error
+          );
+          // Continue with other projects even if one fails
+        }
+      }
 
       setRequirements(allRequirements);
       setLoading(false);

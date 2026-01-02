@@ -116,12 +116,16 @@ payroll
 │  │  │  │  ├─ AddClientModal.jsx
 │  │  │  │  ├─ AddProjectModal.jsx
 │  │  │  │  ├─ DeleteClientModal.jsx
+│  │  │  │  ├─ DeleteMeetingModal.jsx
 │  │  │  │  ├─ DeleteProjectModal.jsx
 │  │  │  │  ├─ EditClientModal.jsx
+│  │  │  │  ├─ EditMeetingModal.jsx
 │  │  │  │  ├─ EditProjectModal.jsx
 │  │  │  │  ├─ ExportModal.jsx
+│  │  │  │  ├─ MeetingDetailsModal.jsx
 │  │  │  │  ├─ RecordPaymentModal.jsx
-│  │  │  │  └─ RequirementsModal.jsx
+│  │  │  │  ├─ RequirementsModal.jsx
+│  │  │  │  └─ ScheduleMeetingModal.jsx
 │  │  │  ├─ common
 │  │  │  │  ├─ Clock.jsx
 │  │  │  │  ├─ Layout.jsx

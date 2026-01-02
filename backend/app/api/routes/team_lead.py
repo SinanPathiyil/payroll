@@ -6,7 +6,7 @@ from typing import List, Optional
 from datetime import datetime
 from pydantic import BaseModel
 
-router = APIRouter(prefix="/team-lead", tags=["Team Lead"])
+router = APIRouter(tags=["Team Lead"])
 
 # ============= HELPER FUNCTIONS =============
 
@@ -617,76 +617,264 @@ async def get_team_lead_dashboard_summary(
 ):
     """Get dashboard summary for Team Lead"""
     
+    tl_id = str(current_user["_id"])
+    
     # Projects assigned to this TL
     total_projects = await db.projects.count_documents({
-        "assigned_to_team_lead": str(current_user["_id"])
+        "assigned_to_team_lead": tl_id
     })
     
     active_projects = await db.projects.count_documents({
-        "assigned_to_team_lead": str(current_user["_id"]),
+        "assigned_to_team_lead": tl_id,
         "status": {"$nin": ["completed", "cancelled"]}
     })
     
     pending_approval = await db.projects.count_documents({
-        "assigned_to_team_lead": str(current_user["_id"]),
+        "assigned_to_team_lead": tl_id,
         "status": "pending_tl_approval"
     })
+    
+    completed_projects = await db.projects.count_documents({
+        "assigned_to_team_lead": tl_id,
+        "status": "completed"
+    })
+    
+    # Get active projects with details
+    active_projects_list = await db.projects.find({
+        "assigned_to_team_lead": tl_id,
+        "status": {"$nin": ["completed", "cancelled"]}
+    }).sort("updated_at", -1).limit(5).to_list(length=None)
+    
+    active_projects_data = []
+    for project in active_projects_list:
+        client = await get_client_details(project.get("client_id"), db) if project.get("client_id") else None
+        team = await db.teams.find_one({"_id": ObjectId(project["team_id"])}) if project.get("team_id") else None
+        
+        # Get current milestone
+        current_milestone = "Not started"
+        for milestone in project.get("milestones", []):
+            if milestone["status"] == "pending":
+                current_milestone = milestone["name"]
+                break
+        
+        team_size = len(team.get("members", [])) if team else 0
+        
+        active_projects_data.append({
+            "id": str(project["_id"]),
+            "project_name": project["project_name"],
+            "client_name": client["company_name"] if client else "No Client",
+            "status": project["status"],
+            "progress": project.get("progress_percentage", 0),
+            "current_milestone": current_milestone,
+            "team_size": team_size,
+            "due_date": project.get("due_date")
+        })
     
     # Tasks in managed teams
     managed_teams = current_user.get("managed_teams", [])
     
     total_tasks = await db.tasks.count_documents({
         "team_id": {"$in": managed_teams}
-    })
+    }) if managed_teams else 0
     
     pending_tasks = await db.tasks.count_documents({
         "team_id": {"$in": managed_teams},
         "status": "pending"
-    })
+    }) if managed_teams else 0
     
     in_progress_tasks = await db.tasks.count_documents({
         "team_id": {"$in": managed_teams},
         "status": "in_progress"
-    })
+    }) if managed_teams else 0
     
     completed_tasks = await db.tasks.count_documents({
         "team_id": {"$in": managed_teams},
         "status": "completed"
-    })
+    }) if managed_teams else 0
     
-    # Pending validations (tasks marked completed but not validated)
-    pending_validations = await db.tasks.count_documents({
+    # Overdue tasks
+    overdue_tasks = await db.tasks.count_documents({
         "team_id": {"$in": managed_teams},
-        "status": "completed",
-        "validated_by": None
-    })
+        "status": {"$nin": ["completed", "cancelled"]},
+        "due_date": {"$lt": datetime.now()}
+    }) if managed_teams else 0
     
-    # Get projects with milestones ready to notify
+    # Team members
+    team_members_data = []
+    if managed_teams:
+        for team_id in managed_teams:
+            team = await db.teams.find_one({"_id": ObjectId(team_id)})
+            if team:
+                for member_id in team.get("members", []):
+                    member = await db.users.find_one({"_id": ObjectId(member_id)})
+                    if member:
+                        # Get member's task stats
+                        member_tasks_assigned = await db.tasks.count_documents({
+                            "assigned_to": member_id,
+                            "status": {"$nin": ["completed", "cancelled"]}
+                        })
+                        
+                        member_tasks_completed = await db.tasks.count_documents({
+                            "assigned_to": member_id,
+                            "status": "completed"
+                        })
+                        
+                        # Check if member is active today (has attendance record)
+                        today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+                        attendance_today = await db.attendance.find_one({
+                            "user_id": member_id,
+                            "date": {"$gte": today_start}
+                        })
+                        
+                        team_members_data.append({
+                            "id": member_id,
+                            "name": member["full_name"],
+                            "role": member.get("designation", "Developer"),
+                            "status": "active" if attendance_today else "inactive",
+                            "tasks_assigned": member_tasks_assigned,
+                            "tasks_completed": member_tasks_completed
+                        })
+    
+    # Get unique team members count
+    total_team_members = len(set([m["id"] for m in team_members_data]))
+    active_today = len([m for m in team_members_data if m["status"] == "active"])
+    
+    # Pending requirements
+    pending_requirements_data = []
+    pending_req_projects = await db.projects.find({
+        "assigned_to_team_lead": tl_id,
+        "status": "pending_tl_approval"
+    }).to_list(length=None)
+    
+    for project in pending_req_projects:
+        client = await get_client_details(project.get("client_id"), db) if project.get("client_id") else None
+        for doc in project.get("requirement_documents", []):
+            if doc.get("shared_with_team_lead") and not doc.get("team_lead_approved"):
+                uploader = await get_user_details(doc["uploaded_by"], db)
+                pending_requirements_data.append({
+                    "id": doc["doc_id"],
+                    "document_name": doc["filename"],
+                    "project_name": project["project_name"],
+                    "client_name": client["company_name"] if client else "No Client",
+                    "uploaded_at": doc["uploaded_at"],
+                    "uploaded_by": uploader["full_name"] if uploader else "Unknown"
+                })
+    
+    # Milestones
     projects_with_milestones = await db.projects.find({
-        "assigned_to_team_lead": str(current_user["_id"]),
+        "assigned_to_team_lead": tl_id,
         "status": {"$nin": ["completed", "cancelled"]}
     }).to_list(length=None)
     
-    milestones_ready = 0
+    milestones_upcoming = 0
+    milestones_in_progress = 0
+    milestones_completed_this_month = 0
+    
+    month_start = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    
     for project in projects_with_milestones:
         for milestone in project.get("milestones", []):
-            if (milestone["status"] == "pending" and 
-                project.get("progress_percentage", 0) >= milestone["percentage"]):
-                milestones_ready += 1
+            if milestone["status"] == "pending":
+                if project.get("progress_percentage", 0) >= milestone["percentage"] - 10:
+                    milestones_upcoming += 1
+                else:
+                    milestones_in_progress += 1
+            elif milestone["status"] == "completed" and milestone.get("reached_at", datetime.min) >= month_start:
+                milestones_completed_this_month += 1
+    
+    # Recent activities
+    recent_activities_data = []
+    recent_tasks = await db.tasks.find({
+        "team_id": {"$in": managed_teams}
+    }).sort("updated_at", -1).limit(10).to_list(length=None) if managed_teams else []
+    
+    for task in recent_tasks:
+        assigned_user = await get_user_details(task.get("assigned_to"), db) if task.get("assigned_to") else None
+        project = await db.projects.find_one({"_id": ObjectId(task["project_id"])}) if task.get("project_id") else None
+        
+        time_diff = datetime.now() - task.get("updated_at", datetime.now())
+        if time_diff.days > 0:
+            time_str = f"{time_diff.days} day{'s' if time_diff.days > 1 else ''} ago"
+        elif time_diff.seconds // 3600 > 0:
+            hours = time_diff.seconds // 3600
+            time_str = f"{hours} hour{'s' if hours > 1 else ''} ago"
+        else:
+            minutes = time_diff.seconds // 60
+            time_str = f"{minutes} minute{'s' if minutes > 1 else ''} ago" if minutes > 0 else "Just now"
+        
+        status_text = task["status"].replace("_", " ").title()
+        message = f"{assigned_user['full_name'] if assigned_user else 'Someone'} "
+        
+        if task["status"] == "completed":
+            message += f"completed task '{task['title']}'"
+        elif task["status"] == "in_progress":
+            message += f"started working on '{task['title']}'"
+        elif task["status"] == "pending":
+            message += f"was assigned '{task['title']}'"
+        else:
+            message += f"updated '{task['title']}' to {status_text}"
+        
+        if project:
+            message += f" in {project['project_name']}"
+        
+        recent_activities_data.append({
+            "id": str(task["_id"]),
+            "message": message,
+            "time": time_str
+        })
+    
+    # Generate alerts
+    alerts = []
+    
+    if pending_approval > 0:
+        alerts.append({
+            "id": "pending_approval",
+            "type": "warning",
+            "message": f"{pending_approval} project{'s' if pending_approval > 1 else ''} pending your approval",
+            "action": "/tl/requirements"
+        })
+    
+    if overdue_tasks > 0:
+        alerts.append({
+            "id": "overdue_tasks",
+            "type": "danger",
+            "message": f"{overdue_tasks} task{'s' if overdue_tasks > 1 else ''} overdue",
+            "action": "/tl/tasks"
+        })
+    
+    if milestones_upcoming > 0:
+        alerts.append({
+            "id": "milestones_ready",
+            "type": "info",
+            "message": f"{milestones_upcoming} milestone{'s' if milestones_upcoming > 1 else ''} ready to notify",
+            "action": "/tl/projects"
+        })
     
     return {
         "projects": {
             "total": total_projects,
             "active": active_projects,
-            "pending_approval": pending_approval
+            "pending_approval": pending_approval,
+            "completed": completed_projects
         },
         "tasks": {
             "total": total_tasks,
-            "pending": pending_tasks,
             "in_progress": in_progress_tasks,
             "completed": completed_tasks,
-            "pending_validation": pending_validations
+            "overdue": overdue_tasks
         },
-        "milestones_ready_to_notify": milestones_ready,
-        "team_count": len(managed_teams)
+        "team": {
+            "total_members": total_team_members,
+            "active_today": active_today
+        },
+        "milestones": {
+            "upcoming": milestones_upcoming,
+            "in_progress": milestones_in_progress,
+            "completed_this_month": milestones_completed_this_month
+        },
+        "pending_requirements": pending_requirements_data,
+        "active_projects": active_projects_data,
+        "team_members": team_members_data[:5],  # Limit to 5 for dashboard
+        "recent_activities": recent_activities_data[:8],  # Limit to 8 for dashboard
+        "alerts": alerts
     }

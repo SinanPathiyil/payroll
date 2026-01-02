@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from app.api.deps import get_current_hr, get_current_team_lead, get_current_user, get_database, verify_team_access
+from app.api.deps import get_current_hr, get_current_team_lead, get_current_user, get_database, verify_team_access, get_current_super_admin
 from app.schemas.team import (
     TeamCreate, TeamUpdate, TeamResponse, TeamDetailResponse,
     TeamMemberAdd, TeamMemberRemove, TeamMemberResponse
@@ -9,9 +9,21 @@ from bson import ObjectId
 from typing import List, Optional
 from datetime import datetime
 
-router = APIRouter(prefix="/teams", tags=["Teams"])
+router = APIRouter(tags=["Teams"])
+
+
 
 # ============= HELPER FUNCTIONS =============
+
+# NEW: Helper to allow both HR and Super Admin
+async def get_current_hr_or_super_admin(current_user: dict = Depends(get_current_user)):
+    """Verify user is HR or Super Admin"""
+    if current_user["role"] not in ["hr", "super_admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only HR or Super Admin can perform this action"
+        )
+    return current_user
 
 async def get_user_details(user_id: str, db) -> dict:
     """Helper to get user details"""
@@ -67,10 +79,10 @@ async def remove_team_from_lead(team_lead_id: str, team_id: str, db):
 @router.post("/", response_model=TeamResponse, status_code=status.HTTP_201_CREATED)
 async def create_team(
     team_data: TeamCreate,
-    current_user: dict = Depends(get_current_hr),
+    current_user: dict = Depends(get_current_hr_or_super_admin),
     db = Depends(get_database)
 ):
-    """Create a new team (HR only)"""
+    """Create a new team (HR or Super Admin only)"""
     
     # Check if team name already exists
     if await check_team_name_exists(team_data.team_name, db):
@@ -151,7 +163,11 @@ async def get_teams(
     query = {}
     
     # Role-based filtering
-    if current_user["role"] == "hr":
+    if current_user["role"] == "super_admin":
+        # Super Admin can see all teams
+        if is_active is not None:
+            query["is_active"] = is_active
+    elif current_user["role"] == "hr":
         # HR can see all teams
         if is_active is not None:
             query["is_active"] = is_active
@@ -166,7 +182,7 @@ async def get_teams(
             return []
         query["_id"] = ObjectId(current_user["team_id"])
     else:
-        # Super admin or other roles - no access to operational teams
+        # Other roles - no access to operational teams
         return []
     
     teams = await db.teams.find(query).to_list(length=None)
@@ -276,10 +292,10 @@ async def get_team_details(
 async def update_team(
     team_id: str,
     team_data: TeamUpdate,
-    current_user: dict = Depends(get_current_hr),
+    current_user: dict = Depends(get_current_hr_or_super_admin),
     db = Depends(get_database)
 ):
-    """Update team information (HR only)"""
+    """Update team information (HR or Super Admin Only)"""
     
     # Get existing team
     try:
@@ -385,10 +401,10 @@ async def update_team(
 @router.delete("/{team_id}")
 async def delete_team(
     team_id: str,
-    current_user: dict = Depends(get_current_hr),
+    current_user: dict = Depends(get_current_hr_or_super_admin),
     db = Depends(get_database)
 ):
-    """Soft delete team (HR only) - deactivates team"""
+    """Soft delete team (HR or Super Admin only) - deactivates team"""
     
     try:
         team = await db.teams.find_one({"_id": ObjectId(team_id)})
@@ -452,10 +468,10 @@ async def delete_team(
 async def add_team_member(
     team_id: str,
     member_data: TeamMemberAdd,
-    current_user: dict = Depends(get_current_hr),
+    current_user: dict = Depends(get_current_hr_or_super_admin),
     db = Depends(get_database)
 ):
-    """Add employee to team (HR only)"""
+    """Add employee to team (HR or Super Admin Only)"""
     
     # Get team
     try:
@@ -544,10 +560,10 @@ async def add_team_member(
 async def remove_team_member(
     team_id: str,
     employee_id: str,
-    current_user: dict = Depends(get_current_hr),
+    current_user: dict = Depends(get_current_hr_or_super_admin),
     db = Depends(get_database)
 ):
-    """Remove employee from team (HR only)"""
+    """Remove employee from team (HR or Super Admin Only)"""
     
     # Get team
     try:

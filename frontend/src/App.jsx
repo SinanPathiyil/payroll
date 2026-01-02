@@ -41,9 +41,11 @@ import HREmployeeActivityBreakdown from "./pages/HREmployeeActivityBreakdown";
 // Import Super Admin Pages
 import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import SuperAdminUsers from "./pages/SuperAdminUsers";
+import SuperAdminTeams from "./pages/SuperAdminTeams";
 import SuperAdminOverrideRequests from "./pages/SuperAdminOverrideRequests";
 import SuperAdminAuditLogs from "./pages/SuperAdminAuditLogs";
 import SuperAdminSystemStats from "./pages/SuperAdminSystemStats";
+
 function App() {
   return (
     <AuthProvider>
@@ -299,6 +301,14 @@ function App() {
           element={
             <ProtectedRoute role="super_admin">
               <SuperAdminUsers />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/super-admin/teams"
+          element={
+            <ProtectedRoute role="super_admin">
+              <SuperAdminTeams />
             </ProtectedRoute>
           }
         />

@@ -57,6 +57,32 @@ class AuditLogResponse(BaseModel):
     ip_address: Optional[str] = None
     timestamp: datetime
 
+# Add this after the existing CreateSuperAdminRequest class (around line 23)
+
+class CreateEmployeeRequest(BaseModel):
+    email: EmailStr
+    full_name: str
+    password: str
+    required_hours: float = 8.0
+    base_salary: float = 0.0
+    team_id: Optional[str] = None
+
+class CreateTeamLeadRequest(BaseModel):
+    email: EmailStr
+    full_name: str
+    password: str
+    required_hours: float = 8.0
+    base_salary: float = 0.0
+    team_id: Optional[str] = None  # Existing team or will be created
+    team_name: Optional[str] = None  # For creating new team
+
+class CreateBusinessAnalystRequest(BaseModel):
+    email: EmailStr
+    full_name: str
+    password: str
+    required_hours: float = 8.0
+    base_salary: float = 0.0
+    
 # ============= HELPER FUNCTIONS =============
 
 async def create_audit_log(
@@ -204,6 +230,312 @@ async def create_super_admin_account(
         managed_teams=new_user.get("managed_teams", [])
     )
 
+@router.post("/users/employee", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+async def create_employee_account(
+    user_data: CreateEmployeeRequest,
+    current_user: dict = Depends(get_current_super_admin),
+    db = Depends(get_database)
+):
+    """Create a new Employee account (Super Admin only)"""
+    
+    # Check if email already exists
+    existing_user = await db.users.find_one({"email": user_data.email})
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered"
+        )
+    
+    # Get team and team lead if team is provided
+    team_lead_id = None
+    if user_data.team_id:
+        try:
+            team = await db.teams.find_one({"_id": ObjectId(user_data.team_id)})
+            if not team:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid team ID"
+                )
+            if not team.get("is_active", True):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Cannot assign employee to inactive team"
+                )
+            team_lead_id = team.get("team_lead_id")
+        except:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid team ID format"
+            )
+    
+    # Create Employee user
+    new_user = {
+        "email": user_data.email,
+        "full_name": user_data.full_name,
+        "hashed_password": get_password_hash(user_data.password),
+        "role": "employee",
+        "is_active": True,
+        "created_by": str(current_user["_id"]),
+        "created_at": datetime.now(),
+        "office_hours": {"start": "09:00", "end": "18:00"},
+        "required_hours": user_data.required_hours,
+        "base_salary": user_data.base_salary,
+        "team_id": user_data.team_id,
+        "reporting_to": team_lead_id,
+        "managed_teams": []
+    }
+    
+    result = await db.users.insert_one(new_user)
+    user_id = str(result.inserted_id)
+    
+    # Add employee to team's members list
+    if user_data.team_id:
+        await db.teams.update_one(
+            {"_id": ObjectId(user_data.team_id)},
+            {"$addToSet": {"members": user_id}}
+        )
+    
+    # Create audit log
+    await create_audit_log(
+        db=db,
+        action_type="employee_account_created",
+        performed_by=str(current_user["_id"]),
+        user_role=current_user["role"],
+        target_user=user_id,
+        details={
+            "email": user_data.email,
+            "full_name": user_data.full_name,
+            "team_id": user_data.team_id
+        }
+    )
+    
+    new_user["_id"] = result.inserted_id
+    
+    return UserResponse(
+        id=str(new_user["_id"]),
+        email=new_user["email"],
+        full_name=new_user["full_name"],
+        role=new_user["role"],
+        is_active=new_user["is_active"],
+        office_hours=new_user["office_hours"],
+        required_hours=new_user["required_hours"],
+        base_salary=new_user.get("base_salary", 0.0),
+        team_id=new_user.get("team_id"),
+        reporting_to=new_user.get("reporting_to"),
+        managed_teams=new_user.get("managed_teams", [])
+    )
+
+
+@router.post("/users/team-lead", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+async def create_team_lead_account(
+    user_data: CreateTeamLeadRequest,
+    current_user: dict = Depends(get_current_super_admin),
+    db = Depends(get_database)
+):
+    """Create a new Team Lead account (Super Admin only)"""
+    
+    # Check if email already exists
+    existing_user = await db.users.find_one({"email": user_data.email})
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered"
+        )
+    
+    team_id = user_data.team_id
+    
+    # If team_name is provided but no team_id, create new team
+    if user_data.team_name and not user_data.team_id:
+        # Check if team name already exists
+        existing_team = await db.teams.find_one({"team_name": user_data.team_name})
+        if existing_team:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Team name already exists"
+            )
+        
+        # Create placeholder - will update with team_lead_id after user creation
+        new_team = {
+            "team_name": user_data.team_name,
+            "description": f"Team led by {user_data.full_name}",
+            "team_lead_id": None,  # Will be updated
+            "created_by": str(current_user["_id"]),
+            "members": [],
+            "is_active": True,
+            "created_at": datetime.now()
+        }
+        team_result = await db.teams.insert_one(new_team)
+        team_id = str(team_result.inserted_id)
+    
+    # Validate existing team if provided
+    elif user_data.team_id:
+        team = await db.teams.find_one({"_id": ObjectId(user_data.team_id)})
+        if not team:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid team ID"
+            )
+    
+    # Create Team Lead user
+    new_user = {
+        "email": user_data.email,
+        "full_name": user_data.full_name,
+        "hashed_password": get_password_hash(user_data.password),
+        "role": "team_lead",
+        "is_active": True,
+        "created_by": str(current_user["_id"]),
+        "created_at": datetime.now(),
+        "office_hours": {"start": "09:00", "end": "18:00"},
+        "required_hours": user_data.required_hours,
+        "base_salary": user_data.base_salary,
+        "team_id": team_id,
+        "reporting_to": None,
+        "managed_teams": [team_id] if team_id else []
+    }
+    
+    result = await db.users.insert_one(new_user)
+    
+    # Update team with team_lead_id if we created a new team
+    if user_data.team_name and team_id:
+        await db.teams.update_one(
+            {"_id": ObjectId(team_id)},
+            {"$set": {"team_lead_id": str(result.inserted_id)}}
+        )
+    
+    # Create audit log
+    await create_audit_log(
+        db=db,
+        action_type="team_lead_account_created",
+        performed_by=str(current_user["_id"]),
+        user_role=current_user["role"],
+        target_user=str(result.inserted_id),
+        details={
+            "email": user_data.email,
+            "full_name": user_data.full_name,
+            "team_id": team_id,
+            "new_team": user_data.team_name if user_data.team_name else None
+        }
+    )
+    
+    new_user["_id"] = result.inserted_id
+    
+    return UserResponse(
+        id=str(new_user["_id"]),
+        email=new_user["email"],
+        full_name=new_user["full_name"],
+        role=new_user["role"],
+        is_active=new_user["is_active"],
+        office_hours=new_user["office_hours"],
+        required_hours=new_user["required_hours"],
+        base_salary=new_user.get("base_salary", 0.0),
+        team_id=new_user.get("team_id"),
+        reporting_to=new_user.get("reporting_to"),
+        managed_teams=new_user.get("managed_teams", [])
+    )
+
+
+@router.post("/users/business-analyst", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+async def create_business_analyst_account(
+    user_data: CreateBusinessAnalystRequest,
+    current_user: dict = Depends(get_current_super_admin),
+    db = Depends(get_database)
+):
+    """Create a new Business Analyst account (Super Admin only)"""
+    
+    # Check if email already exists
+    existing_user = await db.users.find_one({"email": user_data.email})
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered"
+        )
+    
+    # Create Business Analyst user
+    new_user = {
+        "email": user_data.email,
+        "full_name": user_data.full_name,
+        "hashed_password": get_password_hash(user_data.password),
+        "role": "business_analyst",
+        "is_active": True,
+        "created_by": str(current_user["_id"]),
+        "created_at": datetime.now(),
+        "office_hours": {"start": "09:00", "end": "18:00"},
+        "required_hours": user_data.required_hours,
+        "base_salary": user_data.base_salary,
+        "team_id": None,
+        "reporting_to": None,
+        "managed_teams": []
+    }
+    
+    result = await db.users.insert_one(new_user)
+    
+    # Create audit log
+    await create_audit_log(
+        db=db,
+        action_type="business_analyst_created",
+        performed_by=str(current_user["_id"]),
+        user_role=current_user["role"],
+        target_user=str(result.inserted_id),
+        details={"email": user_data.email, "full_name": user_data.full_name}
+    )
+    
+    new_user["_id"] = result.inserted_id
+    
+    return UserResponse(
+        id=str(new_user["_id"]),
+        email=new_user["email"],
+        full_name=new_user["full_name"],
+        role=new_user["role"],
+        is_active=new_user["is_active"],
+        office_hours=new_user["office_hours"],
+        required_hours=new_user["required_hours"],
+        base_salary=new_user.get("base_salary", 0.0),
+        team_id=new_user.get("team_id"),
+        reporting_to=new_user.get("reporting_to"),
+        managed_teams=new_user.get("managed_teams", [])
+    )
+
+
+# Add endpoint to get all teams (for dropdown)
+@router.get("/teams")
+async def get_all_teams(
+    current_user: dict = Depends(get_current_super_admin),
+    db = Depends(get_database)
+):
+    """Get all teams for dropdown selection"""
+    teams = await db.teams.find({"is_active": True}).to_list(length=None)
+    
+    return [
+        {
+            "id": str(team["_id"]),
+            "team_name": team["team_name"],
+            "team_lead_id": team.get("team_lead_id")
+        }
+        for team in teams
+    ]
+
+# Add endpoint to get all team leads (for dropdown)
+@router.get("/team-leads")
+async def get_all_team_leads(
+    current_user: dict = Depends(get_current_super_admin),
+    db = Depends(get_database)
+):
+    """Get all team leads for dropdown selection"""
+    team_leads = await db.users.find({
+        "role": "team_lead",
+        "is_active": True
+    }).to_list(length=None)
+    
+    return [
+        {
+            "id": str(tl["_id"]),
+            "full_name": tl["full_name"],
+            "email": tl["email"],
+            "team_id": tl.get("team_id")
+        }
+        for tl in team_leads
+    ]
+
 @router.get("/users", response_model=List[UserResponse])
 async def get_all_users(
     role: Optional[str] = None,
@@ -303,10 +635,36 @@ async def update_user(
         update_data["full_name"] = user_data.full_name
     if user_data.role is not None:
         update_data["role"] = user_data.role
+        
+    # UPDATED: Handle team_id changes
     if user_data.team_id is not None:
-        update_data["team_id"] = user_data.team_id
-    if user_data.reporting_to is not None:
-        update_data["reporting_to"] = user_data.reporting_to
+        old_team_id = user.get("team_id")
+        
+        # Remove from old team if exists
+        if old_team_id:
+            await db.teams.update_one(
+                {"_id": ObjectId(old_team_id)},
+                {"$pull": {"members": user_id}}
+            )
+        
+        # Add to new team and get team lead
+        if user_data.team_id:
+            team = await db.teams.find_one({"_id": ObjectId(user_data.team_id)})
+            if team:
+                await db.teams.update_one(
+                    {"_id": ObjectId(user_data.team_id)},
+                    {"$addToSet": {"members": user_id}}
+                )
+                update_data["team_id"] = user_data.team_id
+                update_data["reporting_to"] = team.get("team_lead_id")
+        else:
+            update_data["team_id"] = None
+            update_data["reporting_to"] = None
+
+    # Remove the old reporting_to logic - it's now handled above
+    # if user_data.reporting_to is not None:
+    #     update_data["reporting_to"] = user_data.reporting_to
+        
     if user_data.required_hours is not None:
         update_data["required_hours"] = user_data.required_hours
     if user_data.base_salary is not None:

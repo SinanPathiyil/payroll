@@ -73,6 +73,7 @@ export default function Sidebar() {
         return [
           { path: '/super-admin-dashboard', icon: LayoutDashboard, label: 'Dashboard' },
           { path: '/super-admin/users', icon: Users, label: 'User Management' },
+          { path: '/super-admin/teams', icon: Users, label: 'Team Management' },,
           { path: '/super-admin/override-requests', icon: CheckSquare, label: 'Override Requests' },
           { path: '/super-admin/audit-logs', icon: FileText, label: 'Audit Logs' },
           { path: '/super-admin/system-stats', icon: BarChart3, label: 'System Stats' }

@@ -9,7 +9,6 @@ import {
   Search,
   Edit2,
   Trash2,
-  Eye,
   UserCheck,
   AlertCircle,
   X,
@@ -36,9 +35,7 @@ export default function SuperAdminTeams() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState(null);
-  const [selectedTeamDetails, setSelectedTeamDetails] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
   // Form States
@@ -143,22 +140,6 @@ export default function SuperAdminTeams() {
       alert(err.response?.data?.detail || 'Failed to create team');
     } finally {
       setSubmitting(false);
-    }
-  };
-
-  // VIEW TEAM DETAILS
-  const handleViewDetails = async (team) => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/teams/${team.id}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setSelectedTeamDetails(response.data);
-      setShowDetailsModal(true);
-    } catch (err) {
-      console.error('Error fetching team details:', err);
-      alert('Failed to load team details');
     }
   };
 
@@ -364,13 +345,6 @@ export default function SuperAdminTeams() {
                         <div className="sat-actions">
                           <button
                             className="sat-action-btn"
-                            onClick={() => handleViewDetails(team)}
-                            title="View Details"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          <button
-                            className="sat-action-btn"
                             onClick={() => handleEdit(team)}
                             title="Edit Team"
                           >
@@ -537,104 +511,6 @@ export default function SuperAdminTeams() {
                   </button>
                 </div>
               </form>
-            </div>
-          </div>
-        )}
-
-        {/* VIEW DETAILS MODAL */}
-        {showDetailsModal && selectedTeamDetails && (
-          <div className="sat-modal-overlay" onClick={() => setShowDetailsModal(false)}>
-            <div className="sat-modal sat-modal-large" onClick={(e) => e.stopPropagation()}>
-              <div className="sat-modal-header">
-                <h2>Team Details</h2>
-                <button onClick={() => setShowDetailsModal(false)} className="sat-modal-close">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <div className="sat-modal-body">
-                <div className="sat-details-section">
-                  <h3>{selectedTeamDetails.team_name}</h3>
-                  {selectedTeamDetails.description && (
-                    <p className="sat-details-desc">{selectedTeamDetails.description}</p>
-                  )}
-                </div>
-
-                <div className="sat-details-grid">
-                  <div className="sat-details-item">
-                    <label>Team Lead:</label>
-                    <div className="sat-details-value">
-                      {selectedTeamDetails.team_lead_details ? (
-                        <>
-                          <strong>{selectedTeamDetails.team_lead_details.full_name}</strong>
-                          <br />
-                          <small>{selectedTeamDetails.team_lead_details.email}</small>
-                        </>
-                      ) : (
-                        'Unknown'
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="sat-details-item">
-                    <label>Status:</label>
-                    <div className="sat-details-value">
-                      <span className={`sat-status ${selectedTeamDetails.is_active ? 'sat-status-active' : 'sat-status-inactive'}`}>
-                        {selectedTeamDetails.is_active ? (
-                          <>
-                            <CheckCircle className="w-4 h-4" />
-                            <span>Active</span>
-                          </>
-                        ) : (
-                          <>
-                            <XCircle className="w-4 h-4" />
-                            <span>Inactive</span>
-                          </>
-                        )}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="sat-details-item">
-                    <label>Total Members:</label>
-                    <div className="sat-details-value">
-                      <strong>{selectedTeamDetails.member_count}</strong>
-                    </div>
-                  </div>
-
-                  <div className="sat-details-item">
-                    <label>Created By:</label>
-                    <div className="sat-details-value">{selectedTeamDetails.created_by_name}</div>
-                  </div>
-                </div>
-
-                {selectedTeamDetails.members_details && selectedTeamDetails.members_details.length > 0 && (
-                  <div className="sat-members-section">
-                    <h4>Team Members ({selectedTeamDetails.members_details.length})</h4>
-                    <div className="sat-members-list">
-                      {selectedTeamDetails.members_details.map(member => (
-                        <div key={member.id} className="sat-member-card">
-                          <div className="sat-member-avatar">
-                            {member.full_name.charAt(0).toUpperCase()}
-                          </div>
-                          <div className="sat-member-info">
-                            <div className="sat-member-name">{member.full_name}</div>
-                            <div className="sat-member-email">{member.email}</div>
-                            <span className={`sat-member-role ${member.role}`}>
-                              {member.role}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="sat-modal-footer">
-                <button onClick={() => setShowDetailsModal(false)} className="sat-btn-secondary">
-                  Close
-                </button>
-              </div>
             </div>
           </div>
         )}

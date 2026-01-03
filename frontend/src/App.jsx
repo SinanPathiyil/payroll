@@ -36,6 +36,7 @@ import HRAttendance from "./pages/HRAttendance";
 import HRMessages from "./pages/HRMessages";
 import HRReports from "./pages/HRReports";
 import HREmployeeActivityBreakdown from "./pages/HREmployeeActivityBreakdown";
+import HROverrideRequests from "./pages/HROverrideRequests";
 
 // Import Super Admin Pages
 import SuperAdminDashboard from "./pages/SuperAdminDashboard";
@@ -234,6 +235,14 @@ function App() {
           element={
             <ProtectedRoute role="hr">
               <HRReports />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/hr/override-requests"
+          element={
+            <ProtectedRoute>
+              <HROverrideRequests />
             </ProtectedRoute>
           }
         />

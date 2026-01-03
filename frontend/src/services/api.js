@@ -191,6 +191,19 @@ export const getHRDashboard = () => api.get('/hr/dashboard');
 export const getAttendanceRecords = (params) => api.get('/hr/attendance', { params });
 
 // ============================================
+// HR - OVERRIDE REQUESTS
+// ============================================
+export const createOverrideRequest = (requestData) => 
+  api.post('/hr/override-requests', requestData);
+export const getMyOverrideRequests = (statusFilter) => 
+  api.get('/hr/override-requests', { params: { status_filter: statusFilter } });
+export const getOverrideRequest = (requestId) => 
+  api.get(`/hr/override-requests/${requestId}`);
+export const cancelOverrideRequest = (requestId) => 
+  api.delete(`/hr/override-requests/${requestId}`);
+
+
+// ============================================
 // EMPLOYEE
 // ============================================
 export const employeeLogin = () => api.post('/employee/login');

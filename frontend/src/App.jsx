@@ -32,7 +32,6 @@ import EmployeeTimeTracking from "./pages/EmployeeTimeTracking";
 import HREmployees from "./pages/HREmployees";
 import HREmployeeDetails from "./pages/HREmployeeDetails";
 import HRCreateEmployee from "./pages/HRCreateEmployee";
-import HRTasks from "./pages/HRTasks";
 import HRAttendance from "./pages/HRAttendance";
 import HRMessages from "./pages/HRMessages";
 import HRReports from "./pages/HRReports";
@@ -211,14 +210,6 @@ function App() {
           element={
             <ProtectedRoute role="hr">
               <HRCreateEmployee />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/hr/tasks"
-          element={
-            <ProtectedRoute role="hr">
-              <HRTasks />
             </ProtectedRoute>
           }
         />

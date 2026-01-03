@@ -290,18 +290,10 @@ async def get_employee_stats(
     if monthly_productivity_scores:
         monthly_avg_productivity = sum(monthly_productivity_scores) / len(monthly_productivity_scores)
     
-    # Tasks stats
-    total_tasks = await db.tasks.count_documents({"assigned_to": employee_id})
-    completed_tasks = await db.tasks.count_documents({
-        "assigned_to": employee_id,
-        "status": "completed"
-    })
-    
     # Calculate averages
     avg_hours = total_hours / len(attendance_records) if attendance_records else 0
     
-    
-        # ========================================
+    # ========================================
     # SALARY CALCULATION (TIERED SYSTEM)
     # ========================================
     employee = await db.users.find_one({"_id": ObjectId(employee_id)})
@@ -326,12 +318,7 @@ async def get_employee_stats(
             "monthly_avg_productivity": round(monthly_avg_productivity, 2),
             "monthly_period": current_month_label  
         },
-        "tasks_summary": {
-            "total": total_tasks,
-            "completed": completed_tasks,
-            "pending": total_tasks - completed_tasks
-        },
-        "salary_info": salary_info  # ✅ NEW FIELD ADDED
+        "salary_info": salary_info
     }
 
 # <<<<<<< NEW ENDPOINT ADDED HERE >>>>>>>

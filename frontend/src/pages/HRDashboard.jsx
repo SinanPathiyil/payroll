@@ -6,7 +6,6 @@ import {
   Users,
   UserPlus,
   CheckCircle,
-  ListTodo,
   MessageSquare,
   TrendingUp,
   Clock,
@@ -14,7 +13,7 @@ import {
   Activity,
   ArrowUpRight,
 } from "lucide-react";
-import { getEmployees, getAllTasks, getMyMessages } from "../services/api";
+import { getEmployees, getMyMessages } from "../services/api";
 import '../styles/hr-dashboard.css';
 
 export default function HRDashboard() {
@@ -22,7 +21,6 @@ export default function HRDashboard() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [employees, setEmployees] = useState([]);
-  const [tasks, setTasks] = useState([]);
   const [messages, setMessages] = useState([]);
 
   useEffect(() => {
@@ -32,13 +30,11 @@ export default function HRDashboard() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [employeesRes, tasksRes, messagesRes] = await Promise.all([
+      const [employeesRes, messagesRes] = await Promise.all([
         getEmployees(),
-        getAllTasks(),
         getMyMessages(),
       ]);
       setEmployees(employeesRes.data || []);
-      setTasks(tasksRes.data || []);
       setMessages(messagesRes.data || []);
     } catch (error) {
       console.error("Failed to load data:", error);
@@ -50,9 +46,6 @@ export default function HRDashboard() {
   const stats = {
     totalEmployees: employees.length,
     activeToday: employees.filter((e) => e.today_status === "active").length,
-    totalTasks: tasks.length,
-    completedTasks: tasks.filter((t) => t.status === "completed").length,
-    pendingTasks: tasks.filter((t) => t.status === "pending").length,
     unreadMessages: messages.filter((m) => !m.is_read).length,
   };
 
@@ -79,13 +72,6 @@ export default function HRDashboard() {
             </p>
           </div>
           <div className="hr-dashboard-actions">
-            <button
-              className="btn btn-secondary"
-              onClick={() => navigate("/hr/tasks")}
-            >
-              <ListTodo className="w-4 h-4" />
-              <span>Assign Task</span>
-            </button>
             <button
               className="btn btn-primary"
               onClick={() => navigate("/hr/employees/create")}
@@ -116,31 +102,6 @@ export default function HRDashboard() {
             </div>
             <div className="hr-stat-footer">
               <span>View all employees</span>
-              <ArrowUpRight className="w-4 h-4" />
-            </div>
-          </div>
-
-          {/* Tasks */}
-          <div className="hr-stat-card" onClick={() => navigate("/hr/tasks")}>
-            <div className="hr-stat-content">
-              <div className="hr-stat-info">
-                <p className="hr-stat-label">Total Tasks</p>
-                <p className="hr-stat-value">{stats.totalTasks}</p>
-                <p className="hr-stat-hint">
-                  <span className="hr-stat-badge warning">
-                    {stats.pendingTasks} pending
-                  </span>
-                  <span className="hr-stat-badge success">
-                    {stats.completedTasks} completed
-                  </span>
-                </p>
-              </div>
-              <div className="hr-stat-icon hr-stat-icon-purple">
-                <ListTodo className="w-8 h-8" />
-              </div>
-            </div>
-            <div className="hr-stat-footer">
-              <span>Manage tasks</span>
               <ArrowUpRight className="w-4 h-4" />
             </div>
           </div>
@@ -240,44 +201,42 @@ export default function HRDashboard() {
             </div>
           </div>
 
-          {/* Recent Tasks */}
+          {/* Recent Messages */}
           <div className="hr-card">
             <div className="hr-card-header">
               <div className="hr-card-title">
-                <ListTodo className="w-5 h-5" />
-                <span>Recent Tasks</span>
+                <MessageSquare className="w-5 h-5" />
+                <span>Recent Messages</span>
               </div>
               <button 
                 className="btn btn-secondary btn-sm"
-                onClick={() => navigate("/hr/tasks")}
+                onClick={() => navigate("/hr/messages")}
               >
                 View All
               </button>
             </div>
             <div className="hr-card-body">
-              {tasks.length === 0 ? (
+              {messages.length === 0 ? (
                 <div className="hr-empty-state">
-                  <ListTodo className="hr-empty-icon" />
-                  <p>No tasks assigned yet</p>
+                  <MessageSquare className="hr-empty-icon" />
+                  <p>No messages yet</p>
                 </div>
               ) : (
                 <div className="hr-activity-list">
-                  {tasks.slice(0, 5).map((task) => (
-                    <div key={task.id} className="hr-activity-item">
+                  {messages.slice(0, 5).map((message) => (
+                    <div key={message.id} className="hr-activity-item">
                       <div 
                         className="hr-activity-indicator" 
                         style={{ 
-                          backgroundColor: 
-                            task.status === 'completed' ? '#10b981' : 
-                            task.status === 'in_progress' ? '#3b82f6' : '#f59e0b' 
+                          backgroundColor: message.is_read ? '#9ca3af' : '#3b82f6'
                         }} 
                       />
                       <div className="hr-activity-content">
                         <p className="hr-activity-message">
-                          <strong>{task.title}</strong>
+                          <strong>{message.sender_name}</strong>
                         </p>
                         <p className="hr-activity-time">
-                          Assigned to: {task.employee_name} | Status: {task.status}
+                          {message.subject || message.content?.substring(0, 50)}
                         </p>
                       </div>
                     </div>
@@ -307,13 +266,6 @@ export default function HRDashboard() {
               </button>
               <button
                 className="hr-quick-action-btn"
-                onClick={() => navigate("/hr/tasks")}
-              >
-                <ListTodo className="w-5 h-5" />
-                <span>Assign Task</span>
-              </button>
-              <button
-                className="hr-quick-action-btn"
                 onClick={() => navigate("/hr/attendance")}
               >
                 <Calendar className="w-5 h-5" />
@@ -325,6 +277,13 @@ export default function HRDashboard() {
               >
                 <Activity className="w-5 h-5" />
                 <span>Generate Report</span>
+              </button>
+              <button
+                className="hr-quick-action-btn"
+                onClick={() => navigate("/hr/messages")}
+              >
+                <MessageSquare className="w-5 h-5" />
+                <span>View Messages</span>
               </button>
             </div>
           </div>

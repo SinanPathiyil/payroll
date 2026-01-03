@@ -72,7 +72,7 @@ async def get_my_tasks(
     
     return tasks
 
-@router.put("/{task_id}/update")
+@router.patch("/{task_id}")
 async def update_task(
     task_id: str,
     task_update: TaskUpdate,

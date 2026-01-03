@@ -150,7 +150,9 @@ payroll
 │  │  │  │  ├─ HRMessageBoard.jsx
 │  │  │  │  ├─ SendMessageModal.jsx
 │  │  │  │  └─ SettingsPanel.jsx
-│  │  │  └─ ProtectedRoute.jsx
+│  │  │  ├─ ProtectedRoute.jsx
+│  │  │  └─ tl
+│  │  │     └─ SendMessageModal.jsx
 │  │  ├─ context
 │  │  │  └─ AuthContext.jsx
 │  │  ├─ hooks

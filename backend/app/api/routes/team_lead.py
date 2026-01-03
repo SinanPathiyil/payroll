@@ -878,3 +878,157 @@ async def get_team_lead_dashboard_summary(
         "recent_activities": recent_activities_data[:8],  # Limit to 8 for dashboard
         "alerts": alerts
     }
+    
+# ============= TEAM LEAD - TASKS =============
+
+@router.get("/team-members")
+async def get_team_lead_members(
+    current_user: dict = Depends(get_current_team_lead),
+    db = Depends(get_database)
+):
+    """Get all team members for the current Team Lead (for task assignment)"""
+    
+    managed_teams = current_user.get("managed_teams", [])
+    
+    if not managed_teams:
+        return []
+    
+    # Get all team members from managed teams
+    team_members = []
+    seen_members = set()  # Avoid duplicates if member is in multiple teams
+    
+    for team_id in managed_teams:
+        try:
+            team = await db.teams.find_one({"_id": ObjectId(team_id)})
+            if team:
+                for member_id in team.get("members", []):
+                    if member_id not in seen_members:
+                        member = await db.users.find_one({"_id": ObjectId(member_id)})
+                        if member and member.get("role") == "employee":
+                            team_members.append({
+                                "id": str(member["_id"]),
+                                "full_name": member["full_name"],
+                                "email": member["email"],
+                                "role": member["role"],
+                                "team_id": team_id,
+                                "team_name": team.get("team_name")
+                            })
+                            seen_members.add(member_id)
+        except:
+            continue
+    
+    return team_members
+
+@router.post("/tasks/create")
+async def create_team_task(
+    task_data: dict,
+    current_user: dict = Depends(get_current_team_lead),
+    db = Depends(get_database)
+):
+    """Create a task and assign to team member (Team Lead only)"""
+    
+    # Verify the assigned employee is in TL's team
+    assigned_to = task_data.get("assigned_to")
+    if not assigned_to:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="assigned_to is required"
+        )
+    
+    # Check if employee is in any of TL's managed teams
+    managed_teams = current_user.get("managed_teams", [])
+    employee = await db.users.find_one({"_id": ObjectId(assigned_to)})
+    
+    if not employee:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Employee not found"
+        )
+    
+    if employee.get("team_id") not in managed_teams:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only assign tasks to your team members"
+        )
+    
+    # Create task
+    task_dict = {
+        "title": task_data.get("title"),
+        "description": task_data.get("description"),
+        "assigned_to": assigned_to,
+        "assigned_by": str(current_user["_id"]),
+        "team_id": employee.get("team_id"),
+        "project_id": task_data.get("project_id"),  # Optional
+        "status": "pending",
+        "due_date": task_data.get("due_date"),
+        "created_at": datetime.now(),
+        "updated_at": datetime.now(),
+        "completed_at": None
+    }
+    
+    result = await db.tasks.insert_one(task_dict)
+    task_id = str(result.inserted_id)
+    
+    # Send notification to employee
+    notification = {
+        "from_user": str(current_user["_id"]),
+        "to_user": assigned_to,
+        "content": f"New task assigned by {current_user['full_name']}: {task_data.get('title')}",
+        "task_id": task_id,
+        "is_read": False,
+        "created_at": datetime.now()
+    }
+    await db.messages.insert_one(notification)
+    
+    # Create audit log
+    await db.audit_logs.insert_one({
+        "action_type": "task_created_by_tl",
+        "performed_by": str(current_user["_id"]),
+        "user_role": current_user["role"],
+        "target_user": assigned_to,
+        "details": {
+            "task_id": task_id,
+            "task_title": task_data.get("title"),
+            "team_id": employee.get("team_id")
+        },
+        "timestamp": datetime.now()
+    })
+    
+    return {
+        "id": task_id,
+        "message": "Task created successfully"
+    }
+
+@router.get("/tasks")
+async def get_team_tasks(
+    current_user: dict = Depends(get_current_team_lead),
+    db = Depends(get_database)
+):
+    """Get all tasks for team members under this Team Lead"""
+    
+    managed_teams = current_user.get("managed_teams", [])
+    
+    if not managed_teams:
+        return []
+    
+    # Get all tasks for these teams
+    tasks = []
+    cursor = db.tasks.find({"team_id": {"$in": managed_teams}}).sort("created_at", -1)
+    
+    async for task in cursor:
+        # Get employee name
+        employee = await db.users.find_one({"_id": ObjectId(task["assigned_to"])})
+        
+        tasks.append({
+            "id": str(task["_id"]),
+            "title": task["title"],
+            "description": task.get("description"),
+            "assigned_to": task["assigned_to"],
+            "employee_name": employee.get("full_name", "Unknown") if employee else "Unknown",
+            "status": task["status"],
+            "due_date": task.get("due_date"),
+            "created_at": task["created_at"],
+            "completed_at": task.get("completed_at")
+        })
+    
+    return tasks

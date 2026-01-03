@@ -164,11 +164,11 @@ export const notifyMilestoneCompletion = (projectId, data) =>
   api.post(`/team-lead/projects/${projectId}/milestones/notify`, data);
 
 // ============================================
-// TEAM LEAD - TEAM
+// TEAM LEAD - TASKS & TEAM MEMBERS
 // ============================================
-export const getTeamMembers = () => api.get('/teams');
-export const getTeam = (teamId) => api.get(`/teams/${teamId}`);
-export const getTeamMembersList = (teamId) => api.get(`/teams/${teamId}/members`);
+export const getTLTeamMembers = () => api.get('/team-lead/team-members');
+export const createTLTask = (taskData) => api.post('/team-lead/tasks/create', taskData);
+export const getTLTasks = () => api.get('/team-lead/tasks');
 
 // ============================================
 // HR

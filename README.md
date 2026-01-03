@@ -217,7 +217,8 @@ payroll
 │  │  │  ├─ super-admin-teams.css
 │  │  │  ├─ super-admin-users.css
 │  │  │  ├─ tl-dashboard.css
-│  │  │  └─ tl-requirements.css
+│  │  │  ├─ tl-requirements.css
+│  │  │  └─ tl-team.css
 │  │  └─ utils
 │  │     ├─ constants.js
 │  │     ├─ electron.js

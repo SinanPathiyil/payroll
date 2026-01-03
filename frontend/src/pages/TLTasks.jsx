@@ -13,13 +13,19 @@ import {
   Calendar,
   X,
 } from "lucide-react";
-import { getAllTasks, createTask, getEmployees } from "../services/api";
+import {
+  getTLTasks,
+  createTLTask,
+  getTLTeamMembers,
+  getTLActiveProjects,
+} from "../services/api";
 
 export default function TLTasks() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [tasks, setTasks] = useState([]);
   const [employees, setEmployees] = useState([]);
+  const [projects, setProjects] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all"); // all, pending, in_progress, completed
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -27,6 +33,7 @@ export default function TLTasks() {
     title: "",
     description: "",
     assigned_to: "",
+    project_id: "",
     due_date: "",
   });
   const [creating, setCreating] = useState(false);
@@ -38,12 +45,14 @@ export default function TLTasks() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [tasksRes, employeesRes] = await Promise.all([
-        getAllTasks(),
-        getEmployees(),
+      const [tasksRes, membersRes, projectsRes] = await Promise.all([
+        getTLTasks(),
+        getTLTeamMembers(),
+        getTLActiveProjects(),
       ]);
       setTasks(tasksRes.data || []);
-      setEmployees(employeesRes.data || []);
+      setEmployees(membersRes.data || []);
+      setProjects(projectsRes.data || []);
     } catch (error) {
       console.error("Failed to load data:", error);
     } finally {
@@ -56,12 +65,13 @@ export default function TLTasks() {
     setCreating(true);
 
     try {
-      await createTask(formData);
+      await createTLTask(formData);
       setShowCreateModal(false);
       setFormData({
         title: "",
         description: "",
         assigned_to: "",
+        project_id: "",
         due_date: "",
       });
       loadData();
@@ -263,7 +273,13 @@ export default function TLTasks() {
                 <p>No tasks found</p>
               </div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "1rem",
+                }}
+              >
                 {filteredTasks.map((task) => (
                   <div
                     key={task.id}
@@ -275,41 +291,107 @@ export default function TLTasks() {
                       transition: "box-shadow 0.2s",
                     }}
                     onMouseEnter={(e) =>
-                      (e.currentTarget.style.boxShadow = "0 4px 6px -1px rgba(0,0,0,0.1)")
+                      (e.currentTarget.style.boxShadow =
+                        "0 4px 6px -1px rgba(0,0,0,0.1)")
                     }
-                    onMouseLeave={(e) => (e.currentTarget.style.boxShadow = "none")}
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.boxShadow = "none")
+                    }
                   >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "start",
+                      }}
+                    >
                       <div style={{ flex: 1 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.5rem" }}>
-                          <div style={{ color: getStatusColor(task.status) === "success" ? "#10b981" : getStatusColor(task.status) === "info" ? "#3b82f6" : "#f59e0b" }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.75rem",
+                            marginBottom: "0.5rem",
+                          }}
+                        >
+                          <div
+                            style={{
+                              color:
+                                getStatusColor(task.status) === "success"
+                                  ? "#10b981"
+                                  : getStatusColor(task.status) === "info"
+                                    ? "#3b82f6"
+                                    : "#f59e0b",
+                            }}
+                          >
                             {getStatusIcon(task.status)}
                           </div>
-                          <h3 style={{ fontSize: "1.125rem", fontWeight: "600", color: "#111827" }}>
+                          <h3
+                            style={{
+                              fontSize: "1.125rem",
+                              fontWeight: "600",
+                              color: "#111827",
+                            }}
+                          >
                             {task.title}
                           </h3>
                         </div>
-                        <p style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "1rem" }}>
+                        <p
+                          style={{
+                            fontSize: "0.875rem",
+                            color: "#6b7280",
+                            marginBottom: "1rem",
+                          }}
+                        >
                           {task.description}
                         </p>
-                        <div style={{ display: "flex", gap: "1.5rem", fontSize: "0.875rem", color: "#6b7280" }}>
-                          <span style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: "1.5rem",
+                            fontSize: "0.875rem",
+                            color: "#6b7280",
+                          }}
+                        >
+                          <span
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "0.5rem",
+                            }}
+                          >
                             <User className="w-4 h-4" />
                             {task.employee_name}
                           </span>
-                          <span style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                          <span
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "0.5rem",
+                            }}
+                          >
                             <Calendar className="w-4 h-4" />
-                            Created: {new Date(task.created_at).toLocaleDateString()}
+                            Created:{" "}
+                            {new Date(task.created_at).toLocaleDateString()}
                           </span>
                           {task.due_date && (
-                            <span style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                            <span
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "0.5rem",
+                              }}
+                            >
                               <Clock className="w-4 h-4" />
-                              Due: {new Date(task.due_date).toLocaleDateString()}
+                              Due:{" "}
+                              {new Date(task.due_date).toLocaleDateString()}
                             </span>
                           )}
                         </div>
                       </div>
-                      <span className={`ba-stat-badge ${getStatusColor(task.status)}`}>
+                      <span
+                        className={`ba-stat-badge ${getStatusColor(task.status)}`}
+                      >
                         {task.status.replace("_", " ")}
                       </span>
                     </div>
@@ -347,8 +429,17 @@ export default function TLTasks() {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
-              <h2 style={{ fontSize: "1.5rem", fontWeight: "600" }}>Assign New Task</h2>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "1.5rem",
+              }}
+            >
+              <h2 style={{ fontSize: "1.5rem", fontWeight: "600" }}>
+                Assign New Task
+              </h2>
               <button
                 onClick={() => setShowCreateModal(false)}
                 style={{ padding: "0.25rem", color: "#6b7280" }}
@@ -358,16 +449,31 @@ export default function TLTasks() {
             </div>
 
             <form onSubmit={handleCreateTask}>
-              <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "1rem",
+                }}
+              >
                 {/* Title */}
                 <div>
-                  <label style={{ display: "block", fontSize: "0.875rem", fontWeight: "500", marginBottom: "0.5rem" }}>
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: "0.875rem",
+                      fontWeight: "500",
+                      marginBottom: "0.5rem",
+                    }}
+                  >
                     Task Title *
                   </label>
                   <input
                     type="text"
                     value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, title: e.target.value })
+                    }
                     required
                     placeholder="Enter task title"
                     style={{
@@ -382,12 +488,21 @@ export default function TLTasks() {
 
                 {/* Description */}
                 <div>
-                  <label style={{ display: "block", fontSize: "0.875rem", fontWeight: "500", marginBottom: "0.5rem" }}>
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: "0.875rem",
+                      fontWeight: "500",
+                      marginBottom: "0.5rem",
+                    }}
+                  >
                     Description *
                   </label>
                   <textarea
                     value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
                     required
                     placeholder="Enter task description"
                     rows={4}
@@ -404,12 +519,21 @@ export default function TLTasks() {
 
                 {/* Assign To */}
                 <div>
-                  <label style={{ display: "block", fontSize: "0.875rem", fontWeight: "500", marginBottom: "0.5rem" }}>
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: "0.875rem",
+                      fontWeight: "500",
+                      marginBottom: "0.5rem",
+                    }}
+                  >
                     Assign To *
                   </label>
                   <select
                     value={formData.assigned_to}
-                    onChange={(e) => setFormData({ ...formData, assigned_to: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, assigned_to: e.target.value })
+                    }
                     required
                     style={{
                       width: "100%",
@@ -430,15 +554,58 @@ export default function TLTasks() {
                   </select>
                 </div>
 
+                {/* Project Selection */}
+                <div>
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: "0.875rem",
+                      fontWeight: "500",
+                      marginBottom: "0.5rem",
+                    }}
+                  >
+                    Project (Optional)
+                  </label>
+                  <select
+                    value={formData.project_id}
+                    onChange={(e) =>
+                      setFormData({ ...formData, project_id: e.target.value })
+                    }
+                    style={{
+                      width: "100%",
+                      padding: "0.625rem 0.75rem",
+                      border: "1px solid #d1d5db",
+                      borderRadius: "0.5rem",
+                      fontSize: "0.875rem",
+                    }}
+                  >
+                    <option value="">No Project (Standalone Task)</option>
+                    {projects.map((project) => (
+                      <option key={project.id} value={project.id}>
+                        {project.project_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 {/* Due Date */}
                 <div>
-                  <label style={{ display: "block", fontSize: "0.875rem", fontWeight: "500", marginBottom: "0.5rem" }}>
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: "0.875rem",
+                      fontWeight: "500",
+                      marginBottom: "0.5rem",
+                    }}
+                  >
                     Due Date
                   </label>
                   <input
                     type="datetime-local"
                     value={formData.due_date}
-                    onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, due_date: e.target.value })
+                    }
                     style={{
                       width: "100%",
                       padding: "0.625rem 0.75rem",
@@ -451,7 +618,14 @@ export default function TLTasks() {
               </div>
 
               {/* Actions */}
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem", marginTop: "1.5rem" }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: "0.75rem",
+                  marginTop: "1.5rem",
+                }}
+              >
                 <button
                   type="button"
                   className="btn btn-secondary"
@@ -460,7 +634,11 @@ export default function TLTasks() {
                 >
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary" disabled={creating}>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={creating}
+                >
                   {creating ? "Creating..." : "Create Task"}
                 </button>
               </div>

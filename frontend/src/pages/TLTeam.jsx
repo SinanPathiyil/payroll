@@ -6,10 +6,11 @@ import {
   Mail,
   CheckCircle,
   XCircle,
-  User,
   Shield,
+  FileText,
 } from "lucide-react";
 import axios from "axios";
+import "../styles/tl-team.css";
 
 export default function TLTeam() {
   const navigate = useNavigate();
@@ -79,23 +80,21 @@ export default function TLTeam() {
 
   return (
     <Layout>
-      <div className="ba-dashboard">
+      <div className="tl-team">
         {/* Header */}
-        <div className="ba-dashboard-header">
-          <div>
-            <h1 className="ba-dashboard-title">My Team</h1>
-            <p className="ba-dashboard-subtitle">
-              View and manage your team members
-            </p>
-          </div>
+        <div className="tl-team-header">
+          <h1 className="tl-team-title">My Team</h1>
+          <p className="tl-team-subtitle">
+            View and manage your team members
+          </p>
         </div>
 
         {teams.length === 0 ? (
-          <div className="ba-card">
-            <div className="ba-card-body">
-              <div className="ba-empty-state">
-                <Users className="ba-empty-icon" />
-                <p>No teams assigned to you</p>
+          <div className="tl-team-members-card">
+            <div className="tl-team-members-body">
+              <div className="tl-team-empty">
+                <Users className="tl-team-empty-icon" />
+                <p className="tl-team-empty-text">No teams assigned to you</p>
               </div>
             </div>
           </div>
@@ -103,22 +102,27 @@ export default function TLTeam() {
           <>
             {/* Team Selector (if multiple teams) */}
             {teams.length > 1 && (
-              <div className="ba-card" style={{ marginBottom: "2rem" }}>
-                <div className="ba-card-header">
-                  <div className="ba-card-title">
+              <div className="tl-team-selector-card">
+                <div className="tl-team-selector-header">
+                  <div className="tl-team-selector-title">
                     <Shield className="w-5 h-5" />
                     <span>Select Team</span>
                   </div>
                 </div>
-                <div className="ba-card-body">
-                  <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+                <div className="tl-team-selector-body">
+                  <div className="tl-team-buttons">
                     {teams.map((team) => (
                       <button
                         key={team.id}
                         onClick={() => handleTeamSelect(team)}
-                        className={`btn ${selectedTeam?.id === team.id ? "btn-primary" : "btn-secondary"}`}
+                        className={`tl-team-button ${
+                          selectedTeam?.id === team.id ? "active" : ""
+                        }`}
                       >
-                        {team.team_name} ({team.member_count} members)
+                        <span>{team.team_name}</span>
+                        <span className="tl-team-button-count">
+                          {team.member_count}
+                        </span>
                       </button>
                     ))}
                   </div>
@@ -126,80 +130,97 @@ export default function TLTeam() {
               </div>
             )}
 
-            {/* Team Stats */}
+            {/* Team Overview Card - Combined Info */}
             {selectedTeam && (
               <>
-                <div
-                  className="ba-stats-grid"
-                  style={{ gridTemplateColumns: "repeat(3, 1fr)" }}
-                >
-                  <div className="ba-stat-card">
-                    <div className="ba-stat-content">
-                      <div className="ba-stat-info">
-                        <p className="ba-stat-label">Team Name</p>
-                        <p className="ba-stat-value" style={{ fontSize: "1.5rem" }}>
-                          {selectedTeam.team_name}
-                        </p>
-                      </div>
-                      <div className="ba-stat-icon ba-stat-icon-blue">
-                        <Users className="w-8 h-8" />
-                      </div>
+                <div className="tl-team-overview-card">
+                  <div className="tl-team-overview-header">
+                    <div className="tl-team-overview-title">
+                      <Shield className="w-5 h-5" />
+                      <span>Team Overview</span>
                     </div>
                   </div>
-
-                  <div className="ba-stat-card">
-                    <div className="ba-stat-content">
-                      <div className="ba-stat-info">
-                        <p className="ba-stat-label">Total Members</p>
-                        <p className="ba-stat-value">{selectedTeam.member_count}</p>
+                  <div className="tl-team-overview-body">
+                    {/* Stats Grid */}
+                    <div className="tl-team-stats-grid">
+                      <div className="tl-team-stat-item">
+                        <div className="tl-team-stat-icon tl-team-stat-icon-blue">
+                          <Users className="w-6 h-6" />
+                        </div>
+                        <div className="tl-team-stat-details">
+                          <p className="tl-team-stat-label">Team Name</p>
+                          <p className="tl-team-stat-value">
+                            {selectedTeam.team_name}
+                          </p>
+                        </div>
                       </div>
-                      <div className="ba-stat-icon ba-stat-icon-green">
-                        <CheckCircle className="w-8 h-8" />
+
+                      <div className="tl-team-stat-item">
+                        <div className="tl-team-stat-icon tl-team-stat-icon-green">
+                          <CheckCircle className="w-6 h-6" />
+                        </div>
+                        <div className="tl-team-stat-details">
+                          <p className="tl-team-stat-label">Total Members</p>
+                          <p className="tl-team-stat-value">
+                            {selectedTeam.member_count}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="tl-team-stat-item">
+                        <div className="tl-team-stat-icon tl-team-stat-icon-orange">
+                          {selectedTeam.is_active ? (
+                            <CheckCircle className="w-6 h-6" />
+                          ) : (
+                            <XCircle className="w-6 h-6" />
+                          )}
+                        </div>
+                        <div className="tl-team-stat-details">
+                          <p className="tl-team-stat-label">Status</p>
+                          <p className="tl-team-stat-value">
+                            {selectedTeam.is_active ? "Active" : "Inactive"}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="ba-stat-card">
-                    <div className="ba-stat-content">
-                      <div className="ba-stat-info">
-                        <p className="ba-stat-label">Status</p>
-                        <p className="ba-stat-value" style={{ fontSize: "1.5rem" }}>
-                          {selectedTeam.is_active ? "Active" : "Inactive"}
+                    {/* Team Description - Inside Overview */}
+                    {selectedTeam.description && (
+                      <div className="tl-team-description-section">
+                        <div className="tl-team-description-header-inline">
+                          <FileText className="w-5 h-5" />
+                          <span>Description</span>
+                        </div>
+                        <p className="tl-team-description-text">
+                          {selectedTeam.description}
                         </p>
                       </div>
-                      <div className="ba-stat-icon ba-stat-icon-orange">
-                        {selectedTeam.is_active ? (
-                          <CheckCircle className="w-8 h-8" />
-                        ) : (
-                          <XCircle className="w-8 h-8" />
-                        )}
-                      </div>
-                    </div>
+                    )}
                   </div>
                 </div>
 
                 {/* Team Members Table */}
-                <div className="ba-card">
-                  <div className="ba-card-header">
-                    <div className="ba-card-title">
+                <div className="tl-team-members-card">
+                  <div className="tl-team-members-header">
+                    <div className="tl-team-members-title">
                       <Users className="w-5 h-5" />
                       <span>Team Members</span>
                     </div>
                   </div>
-                  <div className="ba-card-body">
+                  <div className="tl-team-members-body">
                     {loadingMembers ? (
-                      <div style={{ textAlign: "center", padding: "2rem" }}>
-                        <div className="spinner spinner-lg" style={{ margin: "0 auto" }}></div>
-                        <p style={{ marginTop: "1rem", color: "#6b7280" }}>Loading members...</p>
+                      <div className="tl-team-loading">
+                        <div className="tl-team-loading-spinner"></div>
+                        <p className="tl-team-loading-text">Loading members...</p>
                       </div>
                     ) : teamMembers.length === 0 ? (
-                      <div className="ba-empty-state">
-                        <Users className="ba-empty-icon" />
-                        <p>No team members yet</p>
+                      <div className="tl-team-empty">
+                        <Users className="tl-team-empty-icon" />
+                        <p className="tl-team-empty-text">No team members yet</p>
                       </div>
                     ) : (
-                      <div className="table-responsive">
-                        <table className="table">
+                      <div className="tl-team-table-wrapper">
+                        <table className="tl-team-table">
                           <thead>
                             <tr>
                               <th>Member</th>
@@ -212,51 +233,44 @@ export default function TLTeam() {
                             {teamMembers.map((member) => (
                               <tr key={member.id}>
                                 <td>
-                                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                                    <div
-                                      style={{
-                                        width: "40px",
-                                        height: "40px",
-                                        borderRadius: "50%",
-                                        background: "linear-gradient(135deg, rgba(11, 11, 13, 0.08), rgba(11, 11, 13, 0.12))",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        fontWeight: "700",
-                                        fontSize: "1rem",
-                                        color: "rgba(11, 11, 13, 0.7)",
-                                      }}
-                                    >
+                                  <div className="tl-team-member-cell">
+                                    <div className="tl-team-member-avatar">
                                       {member.full_name.charAt(0).toUpperCase()}
                                     </div>
-                                    <div>
-                                      <div style={{ fontWeight: "600" }}>{member.full_name}</div>
+                                    <div className="tl-team-member-info">
+                                      <div className="tl-team-member-name">
+                                        {member.full_name}
+                                      </div>
                                     </div>
                                   </div>
                                 </td>
                                 <td>
-                                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                                    <Mail className="w-4 h-4" style={{ color: "#6b7280" }} />
+                                  <div className="tl-team-email-cell">
+                                    <Mail className="w-4 h-4" />
                                     <span>{member.email}</span>
                                   </div>
                                 </td>
                                 <td>
-                                  <span className="ba-stat-badge info">
-                                    {member.role === "team_lead" ? "Team Lead" : "Employee"}
+                                  <span className="tl-team-role-badge">
+                                    {member.role === "team_lead"
+                                      ? "Team Lead"
+                                      : "Employee"}
                                   </span>
                                 </td>
                                 <td>
                                   <span
-                                    className={`ba-stat-badge ${member.is_active ? "success" : ""}`}
+                                    className={`tl-team-status-badge ${
+                                      member.is_active ? "active" : "inactive"
+                                    }`}
                                   >
                                     {member.is_active ? (
                                       <>
-                                        <CheckCircle className="w-4 h-4" />
+                                        <CheckCircle />
                                         Active
                                       </>
                                     ) : (
                                       <>
-                                        <XCircle className="w-4 h-4" />
+                                        <XCircle />
                                         Inactive
                                       </>
                                     )}
@@ -270,23 +284,6 @@ export default function TLTeam() {
                     )}
                   </div>
                 </div>
-
-                {/* Team Description */}
-                {selectedTeam.description && (
-                  <div className="ba-card">
-                    <div className="ba-card-header">
-                      <div className="ba-card-title">
-                        <User className="w-5 h-5" />
-                        <span>Team Description</span>
-                      </div>
-                    </div>
-                    <div className="ba-card-body">
-                      <p style={{ color: "#6b7280", lineHeight: "1.6" }}>
-                        {selectedTeam.description}
-                      </p>
-                    </div>
-                  </div>
-                )}
               </>
             )}
           </>

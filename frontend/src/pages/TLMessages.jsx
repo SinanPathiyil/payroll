@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import Layout from "../components/common/Layout";
 import HRMessageBoard from "../components/hr/HRMessageBoard";
-import SendMessageModal from "../components/hr/SendMessageModal";
+import SendMessageModal from "../components/tl/SendMessageModal";
 import { getMyMessages } from "../services/api";
 import { MessageSquare, Mail, MailOpen, Send } from "lucide-react";
 

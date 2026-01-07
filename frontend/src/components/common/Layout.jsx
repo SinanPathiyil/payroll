@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
-import '../../styles/layout.css';
+/* import '../../styles/layout.css'; */
 
 export default function Layout({ children }) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);

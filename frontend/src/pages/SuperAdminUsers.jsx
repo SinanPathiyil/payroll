@@ -19,6 +19,8 @@ import {
   XCircle,
   AlertCircle,
   X,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import "../styles/super-admin-users.css";
 
@@ -45,6 +47,9 @@ export default function SuperAdminUsers() {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
 
   // Form States
   const [createForm, setCreateForm] = useState({
@@ -54,9 +59,9 @@ export default function SuperAdminUsers() {
     password: "",
     required_hours: 8.0,
     base_salary: 0,
-    team_id: "", // CHANGE: from team_lead_id to team_id
-    team_id_tl: "", // for team_lead (existing team)
-    team_name: "", // for team_lead (new team)
+    team_id: "", 
+    team_id_tl: "", 
+    team_name: "",
   });
 
   const [editForm, setEditForm] = useState({
@@ -630,27 +635,41 @@ export default function SuperAdminUsers() {
                         setCreateForm({ ...createForm, email: e.target.value })
                       }
                       className="sau-input"
-                      placeholder="john@company.com"
+                      placeholder="john.doe@company.com"
                       required
                     />
                   </div>
 
                   <div className="sau-form-group">
                     <label>Password *</label>
-                    <input
-                      type="password"
-                      value={createForm.password}
-                      onChange={(e) =>
-                        setCreateForm({
-                          ...createForm,
-                          password: e.target.value,
-                        })
-                      }
-                      className="sau-input"
-                      placeholder="Minimum 8 characters"
-                      required
-                      minLength="8"
-                    />
+                    <div className="sau-password-input-wrapper">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        value={createForm.password}
+                        onChange={(e) =>
+                          setCreateForm({
+                            ...createForm,
+                            password: e.target.value,
+                          })
+                        }
+                        className="sau-input"
+                        placeholder="Enter secure password (min 8 characters)"
+                        required
+                        minLength="8"
+                      />
+                      <button
+                        type="button"
+                        className="sau-password-toggle"
+                        onClick={() => setShowPassword(!showPassword)}
+                        tabIndex="-1"
+                      >
+                        {showPassword ? (
+                          <EyeOff className="w-5 h-5" />
+                        ) : (
+                          <Eye className="w-5 h-5" />
+                        )}
+                      </button>
+                    </div>
                   </div>
 
                   {/* Conditional fields based on role */}
@@ -977,38 +996,68 @@ export default function SuperAdminUsers() {
 
                   <div className="sau-form-group">
                     <label>New Password *</label>
-                    <input
-                      type="password"
-                      value={passwordForm.new_password}
-                      onChange={(e) =>
-                        setPasswordForm({
-                          ...passwordForm,
-                          new_password: e.target.value,
-                        })
-                      }
-                      className="sau-input"
-                      placeholder="Minimum 8 characters"
-                      required
-                      minLength="8"
-                    />
+                    <div className="sau-password-input-wrapper">
+                      <input
+                        type={showNewPassword ? "text" : "password"}
+                        value={passwordForm.new_password}
+                        onChange={(e) =>
+                          setPasswordForm({
+                            ...passwordForm,
+                            new_password: e.target.value,
+                          })
+                        }
+                        className="sau-input"
+                        placeholder="Enter new password (min 8 characters)"
+                        required
+                        minLength="8"
+                      />
+                      <button
+                        type="button"
+                        className="sau-password-toggle"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        tabIndex="-1"
+                      >
+                        {showNewPassword ? (
+                          <EyeOff className="w-5 h-5" />
+                        ) : (
+                          <Eye className="w-5 h-5" />
+                        )}
+                      </button>
+                    </div>
                   </div>
 
                   <div className="sau-form-group">
                     <label>Confirm Password *</label>
-                    <input
-                      type="password"
-                      value={passwordForm.confirm_password}
-                      onChange={(e) =>
-                        setPasswordForm({
-                          ...passwordForm,
-                          confirm_password: e.target.value,
-                        })
-                      }
-                      className="sau-input"
-                      placeholder="Re-enter password"
-                      required
-                      minLength="8"
-                    />
+                    <div className="sau-password-input-wrapper">
+                      <input
+                        type={showConfirmPassword ? "text" : "password"}
+                        value={passwordForm.confirm_password}
+                        onChange={(e) =>
+                          setPasswordForm({
+                            ...passwordForm,
+                            confirm_password: e.target.value,
+                          })
+                        }
+                        className="sau-input"
+                        placeholder="Re-enter new password"
+                        required
+                        minLength="8"
+                      />
+                      <button
+                        type="button"
+                        className="sau-password-toggle"
+                        onClick={() =>
+                          setShowConfirmPassword(!showConfirmPassword)
+                        }
+                        tabIndex="-1"
+                      >
+                        {showConfirmPassword ? (
+                          <EyeOff className="w-5 h-5" />
+                        ) : (
+                          <Eye className="w-5 h-5" />
+                        )}
+                      </button>
+                    </div>
                   </div>
 
                   <div className="sau-form-group">

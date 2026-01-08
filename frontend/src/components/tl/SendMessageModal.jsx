@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Loader, Send, User, ListTodo } from "lucide-react";
+import { X, Loader, Send, User, ListTodo, AlertCircle } from "lucide-react";
 import { getTLTeamMembers, getTLTasks, sendMessage } from "../../services/api";
 
 export default function SendMessageModal({ onClose, onSuccess }) {
@@ -26,9 +26,10 @@ export default function SendMessageModal({ onClose, onSuccess }) {
       ]);
       setTeamMembers(membersRes.data || []);
       setAllTasks(tasksRes.data || []);
+      setError("");
     } catch (err) {
       console.error("Failed to load data:", err);
-      setError("Failed to load data");
+      setError("Failed to load team data. Please try again.");
     } finally {
       setLoadingData(false);
     }
@@ -42,8 +43,8 @@ export default function SendMessageModal({ onClose, onSuccess }) {
     e.preventDefault();
     setError("");
 
-    if (!formData.employee_id || !formData.message) {
-      setError("Please select an employee and enter a message");
+    if (!formData.employee_id || !formData.message.trim()) {
+      setError("Please select a team member and enter a message");
       return;
     }
 
@@ -69,7 +70,8 @@ export default function SendMessageModal({ onClose, onSuccess }) {
       }
 
       await sendMessage(messageData);
-      onSuccess();
+      onSuccess?.();
+      onClose();
     } catch (err) {
       setError(err.response?.data?.detail || "Failed to send message");
     } finally {
@@ -87,64 +89,65 @@ export default function SendMessageModal({ onClose, onSuccess }) {
   };
 
   return (
-    <div className="modal-backdrop">
-      <div className="modal-container modal-md">
+    <div className="ba-modal-overlay" onClick={onClose}>
+      <div className="ba-modal-container" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="modal-header">
-          <div className="modal-header-content">
-            <Send className="modal-header-icon" />
-            <h2 className="modal-title">Send Message to Team Member</h2>
+        <div className="ba-modal-header">
+          <div className="ba-modal-header-content">
+            <Send className="w-5 h-5" />
+            <h2 className="ba-modal-title">Send Message to Team Member</h2>
           </div>
-          <button onClick={onClose} className="modal-close-btn">
+          <button onClick={onClose} className="ba-modal-close-btn">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Body */}
-        <form onSubmit={handleSubmit} className="modal-body">
+        <div className="ba-modal-body">
           {error && (
-            <div className="modal-error">
-              {error}
+            <div className="ba-alert ba-alert-error">
+              <AlertCircle className="w-5 h-5" />
+              <span>{error}</span>
             </div>
           )}
 
           {loadingData ? (
-            <div className="text-center py-8">
-              <Loader className="w-8 h-8 animate-spin mx-auto text-gray-600" />
-              <p className="mt-2 text-gray-600">Loading team members...</p>
+            <div className="ba-modal-loading">
+              <Loader className="w-8 h-8 animate-spin" style={{ color: 'rgba(11, 11, 13, 0.6)' }} />
+              <p>Loading team members...</p>
             </div>
           ) : (
-            <div className="modal-form-stack">
+            <form onSubmit={handleSubmit} id="send-team-message-form">
               {/* Select Team Member */}
-              <div className="modal-input-group">
-                <label className="modal-label">
-                  <User className="w-4 h-4" />
-                  To Team Member <span className="modal-required">*</span>
+              <div className="ba-form-group">
+                <label className="ba-form-label">
+                  To Team Member <span className="text-red-500">*</span>
                 </label>
                 <select
                   name="employee_id"
                   value={formData.employee_id}
                   onChange={handleChange}
-                  className="modal-select"
+                  className="ba-form-input"
                   required
                 >
-                  <option value="">Select a team member</option>
+                  <option value="">-- Select a team member --</option>
                   {teamMembers.map((member) => (
                     <option key={member.id} value={member.id}>
-                      {member.full_name} - {member.email}
-                      {member.team_name && ` (${member.team_name})`}
+                      {member.full_name} ({member.email})
+                      {member.team_name && ` - ${member.team_name}`}
                     </option>
                   ))}
                 </select>
-                {teamMembers.length === 0 && (
-                  <p className="modal-hint text-orange-600">No team members found</p>
+                {teamMembers.length === 0 && !loadingData && (
+                  <small className="ba-form-hint" style={{ color: '#f59e0b' }}>
+                    No team members found in your team
+                  </small>
                 )}
               </div>
 
               {/* Select Task */}
-              <div className="modal-input-group">
-                <label className="modal-label">
-                  <ListTodo className="w-4 h-4" />
+              <div className="ba-form-group">
+                <label className="ba-form-label">
                   Related Task (Optional)
                 </label>
                 <select
@@ -152,9 +155,9 @@ export default function SendMessageModal({ onClose, onSuccess }) {
                   value={formData.task_id}
                   onChange={handleChange}
                   disabled={!formData.employee_id}
-                  className="modal-select"
+                  className="ba-form-input"
                 >
-                  <option value="">No specific task</option>
+                  <option value="">-- No specific task --</option>
                   {employeeTasks.map((task) => (
                     <option key={task.id} value={task.id}>
                       {task.title} ({task.status})
@@ -162,59 +165,75 @@ export default function SendMessageModal({ onClose, onSuccess }) {
                   ))}
                 </select>
                 {!formData.employee_id && (
-                  <p className="modal-hint">Select a team member first</p>
+                  <small className="ba-form-hint">
+                    Select a team member first to see their tasks
+                  </small>
                 )}
                 {formData.employee_id && employeeTasks.length === 0 && (
-                  <p className="modal-hint">No tasks assigned to this member</p>
+                  <small className="ba-form-hint">
+                    No tasks assigned to this team member
+                  </small>
                 )}
               </div>
 
               {/* Message */}
-              <div className="modal-input-group">
-                <label className="modal-label">
-                  Message <span className="modal-required">*</span>
+              <div className="ba-form-group">
+                <label className="ba-form-label">
+                  Message <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   name="message"
                   value={formData.message}
                   onChange={handleChange}
-                  placeholder="Enter your message..."
-                  rows="6"
-                  className="modal-textarea"
+                  placeholder="Type your message here..."
+                  rows="8"
+                  className="ba-form-textarea"
                   required
                 />
+                {formData.task_id && (
+                  <small className="ba-form-hint">
+                    This message will be linked to the selected task
+                  </small>
+                )}
+                {!formData.task_id && (
+                  <small className="ba-form-hint">
+                    The team member will receive this message in their dashboard
+                  </small>
+                )}
               </div>
-            </div>
+            </form>
           )}
+        </div>
 
-          {/* Footer */}
-          <div className="modal-footer">
-            <button
-              type="button"
-              onClick={onClose}
-              className="btn btn-secondary"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading || loadingData || teamMembers.length === 0}
-              className="btn btn-primary"
-            >
-              {loading ? (
-                <>
-                  <Loader className="w-4 h-4 animate-spin" />
-                  Sending...
-                </>
-              ) : (
-                <>
-                  <Send className="w-4 h-4" />
-                  Send Message
-                </>
-              )}
-            </button>
-          </div>
-        </form>
+        {/* Footer */}
+        <div className="ba-modal-footer">
+          <button
+            type="button"
+            onClick={onClose}
+            className="btn btn-secondary"
+            disabled={loading}
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            form="send-team-message-form"
+            disabled={loading || loadingData || teamMembers.length === 0}
+            className="btn btn-primary"
+          >
+            {loading ? (
+              <>
+                <Loader className="w-4 h-4 animate-spin" />
+                <span>Sending...</span>
+              </>
+            ) : (
+              <>
+                <Send className="w-4 h-4" />
+                <span>Send Message</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );

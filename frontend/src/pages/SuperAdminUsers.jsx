@@ -59,8 +59,8 @@ export default function SuperAdminUsers() {
     password: "",
     required_hours: 8.0,
     base_salary: 0,
-    team_id: "", 
-    team_id_tl: "", 
+    team_id: "",
+    team_id_tl: "",
     team_name: "",
   });
 
@@ -407,7 +407,22 @@ export default function SuperAdminUsers() {
           </div>
           <button
             className="btn btn-primary"
-            onClick={() => setShowCreateModal(true)}
+            onClick={() => {
+              setShowCreateModal(true);
+              // Reset form when opening
+              setCreateForm({
+                role: "employee",
+                email: "",
+                full_name: "",
+                password: "",
+                required_hours: 8.0,
+                base_salary: 0,
+                team_id: "",
+                team_id_tl: "",
+                team_name: "",
+              });
+              setShowPassword(false);
+            }}
           >
             <UserPlus className="w-4 h-4" />
             <span>Create User</span>
@@ -571,13 +586,42 @@ export default function SuperAdminUsers() {
         {showCreateModal && (
           <div
             className="sau-modal-overlay"
-            onClick={() => setShowCreateModal(false)}
+            onClick={() => {
+              setShowCreateModal(false);
+              setShowPassword(false);
+              setCreateForm({
+                role: "employee",
+                email: "",
+                full_name: "",
+                password: "",
+                required_hours: 8.0,
+                base_salary: 0,
+                team_id: "",
+                team_id_tl: "",
+                team_name: "",
+              });
+            }}
           >
             <div className="sau-modal" onClick={(e) => e.stopPropagation()}>
               <div className="sau-modal-header">
                 <h2>Create New User</h2>
                 <button
-                  onClick={() => setShowCreateModal(false)}
+                  onClick={() => {
+                    setShowCreateModal(false);
+                    setShowPassword(false);
+                    // Reset form on close
+                    setCreateForm({
+                      role: "employee",
+                      email: "",
+                      full_name: "",
+                      password: "",
+                      required_hours: 8.0,
+                      base_salary: 0,
+                      team_id: "",
+                      team_id_tl: "",
+                      team_name: "",
+                    });
+                  }}
                   className="sau-modal-close"
                 >
                   <X className="w-5 h-5" />
@@ -636,6 +680,7 @@ export default function SuperAdminUsers() {
                       }
                       className="sau-input"
                       placeholder="john.doe@company.com"
+                      autoComplete="new-email"
                       required
                     />
                   </div>
@@ -654,6 +699,7 @@ export default function SuperAdminUsers() {
                         }
                         className="sau-input"
                         placeholder="Enter secure password (min 8 characters)"
+                        autoComplete="new-password"
                         required
                         minLength="8"
                       />
@@ -802,7 +848,21 @@ export default function SuperAdminUsers() {
                 <div className="sau-modal-footer">
                   <button
                     type="button"
-                    onClick={() => setShowCreateModal(false)}
+                    onClick={() => {
+                      setShowCreateModal(false);
+                      setShowPassword(false);
+                      setCreateForm({
+                        role: "employee",
+                        email: "",
+                        full_name: "",
+                        password: "",
+                        required_hours: 8.0,
+                        base_salary: 0,
+                        team_id: "",
+                        team_id_tl: "",
+                        team_name: "",
+                      });
+                    }}
                     className="sau-btn-secondary"
                   >
                     Cancel

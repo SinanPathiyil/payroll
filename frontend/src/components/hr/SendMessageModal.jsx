@@ -1,13 +1,11 @@
 import { useState, useEffect } from "react";
-import { X, Loader, Send, User, ListTodo } from "lucide-react";
-import { getEmployees, getAllTasks, sendMessage } from "../../services/api";
+import { X, Loader, Send, User, AlertCircle } from "lucide-react";
+import { getEmployees, sendMessage } from "../../services/api";
 
 export default function SendMessageModal({ onClose, onSuccess }) {
   const [employees, setEmployees] = useState([]);
-  const [allTasks, setAllTasks] = useState([]);
   const [formData, setFormData] = useState({
     employee_id: "",
-    task_id: "",
     message: "",
   });
   const [loading, setLoading] = useState(false);
@@ -20,28 +18,22 @@ export default function SendMessageModal({ onClose, onSuccess }) {
 
   const loadData = async () => {
     try {
-      const [employeesRes, tasksRes] = await Promise.all([
-        getEmployees(),
-        getAllTasks(),
-      ]);
-      setEmployees(employeesRes.data);
-      setAllTasks(tasksRes.data);
+      const employeesRes = await getEmployees();
+      setEmployees(employeesRes.data || []);
+      setError("");
     } catch (err) {
-      setError("Failed to load data");
+      console.error("Failed to load employees:", err);
+      setError("Failed to load employees. Please try again.");
     } finally {
       setLoadingData(false);
     }
   };
 
-  const employeeTasks = formData.employee_id
-    ? allTasks.filter((task) => task.assigned_to === formData.employee_id)
-    : [];
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
-    if (!formData.employee_id || !formData.message) {
+    if (!formData.employee_id || !formData.message.trim()) {
       setError("Please select an employee and enter a message");
       return;
     }
@@ -49,26 +41,14 @@ export default function SendMessageModal({ onClose, onSuccess }) {
     setLoading(true);
 
     try {
-      const selectedTask = formData.task_id
-        ? allTasks.find((t) => t.id === formData.task_id)
-        : null;
-
-      let messageContent = formData.message;
-      if (selectedTask) {
-        messageContent = `Regarding Task: "${selectedTask.title}"\n\n${formData.message}`;
-      }
-
       const messageData = {
         to_user: formData.employee_id,
-        content: messageContent,
+        content: formData.message,
       };
 
-      if (formData.task_id) {
-        messageData.task_id = formData.task_id;
-      }
-
       await sendMessage(messageData);
-      onSuccess();
+      onSuccess?.();
+      onClose();
     } catch (err) {
       setError(err.response?.data?.detail || "Failed to send message");
     } finally {
@@ -81,136 +61,117 @@ export default function SendMessageModal({ onClose, onSuccess }) {
     setFormData((prev) => ({
       ...prev,
       [name]: value,
-      ...(name === "employee_id" ? { task_id: "" } : {}),
     }));
   };
 
-  // 🎯 EXACT SAME STRUCTURE AS CreateTaskModal
   return (
-    <div className="modal-backdrop">
-      <div className="modal-container modal-md">
+    <div className="ba-modal-overlay" onClick={onClose}>
+      <div className="ba-modal-container" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="modal-header">
-          <div className="modal-header-content">
-            <Send className="modal-header-icon" />
-            <h2 className="modal-title">Send Message</h2>
+        <div className="ba-modal-header">
+          <div className="ba-modal-header-content">
+            <Send className="w-5 h-5" />
+            <h2 className="ba-modal-title">Send Message</h2>
           </div>
-          <button onClick={onClose} className="modal-close-btn">
+          <button onClick={onClose} className="ba-modal-close-btn">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Body */}
-        <form onSubmit={handleSubmit} className="modal-body">
+        <div className="ba-modal-body">
           {error && (
-            <div className="modal-error">
-              {error}
+            <div className="ba-alert ba-alert-error">
+              <AlertCircle className="w-5 h-5" />
+              <span>{error}</span>
             </div>
           )}
 
           {loadingData ? (
-            <div className="text-center py-8">
-              <Loader className="w-8 h-8 animate-spin mx-auto text-gray-600" />
-              <p className="mt-2 text-gray-600">Loading...</p>
+            <div className="ba-modal-loading">
+              <Loader
+                className="w-8 h-8 animate-spin"
+                style={{ color: "rgba(11, 11, 13, 0.6)" }}
+              />
+              <p>Loading employees...</p>
             </div>
           ) : (
-            <div className="modal-form-stack">
+            <form onSubmit={handleSubmit} id="send-message-form">
               {/* Select Employee */}
-              <div className="modal-input-group">
-                <label className="modal-label">
-                  <User className="w-4 h-4" />
-                  To Employee <span className="modal-required">*</span>
+              <div className="ba-form-group">
+                <label className="ba-form-label">
+                  To Employee <span className="text-red-500">*</span>
                 </label>
                 <select
                   name="employee_id"
                   value={formData.employee_id}
                   onChange={handleChange}
-                  className="modal-select"
+                  className="ba-form-input"
                   required
                 >
-                  <option value="">Select an employee</option>
+                  <option value="">-- Select an employee --</option>
                   {employees.map((employee) => (
                     <option key={employee.id} value={employee.id}>
-                      {employee.full_name} - {employee.email}
+                      {employee.full_name} ({employee.email})
                     </option>
                   ))}
                 </select>
-              </div>
-
-              {/* Select Task */}
-              <div className="modal-input-group">
-                <label className="modal-label">
-                  <ListTodo className="w-4 h-4" />
-                  Related Task (Optional)
-                </label>
-                <select
-                  name="task_id"
-                  value={formData.task_id}
-                  onChange={handleChange}
-                  disabled={!formData.employee_id}
-                  className="modal-select"
-                >
-                  <option value="">No specific task</option>
-                  {employeeTasks.map((task) => (
-                    <option key={task.id} value={task.id}>
-                      {task.title} ({task.status})
-                    </option>
-                  ))}
-                </select>
-                {!formData.employee_id && (
-                  <p className="modal-hint">Select an employee first</p>
-                )}
-                {formData.employee_id && employeeTasks.length === 0 && (
-                  <p className="modal-hint">No tasks for this employee</p>
+                {employees.length === 0 && !loadingData && (
+                  <small className="ba-form-hint">No employees available</small>
                 )}
               </div>
 
               {/* Message */}
-              <div className="modal-input-group">
-                <label className="modal-label">
-                  Message <span className="modal-required">*</span>
+              <div className="ba-form-group">
+                <label className="ba-form-label">
+                  Message <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   name="message"
                   value={formData.message}
                   onChange={handleChange}
-                  placeholder="Enter your message..."
-                  rows="6"
-                  className="modal-textarea"
+                  placeholder="Type your message here..."
+                  rows="8"
+                  className="ba-form-textarea"
                   required
                 />
+                <small className="ba-form-hint">
+                  The employee will receive this message in their dashboard
+                </small>
               </div>
-            </div>
+            </form>
           )}
+        </div>
 
-          {/* Footer */}
-          <div className="modal-footer">
-            <button
-              type="button"
-              onClick={onClose}
-              className="btn btn-secondary"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading || loadingData}
-              className="btn btn-primary"
-            >
-              {loading ? (
-                <>
-                  <Loader className="w-4 h-4 animate-spin" />
-                  Sending...
-                </>
-              ) : (
-                <>
-                  <Send className="w-4 h-4" />
-                  Send Message
-                </>
-              )}
-            </button>
-          </div>
-        </form>
+        {/* Footer */}
+        <div className="ba-modal-footer">
+          <button
+            type="button"
+            onClick={onClose}
+            className="btn btn-secondary"
+            disabled={loading}
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            form="send-message-form"
+            disabled={loading || loadingData || employees.length === 0}
+            className="btn btn-primary"
+          >
+            {loading ? (
+              <>
+                <Loader className="w-4 h-4 animate-spin" />
+                <span>Sending...</span>
+              </>
+            ) : (
+              <>
+                <Send className="w-4 h-4" />
+                <span>Send Message</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );

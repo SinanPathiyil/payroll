@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "../components/common/Layout";
-import { ArrowLeft, UserPlus, Mail, User, Lock, DollarSign } from "lucide-react";
+import { ArrowLeft, UserPlus, Mail, User, Lock, DollarSign, Eye, EyeOff } from "lucide-react";
 import { createUser } from "../services/api";
 
 export default function HRCreateEmployee() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     full_name: "",
@@ -130,6 +131,7 @@ export default function HRCreateEmployee() {
                     onChange={handleChange}
                     required
                     placeholder="John Doe"
+                    autoComplete="off"
                     style={{
                       width: "100%",
                       padding: "0.625rem 0.75rem",
@@ -160,7 +162,8 @@ export default function HRCreateEmployee() {
                     value={formData.email}
                     onChange={handleChange}
                     required
-                    placeholder="john@company.com"
+                    placeholder="john.doe@company.com"
+                    autoComplete="new-email"
                     style={{
                       width: "100%",
                       padding: "0.625rem 0.75rem",
@@ -185,21 +188,47 @@ export default function HRCreateEmployee() {
                     <Lock className="w-4 h-4" style={{ display: "inline", marginRight: "0.5rem" }} />
                     Password *
                   </label>
-                  <input
-                    type="password"
-                    name="password"
-                    value={formData.password}
-                    onChange={handleChange}
-                    required
-                    placeholder="Enter password"
-                    style={{
-                      width: "100%",
-                      padding: "0.625rem 0.75rem",
-                      border: "1px solid #d1d5db",
-                      borderRadius: "0.5rem",
-                      fontSize: "0.875rem",
-                    }}
-                  />
+                  <div style={{ position: "relative" }}>
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      name="password"
+                      value={formData.password}
+                      onChange={handleChange}
+                      required
+                      minLength="8"
+                      placeholder="Enter secure password (min 8 characters)"
+                      autoComplete="new-password"
+                      style={{
+                        width: "100%",
+                        padding: "0.625rem 0.75rem",
+                        paddingRight: "2.5rem",
+                        border: "1px solid #d1d5db",
+                        borderRadius: "0.5rem",
+                        fontSize: "0.875rem",
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      style={{
+                        position: "absolute",
+                        right: "0.75rem",
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        color: "#6b7280",
+                        padding: "0.25rem",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                      tabIndex="-1"
+                    >
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
                 </div>
 
                 {/* Role */}

@@ -406,67 +406,34 @@ export default function TLTasks() {
       {/* Create Task Modal */}
       {showCreateModal && (
         <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            backgroundColor: "rgba(0,0,0,0.5)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 50,
-          }}
+          className="ba-modal-overlay"
           onClick={() => setShowCreateModal(false)}
         >
           <div
-            style={{
-              backgroundColor: "white",
-              borderRadius: "0.75rem",
-              padding: "2rem",
-              maxWidth: "500px",
-              width: "90%",
-              maxHeight: "90vh",
-              overflow: "auto",
-            }}
+            className="ba-modal-container"
             onClick={(e) => e.stopPropagation()}
           >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: "1.5rem",
-              }}
-            >
-              <h2 style={{ fontSize: "1.5rem", fontWeight: "600" }}>
-                Assign New Task
-              </h2>
+            {/* Header */}
+            <div className="ba-modal-header">
+              <div className="ba-modal-header-content">
+                <Plus className="w-5 h-5" />
+                <h2 className="ba-modal-title">Assign New Task</h2>
+              </div>
               <button
                 onClick={() => setShowCreateModal(false)}
-                style={{ padding: "0.25rem", color: "#6b7280" }}
+                className="ba-modal-close-btn"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateTask}>
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "1rem",
-                }}
-              >
+            {/* Body */}
+            <div className="ba-modal-body">
+              <form onSubmit={handleCreateTask} id="assign-task-form">
                 {/* Title */}
-                <div>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "0.875rem",
-                      fontWeight: "500",
-                      marginBottom: "0.5rem",
-                    }}
-                  >
-                    Task Title *
+                <div className="ba-form-group">
+                  <label className="ba-form-label">
+                    Task Title <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -475,28 +442,15 @@ export default function TLTasks() {
                       setFormData({ ...formData, title: e.target.value })
                     }
                     required
-                    placeholder="Enter task title"
-                    style={{
-                      width: "100%",
-                      padding: "0.625rem 0.75rem",
-                      border: "1px solid #d1d5db",
-                      borderRadius: "0.5rem",
-                      fontSize: "0.875rem",
-                    }}
+                    placeholder="e.g., Implement user authentication"
+                    className="ba-form-input"
                   />
                 </div>
 
                 {/* Description */}
-                <div>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "0.875rem",
-                      fontWeight: "500",
-                      marginBottom: "0.5rem",
-                    }}
-                  >
-                    Description *
+                <div className="ba-form-group">
+                  <label className="ba-form-label">
+                    Description <span className="text-red-500">*</span>
                   </label>
                   <textarea
                     value={formData.description}
@@ -504,30 +458,16 @@ export default function TLTasks() {
                       setFormData({ ...formData, description: e.target.value })
                     }
                     required
-                    placeholder="Enter task description"
+                    placeholder="Provide detailed task description..."
                     rows={4}
-                    style={{
-                      width: "100%",
-                      padding: "0.625rem 0.75rem",
-                      border: "1px solid #d1d5db",
-                      borderRadius: "0.5rem",
-                      fontSize: "0.875rem",
-                      resize: "vertical",
-                    }}
+                    className="ba-form-textarea"
                   />
                 </div>
 
                 {/* Assign To */}
-                <div>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "0.875rem",
-                      fontWeight: "500",
-                      marginBottom: "0.5rem",
-                    }}
-                  >
-                    Assign To *
+                <div className="ba-form-group">
+                  <label className="ba-form-label">
+                    Assign To <span className="text-red-500">*</span>
                   </label>
                   <select
                     value={formData.assigned_to}
@@ -535,15 +475,9 @@ export default function TLTasks() {
                       setFormData({ ...formData, assigned_to: e.target.value })
                     }
                     required
-                    style={{
-                      width: "100%",
-                      padding: "0.625rem 0.75rem",
-                      border: "1px solid #d1d5db",
-                      borderRadius: "0.5rem",
-                      fontSize: "0.875rem",
-                    }}
+                    className="ba-form-input"
                   >
-                    <option value="">Select Employee</option>
+                    <option value="">-- Select Employee --</option>
                     {employees
                       .filter((emp) => emp.role === "employee")
                       .map((emp) => (
@@ -552,97 +486,86 @@ export default function TLTasks() {
                         </option>
                       ))}
                   </select>
+                  {employees.filter((emp) => emp.role === "employee").length ===
+                    0 && (
+                    <small className="ba-form-hint">
+                      No employees available in your team
+                    </small>
+                  )}
                 </div>
 
                 {/* Project Selection */}
-                <div>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "0.875rem",
-                      fontWeight: "500",
-                      marginBottom: "0.5rem",
-                    }}
-                  >
-                    Project (Optional)
-                  </label>
+                <div className="ba-form-group">
+                  <label className="ba-form-label">Project (Optional)</label>
                   <select
                     value={formData.project_id}
                     onChange={(e) =>
                       setFormData({ ...formData, project_id: e.target.value })
                     }
-                    style={{
-                      width: "100%",
-                      padding: "0.625rem 0.75rem",
-                      border: "1px solid #d1d5db",
-                      borderRadius: "0.5rem",
-                      fontSize: "0.875rem",
-                    }}
+                    className="ba-form-input"
                   >
-                    <option value="">No Project (Standalone Task)</option>
+                    <option value="">-- No Project (Standalone Task) --</option>
                     {projects.map((project) => (
                       <option key={project.id} value={project.id}>
                         {project.project_name}
                       </option>
                     ))}
                   </select>
+                  <small className="ba-form-hint">
+                    Link this task to a specific project or leave as standalone
+                  </small>
                 </div>
 
                 {/* Due Date */}
-                <div>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "0.875rem",
-                      fontWeight: "500",
-                      marginBottom: "0.5rem",
-                    }}
-                  >
-                    Due Date
-                  </label>
+                <div className="ba-form-group">
+                  <label className="ba-form-label">Due Date (Optional)</label>
                   <input
                     type="datetime-local"
                     value={formData.due_date}
                     onChange={(e) =>
                       setFormData({ ...formData, due_date: e.target.value })
                     }
-                    style={{
-                      width: "100%",
-                      padding: "0.625rem 0.75rem",
-                      border: "1px solid #d1d5db",
-                      borderRadius: "0.5rem",
-                      fontSize: "0.875rem",
-                    }}
+                    className="ba-form-input"
                   />
+                  <small className="ba-form-hint">
+                    Set a deadline for this task
+                  </small>
                 </div>
-              </div>
+              </form>
+            </div>
 
-              {/* Actions */}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  gap: "0.75rem",
-                  marginTop: "1.5rem",
-                }}
+            {/* Footer */}
+            <div className="ba-modal-footer">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setShowCreateModal(false)}
+                disabled={creating}
               >
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setShowCreateModal(false)}
-                  disabled={creating}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  disabled={creating}
-                >
-                  {creating ? "Creating..." : "Create Task"}
-                </button>
-              </div>
-            </form>
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="assign-task-form"
+                className="btn btn-primary"
+                disabled={creating}
+              >
+                {creating ? (
+                  <>
+                    <div
+                      className="spinner spinner-sm"
+                      style={{ width: "16px", height: "16px" }}
+                    ></div>
+                    <span>Assigning...</span>
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4" />
+                    <span>Assign Task</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

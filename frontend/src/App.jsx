@@ -21,12 +21,15 @@ import TLRequirements from "./pages/TLRequirements";
 import TLTasks from "./pages/TLTasks";
 import TLMessages from "./pages/TLMessages";
 import TLTeam from "./pages/TLTeam";
+import TLPendingApprovals from './pages/TLPendingApprovals';
 
 //Import Employee Pages
 import EmployeeTasks from "./pages/EmployeeTasks";
 import EmployeeMessages from "./pages/EmployeeMessages";
 import EmployeeNotes from "./pages/EmployeeNotes";
 import EmployeeTimeTracking from "./pages/EmployeeTimeTracking";
+import EmployeeLeaveBalance from './pages/EmployeeLeaveBalance';
+import EmployeeLeaveHistory from './pages/EmployeeLeaveHistory';
 
 //Import HR Pages
 import HREmployees from "./pages/HREmployees";
@@ -37,6 +40,11 @@ import HRMessages from "./pages/HRMessages";
 import HRReports from "./pages/HRReports";
 import HREmployeeActivityBreakdown from "./pages/HREmployeeActivityBreakdown";
 import HROverrideRequests from "./pages/HROverrideRequests";
+import HRLeaveDashboard from './pages/HRLeaveDashboard';
+import HRLeavePendingApprovals from './pages/HRLeavePendingApprovals';
+import HRLeaveAllRequests from './pages/HRLeaveAllRequests';
+import HRCompanyCalendar from './pages/HRCompanyCalendar';
+import HRLeaveAllocation from './pages/HRLeaveAllocation';
 
 // Import Super Admin Pages
 import SuperAdminDashboard from "./pages/SuperAdminDashboard";
@@ -45,6 +53,12 @@ import SuperAdminTeams from "./pages/SuperAdminTeams";
 import SuperAdminOverrideRequests from "./pages/SuperAdminOverrideRequests";
 import SuperAdminAuditLogs from "./pages/SuperAdminAuditLogs";
 import SuperAdminSystemStats from "./pages/SuperAdminSystemStats";
+import SuperAdminLeaveManagement from './pages/SuperAdminLeaveManagement';
+import SuperAdminLeaveSettings from './pages/SuperAdminLeaveSettings';
+import SuperAdminLeaveTypes from './pages/SuperAdminLeaveTypes';
+import SuperAdminLeavePolicies from './pages/SuperAdminLeavePolicies';
+import SuperAdminLeaveHolidays from './pages/SuperAdminLeaveHolidays';
+
 
 function App() {
   return (
@@ -173,6 +187,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="/team-lead/leave/pending-approvals" element={<TLPendingApprovals />} />
         {/* HR Routes */}
         <Route
           path="/hr-dashboard"
@@ -222,6 +237,11 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="/hr/leave" element={<ProtectedRoute><HRLeaveDashboard /></ProtectedRoute>} />
+        <Route path="/hr/leave/pending-approvals" element={<ProtectedRoute><HRLeavePendingApprovals /></ProtectedRoute>} />
+        <Route path="/hr/leave/all-requests" element={<ProtectedRoute><HRLeaveAllRequests /></ProtectedRoute>} />
+        <Route path="/hr/leave/calendar" element={<ProtectedRoute><HRCompanyCalendar /></ProtectedRoute>} />
+        <Route path="/hr/leave/allocate" element={<HRLeaveAllocation />} />
         <Route
           path="/hr/messages"
           element={
@@ -263,6 +283,8 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="/employee/leave" element={<ProtectedRoute><EmployeeLeaveBalance /></ProtectedRoute>} />
+        <Route path="/employee/leave/history" element={<EmployeeLeaveHistory />} />
         <Route
           path="/employee/messages"
           element={
@@ -312,6 +334,11 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="/super-admin/leave" element={<ProtectedRoute><SuperAdminLeaveManagement /></ProtectedRoute>} />
+        <Route path="/super-admin/leave/settings" element={<ProtectedRoute><SuperAdminLeaveSettings /></ProtectedRoute>} />
+        <Route path="/super-admin/leave/types" element={<ProtectedRoute><SuperAdminLeaveTypes /></ProtectedRoute>} />
+        <Route path="/super-admin/leave/policies" element={<ProtectedRoute><SuperAdminLeavePolicies /></ProtectedRoute>} />
+        <Route path="/super-admin/leave/holidays" element={<ProtectedRoute><SuperAdminLeaveHolidays /></ProtectedRoute>} />
         <Route
           path="/super-admin/override-requests"
           element={

@@ -12,16 +12,20 @@ payroll
 │  │  │     ├─ ba_projects.py
 │  │  │     ├─ clients.py
 │  │  │     ├─ employee.py
+│  │  │     ├─ employee_leave.py
 │  │  │     ├─ hr.py
+│  │  │     ├─ hr_leave.py
 │  │  │     ├─ meetings.py
 │  │  │     ├─ messages.py
 │  │  │     ├─ notes.py
 │  │  │     ├─ payments.py
 │  │  │     ├─ projects.py
 │  │  │     ├─ super_admin.py
+│  │  │     ├─ super_admin_leave.py
 │  │  │     ├─ tasks.py
 │  │  │     ├─ teams.py
 │  │  │     ├─ team_lead.py
+│  │  │     ├─ team_lead_leave.py
 │  │  │     └─ __init__.py
 │  │  ├─ core
 │  │  │  ├─ config.py
@@ -33,6 +37,7 @@ payroll
 │  │  │  ├─ attendance.py
 │  │  │  ├─ audit_log.py
 │  │  │  ├─ client.py
+│  │  │  ├─ leave.py
 │  │  │  ├─ meeting.py
 │  │  │  ├─ message.py
 │  │  │  ├─ note.py
@@ -46,6 +51,7 @@ payroll
 │  │  │  ├─ attendance.py
 │  │  │  ├─ audit_log.py
 │  │  │  ├─ client.py
+│  │  │  ├─ leave.py
 │  │  │  ├─ meeting.py
 │  │  │  ├─ message.py
 │  │  │  ├─ note.py
@@ -133,6 +139,7 @@ payroll
 │  │  │  │  ├─ Navbar.jsx
 │  │  │  │  └─ Sidebar.jsx
 │  │  │  ├─ employee
+│  │  │  │  ├─ ApplyLeaveModal.jsx
 │  │  │  │  ├─ DesktopStats.jsx
 │  │  │  │  ├─ MessageBoard.jsx
 │  │  │  │  ├─ StickyNotes.jsx
@@ -170,6 +177,7 @@ payroll
 │  │  │  ├─ BAProjectDetails.jsx
 │  │  │  ├─ BAProjects.jsx
 │  │  │  ├─ EmployeeDashboard.jsx
+│  │  │  ├─ EmployeeLeaveBalance.jsx
 │  │  │  ├─ EmployeeMessages.jsx
 │  │  │  ├─ EmployeeNotes.jsx
 │  │  │  ├─ EmployeeTasks.jsx
@@ -180,12 +188,20 @@ payroll
 │  │  │  ├─ HREmployeeActivityBreakdown.jsx
 │  │  │  ├─ HREmployeeDetails.jsx
 │  │  │  ├─ HREmployees.jsx
+│  │  │  ├─ HRLeaveAllRequests.jsx
+│  │  │  ├─ HRLeaveDashboard.jsx
+│  │  │  ├─ HRLeavePendingApprovals.jsx
 │  │  │  ├─ HRMessages.jsx
 │  │  │  ├─ HROverrideRequests.jsx
 │  │  │  ├─ HRReports.jsx
 │  │  │  ├─ Login.jsx
 │  │  │  ├─ SuperAdminAuditLogs.jsx
 │  │  │  ├─ SuperAdminDashboard.jsx
+│  │  │  ├─ SuperAdminLeaveHolidays.jsx
+│  │  │  ├─ SuperAdminLeaveManagement.jsx
+│  │  │  ├─ SuperAdminLeavePolicies.jsx
+│  │  │  ├─ SuperAdminLeaveSettings.jsx
+│  │  │  ├─ SuperAdminLeaveTypes.jsx
 │  │  │  ├─ SuperAdminOverrideRequests.jsx
 │  │  │  ├─ SuperAdminSystemStats.jsx
 │  │  │  ├─ SuperAdminTeams.jsx

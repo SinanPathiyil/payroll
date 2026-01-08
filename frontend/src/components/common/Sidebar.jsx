@@ -19,7 +19,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Menu,
-  X
+  X,
+  Clock,        // For Team Lead - Leave Approvals
+  History 
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -48,6 +50,7 @@ export default function Sidebar() {
           { path: '/tl/requirements', icon: CheckSquare, label: 'Requirements' },
           { path: '/tl/team', icon: Users, label: 'My Team' },
           { path: '/tl/tasks', icon: FileText, label: 'Tasks' },
+          { path: '/team-lead/leave/pending-approvals', icon: Clock, label: 'Leave Approvals' },
           { path: '/tl/messages', icon: MessageSquare, label: 'Messages' },
         ];
       
@@ -56,6 +59,7 @@ export default function Sidebar() {
           { path: '/hr-dashboard', icon: LayoutDashboard, label: 'Dashboard' },
           { path: '/hr/employees', icon: Users, label: 'Employees' },
           { path: '/hr/attendance', icon: Calendar, label: 'Attendance' },
+          { path: '/hr/leave', icon: Calendar, label: 'Leave Management' },
           { path: '/hr/override-requests', icon: Shield, label: 'Override Requests' }, // ← ADDED THIS LINE
           { path: '/hr/messages', icon: MessageSquare, label: 'Messages' },
           { path: '/hr/reports', icon: BarChart3, label: 'Reports' },
@@ -65,6 +69,7 @@ export default function Sidebar() {
         return [
           { path: '/employee-dashboard', icon: LayoutDashboard, label: 'Dashboard' },
           { path: '/employee/time-tracking', icon: Calendar, label: 'Time Tracking' },
+          { path: '/employee/leave', icon: Calendar, label: 'My Leaves' },
           { path: '/employee/tasks', icon: CheckSquare, label: 'My Tasks' },
           { path: '/employee/messages', icon: MessageSquare, label: 'Messages' },
           { path: '/employee/notes', icon: FileText, label: 'My Notes' },
@@ -75,6 +80,7 @@ export default function Sidebar() {
           { path: '/super-admin-dashboard', icon: LayoutDashboard, label: 'Dashboard' },
           { path: '/super-admin/users', icon: Users, label: 'User Management' },
           { path: '/super-admin/teams', icon: Users, label: 'Team Management' },
+          { path: '/super-admin/leave', icon: Calendar, label: 'Leave Management' },
           { path: '/super-admin/override-requests', icon: CheckSquare, label: 'Override Requests' },
           { path: '/super-admin/audit-logs', icon: FileText, label: 'Audit Logs' },
           { path: '/super-admin/system-stats', icon: BarChart3, label: 'System Stats' }

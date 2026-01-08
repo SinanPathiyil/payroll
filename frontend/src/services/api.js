@@ -202,6 +202,21 @@ export const getOverrideRequest = (requestId) =>
 export const cancelOverrideRequest = (requestId) => 
   api.delete(`/hr/override-requests/${requestId}`);
 
+// ============================================
+// HR - LEAVE MANAGEMENT
+// ============================================
+export const getHRLeavePendingApprovals = () => api.get('/hr/leave/pending-approvals');
+export const getHRAllLeaveRequests = (params) => api.get('/hr/leave/all-requests', { params });
+export const hrApproveRejectLeave = (requestId, action) => 
+  api.post(`/hr/leave/${requestId}/approve-reject`, action);
+export const hrOverrideLeave = (requestId, data) => 
+  api.post(`/hr/leave/${requestId}/override`, data);
+export const getEmployeeLeaveBalanceHR = (employeeId, year) => 
+  api.get(`/hr/leave/employee/${employeeId}/balance`, { params: { year } });
+export const getCompanyLeaveCalendar = (month, year) => 
+  api.get('/hr/leave/company-calendar', { params: { month, year } });
+export const allocateLeaveBalances = (year) => 
+  api.post('/hr/leave/allocate-balances', null, { params: { year } });
 
 // ============================================
 // EMPLOYEE
@@ -215,6 +230,17 @@ export const getEmployeeProfile = () => api.get('/employee/profile');
 export const logActivity = (activityData) => api.post('/employee/activity', activityData);
 export const getActivityHistory = (params) =>
   api.get('/employee/activity-history', { params });
+
+// ============================================
+// EMPLOYEE - LEAVE MANAGEMENT
+// ============================================
+export const getEmployeeLeaveBalance = () => api.get('/employee/leave/balance');
+export const getEmployeeLeaveTypes = () => api.get('/employee/leave/types');
+export const applyForLeave = (leaveData) => api.post('/employee/leave/apply', leaveData);
+export const getMyLeaveHistory = (params) => api.get('/employee/leave/history', { params });
+export const cancelLeaveRequest = (requestId, data) => api.post(`/employee/leave/${requestId}/cancel`, data);
+export const getTeamLeaveCalendar = (month, year) => api.get('/employee/leave/team-calendar', { params: { month, year } });
+
 
 // ============================================
 // TASKS

@@ -1,23 +1,23 @@
-import { useState, useEffect } from 'react';
-import { Users, Plus, Search, AlertCircle, Save } from 'lucide-react';
-import Layout from '../components/common/Layout';
-import axios from 'axios';
+import { useState, useEffect } from "react";
+import { Users, Plus, Search, X, Save } from "lucide-react";
+import Layout from "../components/common/Layout";
+import axios from "axios";
 
 export default function HRLeaveAllocation() {
   const [loading, setLoading] = useState(true);
   const [employees, setEmployees] = useState([]);
   const [leaveTypes, setLeaveTypes] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
-    user_id: '',
+    user_id: "",
     year: new Date().getFullYear(),
-    leave_type_code: '',
-    days: 0
+    leave_type_code: "",
+    days: 0,
   });
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   useEffect(() => {
     loadData();
@@ -26,8 +26,8 @@ export default function HRLeaveAllocation() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      
+      const token = localStorage.getItem("token");
+
       // Load employees
       const empResponse = await axios.get(
         `${import.meta.env.VITE_API_URL}/hr/employees`,
@@ -36,13 +36,16 @@ export default function HRLeaveAllocation() {
       setEmployees(empResponse.data || []);
 
       // Load leave types
-      const typesResponse = await axios.get(
-        `${import.meta.env.VITE_API_URL}/admin/leave/leave-types`,
+      const leaveTypesRes = await axios.get(
+        // ✅ Correct variable name
+        `${import.meta.env.VITE_API_URL}/hr/leave/leave-types`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setLeaveTypes(typesResponse.data.leave_types || []);
+
+      // The endpoint returns an array directly, not an object with leave_types property
+      setLeaveTypes(leaveTypesRes.data || []); // ✅ Fixed: use leaveTypesRes and access data directly
     } catch (error) {
-      console.error('Failed to load data:', error);
+      console.error("Failed to load data:", error);
     } finally {
       setLoading(false);
     }
@@ -50,45 +53,46 @@ export default function HRLeaveAllocation() {
 
   const loadEmployeeBalance = async (employeeId) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       const response = await axios.get(
         `${import.meta.env.VITE_API_URL}/hr/leave/balances/${employeeId}?year=${formData.year}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       return response.data.balances || [];
     } catch (error) {
-      console.error('Failed to load balance:', error);
+      console.error("Failed to load balance:", error);
       return [];
     }
   };
 
   const handleAllocate = async (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
     try {
       setSubmitting(true);
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       await axios.post(
         `${import.meta.env.VITE_API_URL}/hr/leave/allocate-leaves`,
         formData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      
+
       setShowModal(false);
       setSelectedEmployee(null);
-      alert('Leave allocated successfully!');
+      alert("Leave allocated successfully!");
     } catch (error) {
-      console.error('Failed to allocate:', error);
-      setError(error.response?.data?.detail || 'Failed to allocate leaves');
+      console.error("Failed to allocate:", error);
+      setError(error.response?.data?.detail || "Failed to allocate leaves");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const filteredEmployees = employees.filter(emp =>
-    emp.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.email.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredEmployees = employees.filter(
+    (emp) =>
+      emp.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      emp.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (loading) {
@@ -146,25 +150,37 @@ export default function HRLeaveAllocation() {
                 <p>No employees found</p>
               </div>
             ) : (
-              <div style={{ display: 'grid', gap: '1rem' }}>
+              <div style={{ display: "grid", gap: "1rem" }}>
                 {filteredEmployees.map((employee) => (
                   <div
                     key={employee.id}
                     style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: '1rem',
-                      backgroundColor: '#f9fafb',
-                      borderRadius: '8px',
-                      border: '1px solid #e5e7eb'
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: "1rem",
+                      backgroundColor: "#f9fafb",
+                      borderRadius: "8px",
+                      border: "1px solid #e5e7eb",
                     }}
                   >
                     <div>
-                      <h3 style={{ fontSize: '1rem', fontWeight: '600', margin: '0 0 0.25rem 0' }}>
+                      <h3
+                        style={{
+                          fontSize: "1rem",
+                          fontWeight: "600",
+                          margin: "0 0 0.25rem 0",
+                        }}
+                      >
                         {employee.full_name}
                       </h3>
-                      <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>
+                      <p
+                        style={{
+                          fontSize: "0.875rem",
+                          color: "#6b7280",
+                          margin: 0,
+                        }}
+                      >
                         {employee.email}
                       </p>
                     </div>
@@ -175,7 +191,11 @@ export default function HRLeaveAllocation() {
                         setShowModal(true);
                       }}
                       className="btn btn-primary"
-                      style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.5rem",
+                      }}
                     >
                       <Plus className="w-4 h-4" />
                       <span>Allocate Leave</span>
@@ -190,14 +210,21 @@ export default function HRLeaveAllocation() {
 
       {showModal && selectedEmployee && (
         <div className="ba-modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="ba-modal-container" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+          <div
+            className="ba-modal-container"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: "500px" }}
+          >
             <div className="ba-modal-header">
               <div className="ba-modal-header-content">
                 <Plus className="w-6 h-6" />
                 <h2 className="ba-modal-title">Allocate Leave</h2>
               </div>
-              <button onClick={() => setShowModal(false)} className="ba-modal-close-btn">
-                <AlertCircle className="w-5 h-5" />
+              <button
+                onClick={() => setShowModal(false)}
+                className="ba-modal-close-btn"
+              >
+                <X className="w-5 h-5" />
               </button>
             </div>
 
@@ -205,21 +232,29 @@ export default function HRLeaveAllocation() {
               <div className="ba-modal-body">
                 {error && (
                   <div className="ba-alert ba-alert-error">
-                    <AlertCircle className="w-5 h-5" />
+                    <X className="w-5 h-5" />
                     <span>{error}</span>
                   </div>
                 )}
 
-                <div style={{
-                  padding: '1rem',
-                  backgroundColor: '#eff6ff',
-                  borderRadius: '8px',
-                  marginBottom: '1.5rem'
-                }}>
-                  <p style={{ fontSize: '0.875rem', margin: 0 }}>
+                <div
+                  style={{
+                    padding: "1rem",
+                    backgroundColor: "#eff6ff",
+                    borderRadius: "8px",
+                    marginBottom: "1.5rem",
+                  }}
+                >
+                  <p style={{ fontSize: "0.875rem", margin: 0 }}>
                     <strong>Employee:</strong> {selectedEmployee.full_name}
                   </p>
-                  <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0.25rem 0 0 0' }}>
+                  <p
+                    style={{
+                      fontSize: "0.875rem",
+                      color: "#6b7280",
+                      margin: "0.25rem 0 0 0",
+                    }}
+                  >
                     {selectedEmployee.email}
                   </p>
                 </div>
@@ -230,12 +265,22 @@ export default function HRLeaveAllocation() {
                   </label>
                   <select
                     value={formData.year}
-                    onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        year: parseInt(e.target.value),
+                      })
+                    }
                     className="ba-form-input"
                     required
                   >
-                    {Array.from({ length: 3 }, (_, i) => new Date().getFullYear() + i).map(year => (
-                      <option key={year} value={year}>{year}</option>
+                    {Array.from(
+                      { length: 3 },
+                      (_, i) => new Date().getFullYear() + i
+                    ).map((year) => (
+                      <option key={year} value={year}>
+                        {year}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -246,12 +291,17 @@ export default function HRLeaveAllocation() {
                   </label>
                   <select
                     value={formData.leave_type_code}
-                    onChange={(e) => setFormData({ ...formData, leave_type_code: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        leave_type_code: e.target.value,
+                      })
+                    }
                     className="ba-form-input"
                     required
                   >
                     <option value="">-- Select Leave Type --</option>
-                    {leaveTypes.map(type => (
+                    {leaveTypes.map((type) => (
                       <option key={type.code} value={type.code}>
                         {type.name}
                       </option>
@@ -266,7 +316,12 @@ export default function HRLeaveAllocation() {
                   <input
                     type="number"
                     value={formData.days}
-                    onChange={(e) => setFormData({ ...formData, days: parseFloat(e.target.value) })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        days: parseFloat(e.target.value),
+                      })
+                    }
                     className="ba-form-input"
                     min="0"
                     step="0.5"

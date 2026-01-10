@@ -7,9 +7,10 @@ from app.schemas.leave_request import (
     LeaveRequestApprove, LeaveRequestReject
 )
 from app.schemas.leave_balance import LeaveBalanceResponse, LeaveBalanceSummary, LeaveAllocationRequest
+from app.schemas.leave_type import LeaveTypeResponse 
 from app.services.leave_service import LeaveService
 from bson import ObjectId
-from datetime import datetime, date
+from datetime import datetime, date, time
 
 router = APIRouter()
 
@@ -471,7 +472,7 @@ async def get_company_leave_calendar(
     current_user: dict = Depends(get_current_hr),
     db = Depends(get_database)
 ):
-    """Get company-wide leave calendar"""
+    """Get company-wide leave calendar with public holidays"""
     
     if start_date > end_date:
         raise HTTPException(
@@ -479,33 +480,109 @@ async def get_company_leave_calendar(
             detail="Start date must be before end date"
         )
     
-    # Get all approved leaves in date range
-    cursor = db.leave_requests.find({
+    # Convert date to datetime for MongoDB compatibility
+    start_datetime = datetime.combine(start_date, time.min)
+    end_datetime = datetime.combine(end_date, time.max)
+    
+    # ==================== GET APPROVED LEAVES ====================
+    leaves_cursor = db.leave_requests.find({
         "status": "approved",
-        "start_date": {"$lte": end_date},
-        "end_date": {"$gte": start_date}
+        "start_date": {"$lte": end_datetime},
+        "end_date": {"$gte": start_datetime}
     }).sort("start_date", 1)
     
-    leaves = await cursor.to_list(length=None)
+    leaves = await leaves_cursor.to_list(length=None)
     
     calendar_events = []
+    
+    # Add employee leaves
     for leave in leaves:
+        start = leave["start_date"]
+        end = leave["end_date"]
+        
+        start_str = start.date().isoformat() if isinstance(start, datetime) else start.isoformat()
+        end_str = end.date().isoformat() if isinstance(end, datetime) else end.isoformat()
+        
         calendar_events.append({
             "id": str(leave["_id"]),
+            "type": "leave",
             "request_number": leave["request_number"],
             "user_name": leave["user_name"],
             "user_email": leave["user_email"],
             "leave_type": leave["leave_type_name"],
             "color": leave["leave_type_color"],
-            "start_date": leave["start_date"].isoformat(),
-            "end_date": leave["end_date"].isoformat(),
+            "start_date": start_str,
+            "end_date": end_str,
             "total_days": leave["total_days"],
             "is_half_day": leave["is_half_day"]
+        })
+    
+    # ==================== GET PUBLIC HOLIDAYS ====================
+    # FIXED: Use datetime objects for MongoDB query
+    holidays_cursor = db.public_holidays.find({
+        "is_active": True,
+        "date": {
+            "$gte": start_datetime,  # ← Changed from start_date
+            "$lte": end_datetime      # ← Changed from end_date
+        }
+    }).sort("date", 1)
+    
+    holidays = await holidays_cursor.to_list(length=None)
+    
+    # Add public holidays
+    for holiday in holidays:
+        holiday_date = holiday["date"]
+        date_str = holiday_date.date().isoformat() if isinstance(holiday_date, datetime) else holiday_date.isoformat()
+        
+        calendar_events.append({
+            "id": str(holiday["_id"]),
+            "type": "holiday",
+            "name": holiday["name"],
+            "description": holiday.get("description"),
+            "date": date_str,
+            "is_optional": holiday["is_optional"],
+            "color": "#10b981" if not holiday["is_optional"] else "#f59e0b",
+            "country": holiday.get("country")
         })
     
     return {
         "start_date": start_date.isoformat(),
         "end_date": end_date.isoformat(),
-        "total_leaves": len(calendar_events),
-        "leaves": calendar_events
+        "total_events": len(calendar_events),
+        "total_leaves": len(leaves),
+        "total_holidays": len(holidays),
+        "events": calendar_events
     }
+    
+# ==================== LEAVE TYPES (READ-ONLY FOR HR) ====================
+
+@router.get("/leave-types", response_model=List[LeaveTypeResponse])
+async def get_leave_types_for_hr(
+    active_only: bool = True,
+    current_user: dict = Depends(get_current_hr),
+    db = Depends(get_database)
+):
+    """Get all leave types (read-only for HR)"""
+    leave_service = LeaveService(db)
+    leave_types = await leave_service.get_leave_types(active_only)
+    
+    return [
+        LeaveTypeResponse(
+            id=str(lt["_id"]),
+            name=lt["name"],
+            code=lt["code"],
+            description=lt.get("description"),
+            max_days_per_year=lt["max_days_per_year"],
+            requires_document=lt["requires_document"],
+            can_carry_forward=lt["can_carry_forward"],
+            carry_forward_limit=lt["carry_forward_limit"],
+            allow_half_day=lt["allow_half_day"],
+            color=lt["color"],
+            is_paid=lt["is_paid"],
+            is_active=lt["is_active"],
+            created_by=lt.get("created_by"),
+            created_at=lt["created_at"],
+            updated_at=lt.get("updated_at")
+        )
+        for lt in leave_types
+    ]

@@ -58,10 +58,15 @@ class LeaveService:
     
     async def create_holiday(self, holiday_data: dict, admin_id: str) -> dict:
         """Create a public holiday"""
+        # Convert date to datetime if it's a date object
+        if "date" in holiday_data and isinstance(holiday_data["date"], date) and not isinstance(holiday_data["date"], datetime):
+            holiday_data["date"] = datetime.combine(holiday_data["date"], datetime.min.time())
+        
         holiday_data["created_by"] = admin_id
         holiday_data["created_at"] = datetime.now()
         holiday_data["updated_at"] = None
         holiday_data["imported"] = False
+        holiday_data["is_active"] = True
         
         result = await self.public_holidays_collection.insert_one(holiday_data)
         holiday_data["_id"] = result.inserted_id
@@ -74,16 +79,19 @@ class LeaveService:
             imported_count = 0
             
             for holiday_date, holiday_name in country_holidays.items():
+                # Convert date to datetime
+                holiday_datetime = datetime.combine(holiday_date, datetime.min.time())  # ← FIX
+                
                 # Check if already exists
                 exists = await self.public_holidays_collection.find_one({
-                    "date": holiday_date,
+                    "date": holiday_datetime,  # ← FIX: use datetime
                     "country": country
                 })
                 
                 if not exists:
                     holiday_data = {
                         "name": holiday_name,
-                        "date": holiday_date,
+                        "date": holiday_datetime,  # ← FIX: use datetime
                         "country": country,
                         "is_optional": False,
                         "description": f"Imported from {country} calendar",
@@ -103,8 +111,8 @@ class LeaveService:
     
     async def get_holidays_by_year(self, year: int) -> List[dict]:
         """Get all holidays for a specific year"""
-        start_date = date(year, 1, 1)
-        end_date = date(year, 12, 31)
+        start_date = datetime(year, 1, 1)  # ← FIX: datetime object
+        end_date = datetime(year, 12, 31, 23, 59, 59)  # ← FIX: datetime object
         
         cursor = self.public_holidays_collection.find({
             "date": {"$gte": start_date, "$lte": end_date},
@@ -120,6 +128,10 @@ class LeaveService:
     
     async def update_holiday(self, holiday_id: str, update_data: dict) -> bool:
         """Update holiday"""
+        # Convert date to datetime if needed
+        if "date" in update_data and isinstance(update_data["date"], date) and not isinstance(update_data["date"], datetime):
+            update_data["date"] = datetime.combine(update_data["date"], datetime.min.time())
+        
         update_data["updated_at"] = datetime.now()
         result = await self.public_holidays_collection.update_one(
             {"_id": ObjectId(holiday_id)},

@@ -14,6 +14,7 @@ class LeaveTypeCreate(BaseModel):
     allow_half_day: bool = True
     color: str = Field(default="#3b82f6", pattern="^#[0-9A-Fa-f]{6}$")
     is_paid: bool = True
+    is_active: bool = True
 
 class LeaveTypeUpdate(BaseModel):
     description: Optional[str] = None

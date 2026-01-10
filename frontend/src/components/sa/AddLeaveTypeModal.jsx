@@ -15,7 +15,8 @@ export default function AddLeaveTypeModal({ editingType, onClose, onSuccess }) {
     carry_forward_limit: 0,
     allow_half_day: true,
     color: '#3b82f6',
-    is_paid: true
+    is_paid: true,
+    is_active: true
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -34,7 +35,8 @@ export default function AddLeaveTypeModal({ editingType, onClose, onSuccess }) {
         carry_forward_limit: editingType.carry_forward_limit,
         allow_half_day: editingType.allow_half_day,
         color: editingType.color,
-        is_paid: editingType.is_paid
+        is_paid: editingType.is_paid,
+        is_active: editingType.is_active
       });
     }
   }, [editingType]);

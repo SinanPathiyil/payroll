@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import Layout from "../components/common/Layout";
 import AddHolidayModal from "../components/sa/AddHolidayModal";
+import ImportHolidaysModal from "../components/sa/ImportHolidaysModal";
 import axios from "axios";
 
 export default function AdminPublicHolidays() {
@@ -27,25 +28,8 @@ export default function AdminPublicHolidays() {
     is_optional: false,
     description: "",
   });
-  const [importData, setImportData] = useState({
-    country: "US",
-    year: new Date().getFullYear(),
-  });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-
-  // Country list for import
-  const countries = [
-    { code: "US", name: "United States" },
-    { code: "GB", name: "United Kingdom" },
-    { code: "CA", name: "Canada" },
-    { code: "AU", name: "Australia" },
-    { code: "IN", name: "India" },
-    { code: "DE", name: "Germany" },
-    { code: "FR", name: "France" },
-    { code: "JP", name: "Japan" },
-    { code: "CN", name: "China" },
-  ];
 
   useEffect(() => {
     loadHolidays();
@@ -98,29 +82,6 @@ export default function AdminPublicHolidays() {
     } catch (error) {
       console.error("Failed to save holiday:", error);
       setError(error.response?.data?.detail || "Failed to save holiday");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleImport = async () => {
-    setError("");
-
-    try {
-      setSubmitting(true);
-      const token = localStorage.getItem("token");
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/admin/leave/holidays/import`,
-        importData,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      alert(`Successfully imported ${response.data.imported_count} holidays`);
-      setShowImportModal(false);
-      loadHolidays();
-    } catch (error) {
-      console.error("Failed to import holidays:", error);
-      setError(error.response?.data?.detail || "Failed to import holidays");
     } finally {
       setSubmitting(false);
     }
@@ -466,6 +427,17 @@ export default function AdminPublicHolidays() {
           onSuccess={() => {
             setShowModal(false);
             setEditingHoliday(null);
+            loadHolidays();
+          }}
+        />
+      )}
+
+      {/* Import Holidays Modal */}
+      {showImportModal && (
+        <ImportHolidaysModal
+          onClose={() => setShowImportModal(false)}
+          onSuccess={() => {
+            setShowImportModal(false);
             loadHolidays();
           }}
         />

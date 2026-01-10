@@ -170,7 +170,8 @@ payroll
 │  │  │  ├─ ProtectedRoute.jsx
 │  │  │  ├─ sa
 │  │  │  │  ├─ AddHolidayModal.jsx
-│  │  │  │  └─ AddLeaveTypeModal.jsx
+│  │  │  │  ├─ AddLeaveTypeModal.jsx
+│  │  │  │  └─ ImportHolidaysModal.jsx
 │  │  │  └─ tl
 │  │  │     └─ SendMessageModal.jsx
 │  │  ├─ context
@@ -208,7 +209,6 @@ payroll
 │  │  │  ├─ HRLeaveAllRequests.jsx
 │  │  │  ├─ HRLeaveApprovals.jsx
 │  │  │  ├─ HRLeaveManagement.jsx
-│  │  │  ├─ HRLeavePendingApprovals.jsx
 │  │  │  ├─ HRMessages.jsx
 │  │  │  ├─ HROverrideRequests.jsx
 │  │  │  ├─ HRReports.jsx

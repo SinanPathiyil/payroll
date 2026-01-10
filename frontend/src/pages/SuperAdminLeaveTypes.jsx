@@ -1,67 +1,157 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import Layout from '../components/common/Layout';
-import {
-  ArrowLeft,
-  Plus,
-  Edit,
-  Trash2,
-  AlertCircle,
-  CheckCircle,
-  FileText,
-  X
-} from 'lucide-react';
-import axios from 'axios';
-import '../styles/ba-dashboard.css';
-import '../styles/ba-modal.css';
+import { useState, useEffect } from "react";
+import { Plus, Edit, Trash2, Tag, AlertCircle, Save, X } from "lucide-react";
+import Layout from "../components/common/Layout";
+import AddLeaveTypeModal from "../components/sa/AddLeaveTypeModal";
+import axios from "axios";
 
-export default function SuperAdminLeaveTypes() {
-  const navigate = useNavigate();
+export default function AdminLeaveTypes() {
   const [loading, setLoading] = useState(true);
   const [leaveTypes, setLeaveTypes] = useState([]);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [selectedType, setSelectedType] = useState(null);
-  const [message, setMessage] = useState({ type: '', text: '' });
+  const [predefinedTypes, setPredefinedTypes] = useState([]);
+  const [showModal, setShowModal] = useState(false);
+  const [editingType, setEditingType] = useState(null);
+  const [formData, setFormData] = useState({
+    name: "",
+    code: "",
+    description: "",
+    max_days_per_year: 10,
+    requires_document: false,
+    can_carry_forward: false,
+    carry_forward_limit: 0,
+    allow_half_day: true,
+    color: "#3b82f6",
+    is_paid: true,
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     loadLeaveTypes();
+    loadPredefinedTypes();
   }, []);
 
   const loadLeaveTypes = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/super-admin/leave/types?include_inactive=true`,
+        `${import.meta.env.VITE_API_URL}/admin/leave/leave-types`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setLeaveTypes(response.data || []);
+      setLeaveTypes(response.data.leave_types || []);
     } catch (error) {
-      console.error('Failed to load leave types:', error);
-      setMessage({ type: 'error', text: 'Failed to load leave types' });
+      console.error("Failed to load leave types:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async () => {
+  const loadPredefinedTypes = async () => {
     try {
-      const token = localStorage.getItem('token');
-      await axios.delete(
-        `${import.meta.env.VITE_API_URL}/super-admin/leave/types/${selectedType.id}`,
+      const token = localStorage.getItem("token");
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/admin/leave/leave-types/predefined`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setMessage({ type: 'success', text: 'Leave type deleted successfully' });
-      setShowDeleteModal(false);
-      setSelectedType(null);
-      loadLeaveTypes();
-      setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+      setPredefinedTypes(response.data.leave_types || []);
     } catch (error) {
-      console.error('Failed to delete:', error);
-      setMessage({ type: 'error', text: error.response?.data?.detail || 'Failed to delete leave type' });
+      console.error("Failed to load predefined types:", error);
     }
+  };
+
+  const handlePredefinedSelect = (type) => {
+    setFormData({
+      ...formData,
+      name: type.name,
+      code: type.code,
+      color: type.color,
+    });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+
+    try {
+      setSubmitting(true);
+      const token = localStorage.getItem("token");
+
+      if (editingType) {
+        // Update existing
+        await axios.put(
+          `${import.meta.env.VITE_API_URL}/admin/leave/leave-types/${editingType.id}`,
+          formData,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      } else {
+        // Create new
+        await axios.post(
+          `${import.meta.env.VITE_API_URL}/admin/leave/leave-types`,
+          formData,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      }
+
+      setShowModal(false);
+      setEditingType(null);
+      resetForm();
+      loadLeaveTypes();
+    } catch (error) {
+      console.error("Failed to save leave type:", error);
+      setError(error.response?.data?.detail || "Failed to save leave type");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleEdit = (type) => {
+    setEditingType(type);
+    setFormData({
+      name: type.name,
+      code: type.code,
+      description: type.description || "",
+      max_days_per_year: type.max_days_per_year,
+      requires_document: type.requires_document,
+      can_carry_forward: type.can_carry_forward,
+      carry_forward_limit: type.carry_forward_limit,
+      allow_half_day: type.allow_half_day,
+      color: type.color,
+      is_paid: type.is_paid,
+    });
+    setShowModal(true);
+  };
+
+  const handleDelete = async (typeId) => {
+    if (!confirm("Are you sure you want to deactivate this leave type?"))
+      return;
+
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(
+        `${import.meta.env.VITE_API_URL}/admin/leave/leave-types/${typeId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      loadLeaveTypes();
+    } catch (error) {
+      console.error("Failed to delete leave type:", error);
+      alert(error.response?.data?.detail || "Failed to delete leave type");
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      name: "",
+      code: "",
+      description: "",
+      max_days_per_year: 10,
+      requires_document: false,
+      can_carry_forward: false,
+      carry_forward_limit: 0,
+      allow_half_day: true,
+      color: "#3b82f6",
+      is_paid: true,
+    });
+    setError("");
   };
 
   if (loading) {
@@ -80,183 +170,288 @@ export default function SuperAdminLeaveTypes() {
       <div className="ba-dashboard">
         {/* Header */}
         <div className="ba-dashboard-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <button
-              className="btn btn-secondary"
-              onClick={() => navigate('/super-admin/leave')}
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </button>
-            <div>
-              <h1 className="ba-dashboard-title">Leave Types</h1>
-              <p className="ba-dashboard-subtitle">
-                Manage all leave types available in the system
-              </p>
-            </div>
+          <div>
+            <h1 className="ba-dashboard-title">Leave Type Management</h1>
+            <p className="ba-dashboard-subtitle">
+              Configure available leave types for your organization
+            </p>
           </div>
-          <button
-            className="btn btn-primary"
-            onClick={() => setShowCreateModal(true)}
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Leave Type</span>
-          </button>
+          <div className="ba-dashboard-actions">
+            <button
+              className="btn btn-primary"
+              onClick={() => {
+                setEditingType(null);
+                resetForm();
+                setShowModal(true);
+              }}
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Leave Type</span>
+            </button>
+          </div>
         </div>
 
-        {/* Message */}
-        {message.text && (
-          <div className={`ba-alert ba-alert-${message.type === 'success' ? 'warning' : 'error'}`}>
-            {message.type === 'success' ? <CheckCircle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
-            <span>{message.text}</span>
+        {/* Stats */}
+        <div
+          className="ba-stats-grid"
+          style={{
+            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+          }}
+        >
+          <div className="ba-stat-card">
+            <div className="ba-stat-content">
+              <div className="ba-stat-info">
+                <p className="ba-stat-label">Total Leave Types</p>
+                <p className="ba-stat-value">{leaveTypes.length}</p>
+              </div>
+              <div className="ba-stat-icon ba-stat-icon-blue">
+                <Tag className="w-6 h-6" />
+              </div>
+            </div>
           </div>
-        )}
 
-        {/* Leave Types Grid */}
+          <div className="ba-stat-card">
+            <div className="ba-stat-content">
+              <div className="ba-stat-info">
+                <p className="ba-stat-label">Active Types</p>
+                <p className="ba-stat-value">
+                  {leaveTypes.filter((t) => t.is_active).length}
+                </p>
+              </div>
+              <div className="ba-stat-icon ba-stat-icon-green">
+                <Tag className="w-6 h-6" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Leave Types List */}
         <div className="ba-card">
+          <div className="ba-card-header">
+            <div className="ba-card-title">
+              <Tag className="w-5 h-5" />
+              <span>Configured Leave Types</span>
+            </div>
+          </div>
           <div className="ba-card-body">
             {leaveTypes.length === 0 ? (
               <div className="ba-empty-state">
-                <FileText className="ba-empty-icon" />
-                <p>No leave types configured yet</p>
-                <button
-                  className="btn btn-primary"
-                  onClick={() => setShowCreateModal(true)}
-                  style={{ marginTop: '1rem' }}
+                <Tag className="ba-empty-icon" />
+                <p>No leave types configured</p>
+                <p
+                  style={{
+                    fontSize: "0.875rem",
+                    color: "#6b7280",
+                    marginTop: "0.5rem",
+                  }}
                 >
-                  <Plus className="w-4 h-4" />
-                  <span>Create First Leave Type</span>
-                </button>
+                  Add your first leave type to get started
+                </p>
               </div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
+              <div style={{ display: "grid", gap: "1rem" }}>
                 {leaveTypes.map((type) => (
                   <div
                     key={type.id}
                     style={{
-                      padding: '1.5rem',
-                      background: `linear-gradient(135deg, ${type.color}10, ${type.color}20)`,
-                      border: `2px solid ${type.color}40`,
-                      borderRadius: '12px',
-                      position: 'relative',
-                      opacity: type.is_active ? 1 : 0.6
+                      border: "2px solid #e5e7eb",
+                      borderRadius: "12px",
+                      padding: "1.5rem",
+                      backgroundColor: type.is_active ? "white" : "#f9fafb",
                     }}
                   >
-                    {/* Status Badge */}
-                    {!type.is_active && (
-                      <div style={{
-                        position: 'absolute',
-                        top: '1rem',
-                        right: '1rem',
-                        padding: '0.25rem 0.75rem',
-                        backgroundColor: '#ef4444',
-                        color: 'white',
-                        borderRadius: '12px',
-                        fontSize: '0.75rem',
-                        fontWeight: '700'
-                      }}>
-                        Inactive
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "flex-start",
+                      }}
+                    >
+                      <div style={{ flex: 1 }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "1rem",
+                            marginBottom: "0.75rem",
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: "40px",
+                              height: "40px",
+                              borderRadius: "8px",
+                              backgroundColor: type.color,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              color: "white",
+                              fontWeight: "600",
+                              fontSize: "0.875rem",
+                            }}
+                          >
+                            {type.code.substring(0, 2)}
+                          </div>
+                          <div>
+                            <h3
+                              style={{
+                                fontSize: "1.125rem",
+                                fontWeight: "600",
+                                margin: "0 0 0.25rem 0",
+                              }}
+                            >
+                              {type.name}
+                            </h3>
+                            <p
+                              style={{
+                                fontSize: "0.875rem",
+                                color: "#6b7280",
+                                margin: 0,
+                              }}
+                            >
+                              Code: {type.code}
+                            </p>
+                          </div>
+                        </div>
+
+                        {type.description && (
+                          <p
+                            style={{
+                              fontSize: "0.875rem",
+                              color: "#6b7280",
+                              marginBottom: "1rem",
+                            }}
+                          >
+                            {type.description}
+                          </p>
+                        )}
+
+                        <div
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns:
+                              "repeat(auto-fit, minmax(150px, 1fr))",
+                            gap: "1rem",
+                            marginTop: "1rem",
+                          }}
+                        >
+                          <div>
+                            <p
+                              style={{
+                                fontSize: "0.75rem",
+                                color: "#6b7280",
+                                margin: "0 0 0.25rem 0",
+                              }}
+                            >
+                              Max Days/Year
+                            </p>
+                            <p
+                              style={{
+                                fontSize: "1.125rem",
+                                fontWeight: "600",
+                                margin: 0,
+                              }}
+                            >
+                              {type.max_days_per_year}
+                            </p>
+                          </div>
+                          <div>
+                            <p
+                              style={{
+                                fontSize: "0.75rem",
+                                color: "#6b7280",
+                                margin: "0 0 0.25rem 0",
+                              }}
+                            >
+                              Type
+                            </p>
+                            <p
+                              style={{
+                                fontSize: "1.125rem",
+                                fontWeight: "600",
+                                margin: 0,
+                              }}
+                            >
+                              {type.is_paid ? "Paid" : "Unpaid"}
+                            </p>
+                          </div>
+                          <div>
+                            <p
+                              style={{
+                                fontSize: "0.75rem",
+                                color: "#6b7280",
+                                margin: "0 0 0.25rem 0",
+                              }}
+                            >
+                              Carry Forward
+                            </p>
+                            <p
+                              style={{
+                                fontSize: "1.125rem",
+                                fontWeight: "600",
+                                margin: 0,
+                              }}
+                            >
+                              {type.can_carry_forward
+                                ? `Yes (${type.carry_forward_limit})`
+                                : "No"}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: "0.5rem",
+                            marginTop: "1rem",
+                            flexWrap: "wrap",
+                          }}
+                        >
+                          {type.allow_half_day && (
+                            <span className="ba-stat-badge success">
+                              Half Day Allowed
+                            </span>
+                          )}
+                          {type.requires_document && (
+                            <span className="ba-stat-badge warning">
+                              Document Required
+                            </span>
+                          )}
+                          {!type.is_active && (
+                            <span
+                              className="ba-stat-badge"
+                              style={{
+                                backgroundColor: "#f3f4f6",
+                                color: "#4b5563",
+                              }}
+                            >
+                              Inactive
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    )}
 
-                    {/* Color Indicator */}
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.75rem',
-                      marginBottom: '1rem'
-                    }}>
-                      <div style={{
-                        width: '24px',
-                        height: '24px',
-                        borderRadius: '50%',
-                        backgroundColor: type.color,
-                        border: '2px solid white',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
-                      }} />
-                      <h3 style={{
-                        fontSize: '1.25rem',
-                        fontWeight: '700',
-                        margin: 0,
-                        flex: 1
-                      }}>
-                        {type.name}
-                      </h3>
-                    </div>
-
-                    {/* Code */}
-                    <div style={{
-                      display: 'inline-block',
-                      padding: '0.25rem 0.75rem',
-                      backgroundColor: 'rgba(0,0,0,0.05)',
-                      borderRadius: '6px',
-                      fontSize: '0.875rem',
-                      fontWeight: '600',
-                      marginBottom: '0.75rem'
-                    }}>
-                      {type.code}
-                    </div>
-
-                    {/* Description */}
-                    {type.description && (
-                      <p style={{
-                        fontSize: '0.9rem',
-                        color: '#6b7280',
-                        margin: '0.75rem 0',
-                        lineHeight: '1.5'
-                      }}>
-                        {type.description}
-                      </p>
-                    )}
-
-                    {/* Features */}
-                    <div style={{
-                      display: 'flex',
-                      flexWrap: 'wrap',
-                      gap: '0.5rem',
-                      margin: '1rem 0'
-                    }}>
-                      {type.allow_half_day && (
-                        <span className="ba-stat-badge info">Half Day</span>
-                      )}
-                      {type.requires_documentation && (
-                        <span className="ba-stat-badge warning">Doc Required</span>
-                      )}
-                      {type.allow_carry_forward && (
-                        <span className="ba-stat-badge success">Carry Forward</span>
-                      )}
-                      {type.max_days_per_request && (
-                        <span className="ba-stat-badge secondary">Max: {type.max_days_per_request} days</span>
-                      )}
-                    </div>
-
-                    {/* Actions */}
-                    <div style={{
-                      display: 'flex',
-                      gap: '0.5rem',
-                      marginTop: '1rem',
-                      paddingTop: '1rem',
-                      borderTop: '1px solid rgba(0,0,0,0.1)'
-                    }}>
-                      <button
-                        className="btn btn-secondary btn-sm"
-                        style={{ flex: 1 }}
-                        onClick={() => {
-                          setSelectedType(type);
-                          setShowEditModal(true);
-                        }}
-                      >
-                        <Edit className="w-4 h-4" />
-                        <span>Edit</span>
-                      </button>
-                      <button
-                        className="btn btn-danger btn-sm"
-                        onClick={() => {
-                          setSelectedType(type);
-                          setShowDeleteModal(true);
-                        }}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div style={{ display: "flex", gap: "0.5rem" }}>
+                        <button
+                          onClick={() => handleEdit(type)}
+                          className="btn btn-secondary"
+                          style={{ padding: "0.5rem" }}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(type.id)}
+                          className="btn"
+                          style={{
+                            padding: "0.5rem",
+                            backgroundColor: "#fee2e2",
+                            color: "#991b1b",
+                            border: "1px solid #fca5a5",
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -264,503 +459,23 @@ export default function SuperAdminLeaveTypes() {
             )}
           </div>
         </div>
-
-        {/* Create Modal */}
-        {showCreateModal && (
-          <CreateLeaveTypeModal
-            onClose={() => setShowCreateModal(false)}
-            onSuccess={() => {
-              setShowCreateModal(false);
-              loadLeaveTypes();
-              setMessage({ type: 'success', text: 'Leave type created successfully' });
-              setTimeout(() => setMessage({ type: '', text: '' }), 3000);
-            }}
-          />
-        )}
-
-        {/* Edit Modal */}
-        {showEditModal && selectedType && (
-          <EditLeaveTypeModal
-            leaveType={selectedType}
-            onClose={() => {
-              setShowEditModal(false);
-              setSelectedType(null);
-            }}
-            onSuccess={() => {
-              setShowEditModal(false);
-              setSelectedType(null);
-              loadLeaveTypes();
-              setMessage({ type: 'success', text: 'Leave type updated successfully' });
-              setTimeout(() => setMessage({ type: '', text: '' }), 3000);
-            }}
-          />
-        )}
-
-        {/* Delete Confirmation Modal */}
-        {showDeleteModal && selectedType && (
-          <div className="ba-modal-overlay" onClick={() => setShowDeleteModal(false)}>
-            <div className="ba-modal-container ba-modal-small" onClick={(e) => e.stopPropagation()}>
-              <div className="ba-modal-header ba-modal-header-danger">
-                <div className="ba-modal-header-content">
-                  <AlertCircle className="w-6 h-6" />
-                  <h2 className="ba-modal-title">Delete Leave Type</h2>
-                </div>
-                <button onClick={() => setShowDeleteModal(false)} className="ba-modal-close-btn">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <div className="ba-modal-body">
-                <p className="ba-delete-message">
-                  Are you sure you want to delete <strong>{selectedType.name}</strong>?
-                </p>
-                <div className="ba-alert ba-alert-warning">
-                  <AlertCircle className="w-5 h-5" />
-                  <span>This will deactivate the leave type. It cannot be deleted if active policies exist.</span>
-                </div>
-              </div>
-              <div className="ba-modal-footer">
-                <button onClick={() => setShowDeleteModal(false)} className="btn btn-secondary">
-                  Cancel
-                </button>
-                <button onClick={handleDelete} className="btn btn-danger">
-                  <Trash2 className="w-4 h-4" />
-                  <span>Delete</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* Add/Edit Modal */}
+      {showModal && (
+        <AddLeaveTypeModal
+          editingType={editingType}
+          onClose={() => {
+            setShowModal(false);
+            setEditingType(null);
+          }}
+          onSuccess={() => {
+            setShowModal(false);
+            setEditingType(null);
+            loadLeaveTypes();
+          }}
+        />
+      )}
     </Layout>
-  );
-}
-
-// Create Leave Type Modal Component
-function CreateLeaveTypeModal({ onClose, onSuccess }) {
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
-  const [formData, setFormData] = useState({
-    name: '',
-    code: '',
-    description: '',
-    color: '#3b82f6',
-    requires_documentation: false,
-    max_days_per_request: '',
-    allow_half_day: true,
-    allow_carry_forward: false
-  });
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-
-    if (!formData.name || !formData.code) {
-      setError('Name and code are required');
-      return;
-    }
-
-    try {
-      setSubmitting(true);
-      const token = localStorage.getItem('token');
-      const payload = {
-        ...formData,
-        code: formData.code.toUpperCase(),
-        max_days_per_request: formData.max_days_per_request ? parseInt(formData.max_days_per_request) : null
-      };
-      await axios.post(
-        `${import.meta.env.VITE_API_URL}/super-admin/leave/types`,
-        payload,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      onSuccess();
-    } catch (error) {
-      console.error('Failed to create:', error);
-      setError(error.response?.data?.detail || 'Failed to create leave type');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const predefinedColors = [
-    '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'
-  ];
-
-  return (
-    <div className="ba-modal-overlay" onClick={onClose}>
-      <div className="ba-modal-container" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
-        <div className="ba-modal-header">
-          <div className="ba-modal-header-content">
-            <Plus className="w-6 h-6" />
-            <h2 className="ba-modal-title">Create Leave Type</h2>
-          </div>
-          <button onClick={onClose} className="ba-modal-close-btn">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit}>
-          <div className="ba-modal-body">
-            {error && (
-              <div className="ba-alert ba-alert-error">
-                <AlertCircle className="w-5 h-5" />
-                <span>{error}</span>
-              </div>
-            )}
-
-            <div className="ba-form-grid">
-              <div className="ba-form-group">
-                <label className="ba-form-label">
-                  Leave Type Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="ba-form-input"
-                  placeholder="e.g., Sick Leave"
-                  required
-                />
-              </div>
-
-              <div className="ba-form-group">
-                <label className="ba-form-label">
-                  Code <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={formData.code}
-                  onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                  className="ba-form-input"
-                  placeholder="e.g., SICK"
-                  style={{ textTransform: 'uppercase' }}
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="ba-form-group">
-              <label className="ba-form-label">Description</label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="ba-form-textarea"
-                rows="3"
-                placeholder="Brief description of this leave type..."
-              />
-            </div>
-
-            <div className="ba-form-group">
-              <label className="ba-form-label">Color</label>
-              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                {predefinedColors.map(color => (
-                  <button
-                    key={color}
-                    type="button"
-                    onClick={() => setFormData({ ...formData, color })}
-                    style={{
-                      width: '40px',
-                      height: '40px',
-                      borderRadius: '8px',
-                      backgroundColor: color,
-                      border: formData.color === color ? '3px solid #000' : '2px solid #e5e7eb',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s'
-                    }}
-                  />
-                ))}
-                <input
-                  type="color"
-                  value={formData.color}
-                  onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '8px',
-                    border: '2px solid #e5e7eb',
-                    cursor: 'pointer'
-                  }}
-                />
-              </div>
-            </div>
-
-            <div className="ba-form-group">
-              <label className="ba-form-label">Max Days Per Request (Optional)</label>
-              <input
-                type="number"
-                value={formData.max_days_per_request}
-                onChange={(e) => setFormData({ ...formData, max_days_per_request: e.target.value })}
-                className="ba-form-input"
-                placeholder="Leave empty for no limit"
-                min="1"
-              />
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1rem' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={formData.allow_half_day}
-                  onChange={(e) => setFormData({ ...formData, allow_half_day: e.target.checked })}
-                  style={{ width: '18px', height: '18px' }}
-                />
-                <span style={{ fontSize: '0.95rem', fontWeight: '500' }}>Allow Half-Day Leave</span>
-              </label>
-
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={formData.allow_carry_forward}
-                  onChange={(e) => setFormData({ ...formData, allow_carry_forward: e.target.checked })}
-                  style={{ width: '18px', height: '18px' }}
-                />
-                <span style={{ fontSize: '0.95rem', fontWeight: '500' }}>Allow Carry Forward</span>
-              </label>
-
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={formData.requires_documentation}
-                  onChange={(e) => setFormData({ ...formData, requires_documentation: e.target.checked })}
-                  style={{ width: '18px', height: '18px' }}
-                />
-                <span style={{ fontSize: '0.95rem', fontWeight: '500' }}>Requires Documentation</span>
-              </label>
-            </div>
-          </div>
-
-          <div className="ba-modal-footer">
-            <button type="button" onClick={onClose} className="btn btn-secondary" disabled={submitting}>
-              Cancel
-            </button>
-            <button type="submit" className="btn btn-primary" disabled={submitting}>
-              {submitting ? (
-                <>
-                  <div className="spinner spinner-sm"></div>
-                  <span>Creating...</span>
-                </>
-              ) : (
-                <>
-                  <Plus className="w-4 h-4" />
-                  <span>Create Leave Type</span>
-                </>
-              )}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-// Edit Leave Type Modal Component
-function EditLeaveTypeModal({ leaveType, onClose, onSuccess }) {
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
-  const [formData, setFormData] = useState({
-    name: leaveType.name,
-    description: leaveType.description || '',
-    color: leaveType.color,
-    requires_documentation: leaveType.requires_documentation,
-    max_days_per_request: leaveType.max_days_per_request || '',
-    allow_half_day: leaveType.allow_half_day,
-    allow_carry_forward: leaveType.allow_carry_forward,
-    is_active: leaveType.is_active
-  });
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-
-    try {
-      setSubmitting(true);
-      const token = localStorage.getItem('token');
-      const payload = {
-        ...formData,
-        max_days_per_request: formData.max_days_per_request ? parseInt(formData.max_days_per_request) : null
-      };
-      await axios.put(
-        `${import.meta.env.VITE_API_URL}/super-admin/leave/types/${leaveType.id}`,
-        payload,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      onSuccess();
-    } catch (error) {
-      console.error('Failed to update:', error);
-      setError(error.response?.data?.detail || 'Failed to update leave type');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const predefinedColors = [
-    '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'
-  ];
-
-  return (
-    <div className="ba-modal-overlay" onClick={onClose}>
-      <div className="ba-modal-container" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
-        <div className="ba-modal-header">
-          <div className="ba-modal-header-content">
-            <Edit className="w-6 h-6" />
-            <h2 className="ba-modal-title">Edit Leave Type</h2>
-          </div>
-          <button onClick={onClose} className="ba-modal-close-btn">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit}>
-          <div className="ba-modal-body">
-            {error && (
-              <div className="ba-alert ba-alert-error">
-                <AlertCircle className="w-5 h-5" />
-                <span>{error}</span>
-              </div>
-            )}
-
-            <div className="ba-form-group">
-              <label className="ba-form-label">
-                Leave Type Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="ba-form-input"
-                required
-              />
-            </div>
-
-            <div className="ba-form-group">
-              <label className="ba-form-label">Code</label>
-              <input
-                type="text"
-                value={leaveType.code}
-                className="ba-form-input"
-                disabled
-                style={{ backgroundColor: '#f3f4f6', cursor: 'not-allowed' }}
-              />
-              <p className="ba-form-hint">Code cannot be changed after creation</p>
-            </div>
-
-            <div className="ba-form-group">
-              <label className="ba-form-label">Description</label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="ba-form-textarea"
-                rows="3"
-              />
-            </div>
-
-            <div className="ba-form-group">
-              <label className="ba-form-label">Color</label>
-              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                {predefinedColors.map(color => (
-                  <button
-                    key={color}
-                    type="button"
-                    onClick={() => setFormData({ ...formData, color })}
-                    style={{
-                      width: '40px',
-                      height: '40px',
-                      borderRadius: '8px',
-                      backgroundColor: color,
-                      border: formData.color === color ? '3px solid #000' : '2px solid #e5e7eb',
-                      cursor: 'pointer'
-                    }}
-                  />
-                ))}
-                <input
-                  type="color"
-                  value={formData.color}
-                  onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '8px',
-                    border: '2px solid #e5e7eb',
-                    cursor: 'pointer'
-                  }}
-                />
-              </div>
-            </div>
-
-            <div className="ba-form-group">
-              <label className="ba-form-label">Max Days Per Request (Optional)</label>
-              <input
-                type="number"
-                value={formData.max_days_per_request}
-                onChange={(e) => setFormData({ ...formData, max_days_per_request: e.target.value })}
-                className="ba-form-input"
-                placeholder="Leave empty for no limit"
-                min="1"
-              />
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1rem' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={formData.is_active}
-                  onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                  style={{ width: '18px', height: '18px' }}
-                />
-                <span style={{ fontSize: '0.95rem', fontWeight: '500' }}>Active</span>
-              </label>
-
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={formData.allow_half_day}
-                  onChange={(e) => setFormData({ ...formData, allow_half_day: e.target.checked })}
-                  style={{ width: '18px', height: '18px' }}
-                />
-                <span style={{ fontSize: '0.95rem', fontWeight: '500' }}>Allow Half-Day Leave</span>
-              </label>
-
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={formData.allow_carry_forward}
-                  onChange={(e) => setFormData({ ...formData, allow_carry_forward: e.target.checked })}
-                  style={{ width: '18px', height: '18px' }}
-                />
-                <span style={{ fontSize: '0.95rem', fontWeight: '500' }}>Allow Carry Forward</span>
-              </label>
-
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={formData.requires_documentation}
-                  onChange={(e) => setFormData({ ...formData, requires_documentation: e.target.checked })}
-                  style={{ width: '18px', height: '18px' }}
-                />
-                <span style={{ fontSize: '0.95rem', fontWeight: '500' }}>Requires Documentation</span>
-              </label>
-            </div>
-          </div>
-
-          <div className="ba-modal-footer">
-            <button type="button" onClick={onClose} className="btn btn-secondary" disabled={submitting}>
-              Cancel
-            </button>
-            <button type="submit" className="btn btn-primary" disabled={submitting}>
-              {submitting ? (
-                <>
-                  <div className="spinner spinner-sm"></div>
-                  <span>Updating...</span>
-                </>
-              ) : (
-                <>
-                  <Edit className="w-4 h-4" />
-                  <span>Update Leave Type</span>
-                </>
-              )}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
   );
 }

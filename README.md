@@ -12,20 +12,20 @@ payroll
 │  │  │     ├─ ba_projects.py
 │  │  │     ├─ clients.py
 │  │  │     ├─ employee.py
-│  │  │     ├─ employee_leave.py
 │  │  │     ├─ hr.py
-│  │  │     ├─ hr_leave.py
+│  │  │     ├─ leave_admin.py
+│  │  │     ├─ leave_employee.py
+│  │  │     ├─ leave_hr.py
+│  │  │     ├─ leave_team_lead.py
 │  │  │     ├─ meetings.py
 │  │  │     ├─ messages.py
 │  │  │     ├─ notes.py
 │  │  │     ├─ payments.py
 │  │  │     ├─ projects.py
 │  │  │     ├─ super_admin.py
-│  │  │     ├─ super_admin_leave.py
 │  │  │     ├─ tasks.py
 │  │  │     ├─ teams.py
 │  │  │     ├─ team_lead.py
-│  │  │     ├─ team_lead_leave.py
 │  │  │     └─ __init__.py
 │  │  ├─ core
 │  │  │  ├─ config.py
@@ -37,12 +37,16 @@ payroll
 │  │  │  ├─ attendance.py
 │  │  │  ├─ audit_log.py
 │  │  │  ├─ client.py
-│  │  │  ├─ leave.py
+│  │  │  ├─ leave_balance.py
+│  │  │  ├─ leave_policy.py
+│  │  │  ├─ leave_request.py
+│  │  │  ├─ leave_type.py
 │  │  │  ├─ meeting.py
 │  │  │  ├─ message.py
 │  │  │  ├─ note.py
 │  │  │  ├─ override_request.py
 │  │  │  ├─ project.py
+│  │  │  ├─ public_holiday.py
 │  │  │  ├─ task.py
 │  │  │  ├─ team.py
 │  │  │  └─ user.py
@@ -51,13 +55,17 @@ payroll
 │  │  │  ├─ attendance.py
 │  │  │  ├─ audit_log.py
 │  │  │  ├─ client.py
-│  │  │  ├─ leave.py
+│  │  │  ├─ leave_balance.py
+│  │  │  ├─ leave_policy.py
+│  │  │  ├─ leave_request.py
+│  │  │  ├─ leave_type.py
 │  │  │  ├─ meeting.py
 │  │  │  ├─ message.py
 │  │  │  ├─ note.py
 │  │  │  ├─ override_request.py
 │  │  │  ├─ payment.py
 │  │  │  ├─ project.py
+│  │  │  ├─ public_holiday.py
 │  │  │  ├─ task.py
 │  │  │  ├─ team.py
 │  │  │  └─ user.py
@@ -67,6 +75,7 @@ payroll
 │  │  │  ├─ auth_service.py
 │  │  │  ├─ employee_service.py
 │  │  │  ├─ hr_service.py
+│  │  │  ├─ leave_service.py
 │  │  │  └─ smart_classifier.py
 │  │  └─ utils
 │  │     └─ helpers.py
@@ -155,9 +164,13 @@ payroll
 │  │  │  │  ├─ EmployeeList.jsx
 │  │  │  │  ├─ EmployeeStatsModal.jsx
 │  │  │  │  ├─ HRMessageBoard.jsx
+│  │  │  │  ├─ ReviewLeaveModal.jsx
 │  │  │  │  ├─ SendMessageModal.jsx
 │  │  │  │  └─ SettingsPanel.jsx
 │  │  │  ├─ ProtectedRoute.jsx
+│  │  │  ├─ sa
+│  │  │  │  ├─ AddHolidayModal.jsx
+│  │  │  │  └─ AddLeaveTypeModal.jsx
 │  │  │  └─ tl
 │  │  │     └─ SendMessageModal.jsx
 │  │  ├─ context
@@ -178,6 +191,7 @@ payroll
 │  │  │  ├─ BAProjects.jsx
 │  │  │  ├─ EmployeeDashboard.jsx
 │  │  │  ├─ EmployeeLeaveBalance.jsx
+│  │  │  ├─ EmployeeLeaveCalendar.jsx
 │  │  │  ├─ EmployeeLeaveHistory.jsx
 │  │  │  ├─ EmployeeMessages.jsx
 │  │  │  ├─ EmployeeNotes.jsx
@@ -192,7 +206,8 @@ payroll
 │  │  │  ├─ HREmployees.jsx
 │  │  │  ├─ HRLeaveAllocation.jsx
 │  │  │  ├─ HRLeaveAllRequests.jsx
-│  │  │  ├─ HRLeaveDashboard.jsx
+│  │  │  ├─ HRLeaveApprovals.jsx
+│  │  │  ├─ HRLeaveManagement.jsx
 │  │  │  ├─ HRLeavePendingApprovals.jsx
 │  │  │  ├─ HRMessages.jsx
 │  │  │  ├─ HROverrideRequests.jsx
@@ -200,22 +215,23 @@ payroll
 │  │  │  ├─ Login.jsx
 │  │  │  ├─ SuperAdminAuditLogs.jsx
 │  │  │  ├─ SuperAdminDashboard.jsx
-│  │  │  ├─ SuperAdminLeaveHolidays.jsx
-│  │  │  ├─ SuperAdminLeaveManagement.jsx
 │  │  │  ├─ SuperAdminLeavePolicies.jsx
 │  │  │  ├─ SuperAdminLeaveSettings.jsx
 │  │  │  ├─ SuperAdminLeaveTypes.jsx
 │  │  │  ├─ SuperAdminOverrideRequests.jsx
+│  │  │  ├─ SuperAdminPublicHolidays.jsx
 │  │  │  ├─ SuperAdminSystemStats.jsx
 │  │  │  ├─ SuperAdminTeams.jsx
 │  │  │  ├─ SuperAdminUsers.jsx
 │  │  │  ├─ TLDashboard.jsx
+│  │  │  ├─ TLLeaveRequests.jsx
 │  │  │  ├─ TLMessages.jsx
-│  │  │  ├─ TLPendingApprovals.jsx
+│  │  │  ├─ TLMyLeave.jsx
 │  │  │  ├─ TLProjects.jsx
 │  │  │  ├─ TLRequirements.jsx
 │  │  │  ├─ TLTasks.jsx
-│  │  │  └─ TLTeam.jsx
+│  │  │  ├─ TLTeam.jsx
+│  │  │  └─ TLTeamCalendar.jsx
 │  │  ├─ services
 │  │  │  ├─ api.js
 │  │  │  └─ websocket.js

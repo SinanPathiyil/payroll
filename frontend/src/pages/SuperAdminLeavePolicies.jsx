@@ -1,71 +1,166 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Settings, Save, Plus, Trash2, AlertCircle, Info } from 'lucide-react';
 import Layout from '../components/common/Layout';
-import {
-  ArrowLeft,
-  Plus,
-  Edit,
-  Trash2,
-  AlertCircle,
-  CheckCircle,
-  Shield,
-  X
-} from 'lucide-react';
 import axios from 'axios';
-import '../styles/ba-dashboard.css';
-import '../styles/ba-modal.css';
 
-export default function SuperAdminLeavePolicies() {
-  const navigate = useNavigate();
+export default function AdminLeavePolicies() {
   const [loading, setLoading] = useState(true);
-  const [policies, setPolicies] = useState([]);
   const [leaveTypes, setLeaveTypes] = useState([]);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [selectedPolicy, setSelectedPolicy] = useState(null);
-  const [message, setMessage] = useState({ type: '', text: '' });
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [policy, setPolicy] = useState({
+    year: new Date().getFullYear(),
+    probation_enabled: true,
+    probation_period_days: 90,
+    carry_forward_enabled: true,
+    carry_forward_expiry_month: 3,
+    carry_forward_expiry_day: 31,
+    advance_notice_days: 0,
+    max_consecutive_days: 30,
+    weekend_days: ['saturday', 'sunday'],
+    exclude_weekends: true,
+    exclude_public_holidays: true,
+    role_allocations: []
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  const roles = ['employee', 'team_lead', 'hr'];
 
   useEffect(() => {
-    loadData();
-  }, []);
+    loadLeaveTypes();
+    loadPolicy();
+  }, [selectedYear]);
 
-  const loadData = async () => {
+  const loadLeaveTypes = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/admin/leave/leave-types`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setLeaveTypes(response.data.leave_types || []);
+    } catch (error) {
+      console.error('Failed to load leave types:', error);
+    }
+  };
+
+  const loadPolicy = async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/admin/leave/policies/${selectedYear}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       
-      const [policiesRes, typesRes] = await Promise.all([
-        axios.get(`${import.meta.env.VITE_API_URL}/super-admin/leave/policies`, { headers }),
-        axios.get(`${import.meta.env.VITE_API_URL}/super-admin/leave/types`, { headers })
-      ]);
-
-      setPolicies(policiesRes.data || []);
-      setLeaveTypes(typesRes.data || []);
+      if (response.data) {
+        setPolicy(response.data);
+      } else {
+        // Initialize empty policy for new year
+        initializeEmptyPolicy();
+      }
     } catch (error) {
-      console.error('Failed to load data:', error);
-      setMessage({ type: 'error', text: 'Failed to load policies' });
+      console.error('Failed to load policy:', error);
+      // If 404, initialize empty policy
+      if (error.response?.status === 404) {
+        initializeEmptyPolicy();
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async () => {
+  const initializeEmptyPolicy = () => {
+    setPolicy({
+      year: selectedYear,
+      probation_enabled: true,
+      probation_period_days: 90,
+      carry_forward_enabled: true,
+      carry_forward_expiry_month: 3,
+      carry_forward_expiry_day: 31,
+      advance_notice_days: 0,
+      max_consecutive_days: 30,
+      weekend_days: ['saturday', 'sunday'],
+      exclude_weekends: true,
+      exclude_public_holidays: true,
+      role_allocations: roles.map(role => ({
+        role: role,
+        allocations: leaveTypes.map(lt => ({
+          leave_type_code: lt.code,
+          days: 0
+        }))
+      }))
+    });
+  };
+
+  const handleWeekendToggle = (day) => {
+    const dayLower = day.toLowerCase();
+    const newWeekendDays = policy.weekend_days.includes(dayLower)
+      ? policy.weekend_days.filter(d => d !== dayLower)
+      : [...policy.weekend_days, dayLower];
+    
+    setPolicy({ ...policy, weekend_days: newWeekendDays });
+  };
+
+  const updateRoleAllocation = (role, leaveTypeCode, days) => {
+    const newRoleAllocations = [...policy.role_allocations];
+    const roleIndex = newRoleAllocations.findIndex(r => r.role === role);
+    
+    if (roleIndex === -1) {
+      // Add new role
+      newRoleAllocations.push({
+        role: role,
+        allocations: [{ leave_type_code: leaveTypeCode, days: parseInt(days) || 0 }]
+      });
+    } else {
+      const allocIndex = newRoleAllocations[roleIndex].allocations.findIndex(
+        a => a.leave_type_code === leaveTypeCode
+      );
+      
+      if (allocIndex === -1) {
+        newRoleAllocations[roleIndex].allocations.push({
+          leave_type_code: leaveTypeCode,
+          days: parseInt(days) || 0
+        });
+      } else {
+        newRoleAllocations[roleIndex].allocations[allocIndex].days = parseInt(days) || 0;
+      }
+    }
+    
+    setPolicy({ ...policy, role_allocations: newRoleAllocations });
+  };
+
+  const getRoleAllocation = (role, leaveTypeCode) => {
+    const roleAlloc = policy.role_allocations.find(r => r.role === role);
+    if (!roleAlloc) return 0;
+    
+    const leaveAlloc = roleAlloc.allocations.find(a => a.leave_type_code === leaveTypeCode);
+    return leaveAlloc ? leaveAlloc.days : 0;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+
     try {
+      setSubmitting(true);
       const token = localStorage.getItem('token');
-      await axios.delete(
-        `${import.meta.env.VITE_API_URL}/super-admin/leave/policies/${selectedPolicy.id}`,
+      
+      await axios.post(
+        `${import.meta.env.VITE_API_URL}/admin/leave/policies`,
+        { ...policy, year: selectedYear },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setMessage({ type: 'success', text: 'Policy deleted successfully' });
-      setShowDeleteModal(false);
-      setSelectedPolicy(null);
-      loadData();
-      setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+      
+      setSuccess('Leave policy saved successfully!');
+      setTimeout(() => setSuccess(''), 3000);
     } catch (error) {
-      console.error('Failed to delete:', error);
-      setMessage({ type: 'error', text: error.response?.data?.detail || 'Failed to delete policy' });
+      console.error('Failed to save policy:', error);
+      setError(error.response?.data?.detail || 'Failed to save policy');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -74,7 +169,7 @@ export default function SuperAdminLeavePolicies() {
       <Layout>
         <div className="layout-loading">
           <div className="spinner spinner-lg"></div>
-          <p className="layout-loading-text">Loading Policies...</p>
+          <p className="layout-loading-text">Loading Policy...</p>
         </div>
       </Layout>
     );
@@ -85,625 +180,366 @@ export default function SuperAdminLeavePolicies() {
       <div className="ba-dashboard">
         {/* Header */}
         <div className="ba-dashboard-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <button
-              className="btn btn-secondary"
-              onClick={() => navigate('/super-admin/leave')}
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </button>
-            <div>
-              <h1 className="ba-dashboard-title">Leave Policies</h1>
-              <p className="ba-dashboard-subtitle">
-                Define leave allocation rules for different roles
-              </p>
-            </div>
+          <div>
+            <h1 className="ba-dashboard-title">Leave Policy Configuration</h1>
+            <p className="ba-dashboard-subtitle">
+              Configure leave rules and allocations for your organization
+            </p>
           </div>
-          <button
-            className="btn btn-primary"
-            onClick={() => setShowCreateModal(true)}
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Policy</span>
-          </button>
         </div>
 
-        {/* Message */}
-        {message.text && (
-          <div className={`ba-alert ba-alert-${message.type === 'success' ? 'warning' : 'error'}`}>
-            {message.type === 'success' ? <CheckCircle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
-            <span>{message.text}</span>
-          </div>
-        )}
-
-        {/* Policies Table */}
+        {/* Year Selector */}
         <div className="ba-card">
-          <div className="ba-card-body" style={{ padding: 0 }}>
-            {policies.length === 0 ? (
-              <div className="ba-empty-state">
-                <Shield className="ba-empty-icon" />
-                <p>No leave policies configured yet</p>
-                <button
-                  className="btn btn-primary"
-                  onClick={() => setShowCreateModal(true)}
-                  style={{ marginTop: '1rem' }}
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Create First Policy</span>
-                </button>
+          <div className="ba-card-body">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <label style={{ fontSize: '0.875rem', fontWeight: '500' }}>
+                Configure Policy for Year:
+              </label>
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                className="ba-form-input"
+                style={{ maxWidth: '200px' }}
+              >
+                {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 1 + i).map(year => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          {/* Alerts */}
+          {error && (
+            <div className="ba-alert ba-alert-error">
+              <AlertCircle className="w-5 h-5" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {success && (
+            <div style={{
+              padding: '1rem',
+              backgroundColor: '#d1fae5',
+              border: '2px solid #6ee7b7',
+              borderRadius: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              marginBottom: '1.5rem'
+            }}>
+              <Save className="w-5 h-5" style={{ color: '#065f46' }} />
+              <span style={{ color: '#065f46', fontWeight: '500' }}>{success}</span>
+            </div>
+          )}
+
+          {/* Probation Settings */}
+          <div className="ba-card">
+            <div className="ba-card-header">
+              <div className="ba-card-title">
+                <Settings className="w-5 h-5" />
+                <span>Probation Period Settings</span>
               </div>
-            ) : (
+            </div>
+            <div className="ba-card-body">
+              <div className="ba-form-group">
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={policy.probation_enabled}
+                    onChange={(e) => setPolicy({ ...policy, probation_enabled: e.target.checked })}
+                    style={{ width: '18px', height: '18px' }}
+                  />
+                  <span style={{ fontSize: '0.95rem', fontWeight: '500' }}>
+                    Enable Probation Period Restrictions
+                  </span>
+                </label>
+                <p style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.5rem', marginLeft: '1.625rem' }}>
+                  Restrict certain leave types during employee probation period
+                </p>
+              </div>
+
+              {policy.probation_enabled && (
+                <div className="ba-form-group">
+                  <label className="ba-form-label">Probation Period (Days)</label>
+                  <input
+                    type="number"
+                    value={policy.probation_period_days}
+                    onChange={(e) => setPolicy({ ...policy, probation_period_days: parseInt(e.target.value) || 0 })}
+                    className="ba-form-input"
+                    style={{ maxWidth: '200px' }}
+                    min="0"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Carry Forward Settings */}
+          <div className="ba-card">
+            <div className="ba-card-header">
+              <div className="ba-card-title">
+                <Settings className="w-5 h-5" />
+                <span>Carry Forward Settings</span>
+              </div>
+            </div>
+            <div className="ba-card-body">
+              <div className="ba-form-group">
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={policy.carry_forward_enabled}
+                    onChange={(e) => setPolicy({ ...policy, carry_forward_enabled: e.target.checked })}
+                    style={{ width: '18px', height: '18px' }}
+                  />
+                  <span style={{ fontSize: '0.95rem', fontWeight: '500' }}>
+                    Allow Unused Leaves to Carry Forward
+                  </span>
+                </label>
+              </div>
+
+              {policy.carry_forward_enabled && (
+                <div className="ba-form-grid">
+                  <div className="ba-form-group">
+                    <label className="ba-form-label">Expiry Month</label>
+                    <select
+                      value={policy.carry_forward_expiry_month}
+                      onChange={(e) => setPolicy({ ...policy, carry_forward_expiry_month: parseInt(e.target.value) })}
+                      className="ba-form-input"
+                    >
+                      {['January', 'February', 'March', 'April', 'May', 'June', 
+                        'July', 'August', 'September', 'October', 'November', 'December'].map((month, idx) => (
+                        <option key={idx} value={idx + 1}>{month}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="ba-form-group">
+                    <label className="ba-form-label">Expiry Day</label>
+                    <input
+                      type="number"
+                      value={policy.carry_forward_expiry_day}
+                      onChange={(e) => setPolicy({ ...policy, carry_forward_expiry_day: parseInt(e.target.value) || 1 })}
+                      className="ba-form-input"
+                      min="1"
+                      max="31"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Request Rules */}
+          <div className="ba-card">
+            <div className="ba-card-header">
+              <div className="ba-card-title">
+                <Settings className="w-5 h-5" />
+                <span>Leave Request Rules</span>
+              </div>
+            </div>
+            <div className="ba-card-body">
+              <div className="ba-form-grid">
+                <div className="ba-form-group">
+                  <label className="ba-form-label">Advance Notice (Days)</label>
+                  <input
+                    type="number"
+                    value={policy.advance_notice_days}
+                    onChange={(e) => setPolicy({ ...policy, advance_notice_days: parseInt(e.target.value) || 0 })}
+                    className="ba-form-input"
+                    min="0"
+                  />
+                  <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                    Minimum days in advance required to apply (0 = no restriction)
+                  </p>
+                </div>
+                <div className="ba-form-group">
+                  <label className="ba-form-label">Max Consecutive Days</label>
+                  <input
+                    type="number"
+                    value={policy.max_consecutive_days}
+                    onChange={(e) => setPolicy({ ...policy, max_consecutive_days: parseInt(e.target.value) || 1 })}
+                    className="ba-form-input"
+                    min="1"
+                  />
+                  <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                    Maximum continuous leave days allowed
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Weekend & Holiday Settings */}
+          <div className="ba-card">
+            <div className="ba-card-header">
+              <div className="ba-card-title">
+                <Settings className="w-5 h-5" />
+                <span>Weekend & Holiday Settings</span>
+              </div>
+            </div>
+            <div className="ba-card-body">
+              <div className="ba-form-group">
+                <label className="ba-form-label">Weekend Days</label>
+                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                  {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => (
+                    <label
+                      key={day}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        cursor: 'pointer',
+                        padding: '0.5rem 1rem',
+                        border: '2px solid #e5e7eb',
+                        borderRadius: '8px',
+                        backgroundColor: policy.weekend_days.includes(day.toLowerCase()) ? '#dbeafe' : 'white'
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={policy.weekend_days.includes(day.toLowerCase())}
+                        onChange={() => handleWeekendToggle(day)}
+                        style={{ width: '16px', height: '16px' }}
+                      />
+                      <span style={{ fontSize: '0.875rem', fontWeight: '500' }}>{day}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="ba-form-group">
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={policy.exclude_weekends}
+                    onChange={(e) => setPolicy({ ...policy, exclude_weekends: e.target.checked })}
+                    style={{ width: '18px', height: '18px' }}
+                  />
+                  <span style={{ fontSize: '0.95rem', fontWeight: '500' }}>
+                    Exclude Weekends from Leave Count
+                  </span>
+                </label>
+              </div>
+
+              <div className="ba-form-group">
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={policy.exclude_public_holidays}
+                    onChange={(e) => setPolicy({ ...policy, exclude_public_holidays: e.target.checked })}
+                    style={{ width: '18px', height: '18px' }}
+                  />
+                  <span style={{ fontSize: '0.95rem', fontWeight: '500' }}>
+                    Exclude Public Holidays from Leave Count
+                  </span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Role-Based Allocations */}
+          <div className="ba-card">
+            <div className="ba-card-header">
+              <div className="ba-card-title">
+                <Settings className="w-5 h-5" />
+                <span>Role-Based Leave Allocations</span>
+              </div>
+            </div>
+            <div className="ba-card-body">
+              <div style={{
+                padding: '1rem',
+                backgroundColor: '#eff6ff',
+                border: '1px solid #bfdbfe',
+                borderRadius: '8px',
+                marginBottom: '1.5rem',
+                display: 'flex',
+                gap: '0.75rem'
+              }}>
+                <Info className="w-5 h-5" style={{ color: '#1e40af', flexShrink: 0 }} />
+                <p style={{ fontSize: '0.875rem', color: '#1e40af', margin: 0 }}>
+                  Configure how many days of each leave type are allocated to different roles annually.
+                </p>
+              </div>
+
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
-                    <tr style={{ borderBottom: '2px solid #e5e7eb', backgroundColor: '#f9fafb' }}>
-                      <th style={{ padding: '1rem', textAlign: 'left', fontWeight: '700' }}>Leave Type</th>
-                      <th style={{ padding: '1rem', textAlign: 'left', fontWeight: '700' }}>Role</th>
-                      <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '700' }}>Allocated Days</th>
-                      <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '700' }}>Carry Forward</th>
-                      <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '700' }}>Pro-rated</th>
-                      <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '700' }}>Accrual</th>
-                      <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '700' }}>Actions</th>
+                    <tr style={{ backgroundColor: '#f9fafb', borderBottom: '2px solid #e5e7eb' }}>
+                      <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: '600' }}>
+                        Leave Type
+                      </th>
+                      {roles.map(role => (
+                        <th key={role} style={{ padding: '1rem', textAlign: 'center', fontSize: '0.875rem', fontWeight: '600' }}>
+                          {role.replace('_', ' ').toUpperCase()}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {policies.map((policy) => (
+                    {leaveTypes.map((leaveType, idx) => (
                       <tr
-                        key={policy.id}
+                        key={leaveType.id}
                         style={{
-                          borderBottom: '1px solid #e5e7eb',
-                          transition: 'background-color 0.2s'
+                          borderBottom: idx < leaveTypes.length - 1 ? '1px solid #e5e7eb' : 'none'
                         }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                       >
                         <td style={{ padding: '1rem' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <div
                               style={{
-                                width: '12px',
-                                height: '12px',
+                                width: '10px',
+                                height: '10px',
                                 borderRadius: '50%',
-                                backgroundColor: leaveTypes.find(t => t.code === policy.leave_type_code)?.color || '#3b82f6'
+                                backgroundColor: leaveType.color
                               }}
                             />
-                            <span style={{ fontWeight: '600' }}>{policy.leave_type_name}</span>
+                            <span style={{ fontWeight: '500' }}>{leaveType.name}</span>
                           </div>
                         </td>
-                        <td style={{ padding: '1rem' }}>
-                          <span className="ba-stat-badge secondary">
-                            {policy.role || 'All Roles'}
-                          </span>
-                        </td>
-                        <td style={{ padding: '1rem', textAlign: 'center', fontWeight: '700', fontSize: '1.1rem' }}>
-                          {policy.allocated_days}
-                        </td>
-                        <td style={{ padding: '1rem', textAlign: 'center' }}>
-                          {policy.can_carry_forward ? (
-                            <span className="ba-stat-badge success">
-                              Yes {policy.max_carry_forward ? `(${policy.max_carry_forward})` : ''}
-                            </span>
-                          ) : (
-                            <span className="ba-stat-badge secondary">No</span>
-                          )}
-                        </td>
-                        <td style={{ padding: '1rem', textAlign: 'center' }}>
-                          {policy.pro_rated ? (
-                            <CheckCircle className="w-5 h-5" style={{ color: '#10b981', margin: '0 auto' }} />
-                          ) : (
-                            <X className="w-5 h-5" style={{ color: '#6b7280', margin: '0 auto' }} />
-                          )}
-                        </td>
-                        <td style={{ padding: '1rem', textAlign: 'center' }}>
-                          <span className="ba-stat-badge info">
-                            {policy.accrual_basis === 'monthly' ? 'Monthly' : 'Yearly'}
-                          </span>
-                        </td>
-                        <td style={{ padding: '1rem', textAlign: 'center' }}>
-                          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
-                            <button
-                              className="btn btn-secondary btn-sm"
-                              onClick={() => {
-                                setSelectedPolicy(policy);
-                                setShowEditModal(true);
-                              }}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </button>
-                            <button
-                              className="btn btn-danger btn-sm"
-                              onClick={() => {
-                                setSelectedPolicy(policy);
-                                setShowDeleteModal(true);
-                              }}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
+                        {roles.map(role => (
+                          <td key={role} style={{ padding: '1rem', textAlign: 'center' }}>
+                            <input
+                              type="number"
+                              value={getRoleAllocation(role, leaveType.code)}
+                              onChange={(e) => updateRoleAllocation(role, leaveType.code, e.target.value)}
+                              className="ba-form-input"
+                              style={{ maxWidth: '100px', textAlign: 'center' }}
+                              min="0"
+                            />
+                          </td>
+                        ))}
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-            )}
-          </div>
-        </div>
-
-        {/* Create Modal */}
-        {showCreateModal && (
-          <CreatePolicyModal
-            leaveTypes={leaveTypes}
-            onClose={() => setShowCreateModal(false)}
-            onSuccess={() => {
-              setShowCreateModal(false);
-              loadData();
-              setMessage({ type: 'success', text: 'Policy created successfully' });
-              setTimeout(() => setMessage({ type: '', text: '' }), 3000);
-            }}
-          />
-        )}
-
-        {/* Edit Modal */}
-        {showEditModal && selectedPolicy && (
-          <EditPolicyModal
-            policy={selectedPolicy}
-            leaveTypes={leaveTypes}
-            onClose={() => {
-              setShowEditModal(false);
-              setSelectedPolicy(null);
-            }}
-            onSuccess={() => {
-              setShowEditModal(false);
-              setSelectedPolicy(null);
-              loadData();
-              setMessage({ type: 'success', text: 'Policy updated successfully' });
-              setTimeout(() => setMessage({ type: '', text: '' }), 3000);
-            }}
-          />
-        )}
-
-        {/* Delete Modal */}
-        {showDeleteModal && selectedPolicy && (
-          <div className="ba-modal-overlay" onClick={() => setShowDeleteModal(false)}>
-            <div className="ba-modal-container ba-modal-small" onClick={(e) => e.stopPropagation()}>
-              <div className="ba-modal-header ba-modal-header-danger">
-                <div className="ba-modal-header-content">
-                  <AlertCircle className="w-6 h-6" />
-                  <h2 className="ba-modal-title">Delete Policy</h2>
-                </div>
-                <button onClick={() => setShowDeleteModal(false)} className="ba-modal-close-btn">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <div className="ba-modal-body">
-                <p className="ba-delete-message">
-                  Are you sure you want to delete the policy for <strong>{selectedPolicy.leave_type_name}</strong>?
-                </p>
-                <div className="ba-alert ba-alert-warning">
-                  <AlertCircle className="w-5 h-5" />
-                  <span>This will affect leave allocations for employees.</span>
-                </div>
-              </div>
-              <div className="ba-modal-footer">
-                <button onClick={() => setShowDeleteModal(false)} className="btn btn-secondary">
-                  Cancel
-                </button>
-                <button onClick={handleDelete} className="btn btn-danger">
-                  <Trash2 className="w-4 h-4" />
-                  <span>Delete</span>
-                </button>
-              </div>
             </div>
           </div>
-        )}
+
+          {/* Save Button */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={submitting}
+              style={{ minWidth: '200px' }}
+            >
+              {submitting ? (
+                <>
+                  <div className="spinner spinner-sm"></div>
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  <span>Save Policy Configuration</span>
+                </>
+              )}
+            </button>
+          </div>
+        </form>
       </div>
     </Layout>
-  );
-}
-
-// Create Policy Modal
-function CreatePolicyModal({ leaveTypes, onClose, onSuccess }) {
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
-  const [formData, setFormData] = useState({
-    leave_type_code: '',
-    role: '',
-    allocated_days: '',
-    can_carry_forward: false,
-    max_carry_forward: '',
-    pro_rated: true,
-    applies_to_all: true,
-    min_service_months: 0,
-    accrual_basis: 'yearly'
-  });
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-
-    if (!formData.leave_type_code || !formData.allocated_days) {
-      setError('Leave type and allocated days are required');
-      return;
-    }
-
-    try {
-      setSubmitting(true);
-      const token = localStorage.getItem('token');
-      const payload = {
-        ...formData,
-        allocated_days: parseFloat(formData.allocated_days),
-        max_carry_forward: formData.max_carry_forward ? parseFloat(formData.max_carry_forward) : null,
-        role: formData.applies_to_all ? null : formData.role || null
-      };
-      await axios.post(
-        `${import.meta.env.VITE_API_URL}/super-admin/leave/policies`,
-        payload,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      onSuccess();
-    } catch (error) {
-      console.error('Failed to create:', error);
-      setError(error.response?.data?.detail || 'Failed to create policy');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <div className="ba-modal-overlay" onClick={onClose}>
-      <div className="ba-modal-container" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '700px' }}>
-        <div className="ba-modal-header">
-          <div className="ba-modal-header-content">
-            <Plus className="w-6 h-6" />
-            <h2 className="ba-modal-title">Create Leave Policy</h2>
-          </div>
-          <button onClick={onClose} className="ba-modal-close-btn">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit}>
-          <div className="ba-modal-body">
-            {error && (
-              <div className="ba-alert ba-alert-error">
-                <AlertCircle className="w-5 h-5" />
-                <span>{error}</span>
-              </div>
-            )}
-
-            <div className="ba-form-grid">
-              <div className="ba-form-group">
-                <label className="ba-form-label">
-                  Leave Type <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={formData.leave_type_code}
-                  onChange={(e) => setFormData({ ...formData, leave_type_code: e.target.value })}
-                  className="ba-form-input"
-                  required
-                >
-                  <option value="">-- Select Leave Type --</option>
-                  {leaveTypes.map(type => (
-                    <option key={type.code} value={type.code}>{type.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="ba-form-group">
-                <label className="ba-form-label">
-                  Allocated Days <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  step="0.5"
-                  value={formData.allocated_days}
-                  onChange={(e) => setFormData({ ...formData, allocated_days: e.target.value })}
-                  className="ba-form-input"
-                  placeholder="e.g., 10"
-                  min="0"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="ba-form-group">
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={formData.applies_to_all}
-                  onChange={(e) => setFormData({ ...formData, applies_to_all: e.target.checked, role: '' })}
-                  style={{ width: '18px', height: '18px' }}
-                />
-                <span style={{ fontSize: '0.95rem', fontWeight: '500' }}>Apply to All Roles</span>
-              </label>
-            </div>
-
-            {!formData.applies_to_all && (
-              <div className="ba-form-group">
-                <label className="ba-form-label">Specific Role</label>
-                <select
-                  value={formData.role}
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                  className="ba-form-input"
-                >
-                  <option value="">-- Select Role --</option>
-                  <option value="employee">Employee</option>
-                  <option value="team_lead">Team Lead</option>
-                  <option value="hr">HR</option>
-                  <option value="business_analyst">Business Analyst</option>
-                </select>
-              </div>
-            )}
-
-            <div className="ba-form-grid">
-              <div className="ba-form-group">
-                <label className="ba-form-label">Accrual Basis</label>
-                <select
-                  value={formData.accrual_basis}
-                  onChange={(e) => setFormData({ ...formData, accrual_basis: e.target.value })}
-                  className="ba-form-input"
-                >
-                  <option value="yearly">Yearly</option>
-                  <option value="monthly">Monthly</option>
-                </select>
-              </div>
-
-              <div className="ba-form-group">
-                <label className="ba-form-label">Min Service (Months)</label>
-                <input
-                  type="number"
-                  value={formData.min_service_months}
-                  onChange={(e) => setFormData({ ...formData, min_service_months: parseInt(e.target.value) || 0 })}
-                  className="ba-form-input"
-                  min="0"
-                />
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1rem' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={formData.pro_rated}
-                  onChange={(e) => setFormData({ ...formData, pro_rated: e.target.checked })}
-                  style={{ width: '18px', height: '18px' }}
-                />
-                <span style={{ fontSize: '0.95rem', fontWeight: '500' }}>Pro-rate based on joining date</span>
-              </label>
-
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={formData.can_carry_forward}
-                  onChange={(e) => setFormData({ ...formData, can_carry_forward: e.target.checked })}
-                  style={{ width: '18px', height: '18px' }}
-                />
-                <span style={{ fontSize: '0.95rem', fontWeight: '500' }}>Allow Carry Forward</span>
-              </label>
-            </div>
-
-            {formData.can_carry_forward && (
-              <div className="ba-form-group" style={{ marginTop: '1rem' }}>
-                <label className="ba-form-label">Max Carry Forward Days (Optional)</label>
-                <input
-                  type="number"
-                  step="0.5"
-                  value={formData.max_carry_forward}
-                  onChange={(e) => setFormData({ ...formData, max_carry_forward: e.target.value })}
-                  className="ba-form-input"
-                  placeholder="Leave empty for no limit"
-                  min="0"
-                />
-              </div>
-            )}
-          </div>
-
-          <div className="ba-modal-footer">
-            <button type="button" onClick={onClose} className="btn btn-secondary" disabled={submitting}>
-              Cancel
-            </button>
-            <button type="submit" className="btn btn-primary" disabled={submitting}>
-              {submitting ? (
-                <>
-                  <div className="spinner spinner-sm"></div>
-                  <span>Creating...</span>
-                </>
-              ) : (
-                <>
-                  <Plus className="w-4 h-4" />
-                  <span>Create Policy</span>
-                </>
-              )}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-// Edit Policy Modal
-function EditPolicyModal({ policy, leaveTypes, onClose, onSuccess }) {
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
-  const [formData, setFormData] = useState({
-    allocated_days: policy.allocated_days,
-    can_carry_forward: policy.can_carry_forward,
-    max_carry_forward: policy.max_carry_forward || '',
-    pro_rated: policy.pro_rated,
-    min_service_months: policy.min_service_months || 0,
-    accrual_basis: policy.accrual_basis || 'yearly'
-  });
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-
-    try {
-      setSubmitting(true);
-      const token = localStorage.getItem('token');
-      const payload = {
-        ...formData,
-        allocated_days: parseFloat(formData.allocated_days),
-        max_carry_forward: formData.max_carry_forward ? parseFloat(formData.max_carry_forward) : null
-      };
-      await axios.put(
-        `${import.meta.env.VITE_API_URL}/super-admin/leave/policies/${policy.id}`,
-        payload,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      onSuccess();
-    } catch (error) {
-      console.error('Failed to update:', error);
-      setError(error.response?.data?.detail || 'Failed to update policy');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <div className="ba-modal-overlay" onClick={onClose}>
-      <div className="ba-modal-container" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '700px' }}>
-        <div className="ba-modal-header">
-          <div className="ba-modal-header-content">
-            <Edit className="w-6 h-6" />
-            <h2 className="ba-modal-title">Edit Leave Policy</h2>
-          </div>
-          <button onClick={onClose} className="ba-modal-close-btn">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit}>
-          <div className="ba-modal-body">
-            {error && (
-              <div className="ba-alert ba-alert-error">
-                <AlertCircle className="w-5 h-5" />
-                <span>{error}</span>
-              </div>
-            )}
-
-            <div className="ba-form-group">
-              <label className="ba-form-label">Leave Type</label>
-              <input
-                type="text"
-                value={policy.leave_type_name}
-                className="ba-form-input"
-                disabled
-                style={{ backgroundColor: '#f3f4f6', cursor: 'not-allowed' }}
-              />
-            </div>
-
-            <div className="ba-form-group">
-              <label className="ba-form-label">Role</label>
-              <input
-                type="text"
-                value={policy.role || 'All Roles'}
-                className="ba-form-input"
-                disabled
-                style={{ backgroundColor: '#f3f4f6', cursor: 'not-allowed' }}
-              />
-            </div>
-
-            <div className="ba-form-grid">
-              <div className="ba-form-group">
-                <label className="ba-form-label">
-                  Allocated Days <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  step="0.5"
-                  value={formData.allocated_days}
-                  onChange={(e) => setFormData({ ...formData, allocated_days: e.target.value })}
-                  className="ba-form-input"
-                  min="0"
-                  required
-                />
-              </div>
-
-              <div className="ba-form-group">
-                <label className="ba-form-label">Accrual Basis</label>
-                <select
-                  value={formData.accrual_basis}
-                  onChange={(e) => setFormData({ ...formData, accrual_basis: e.target.value })}
-                  className="ba-form-input"
-                >
-                  <option value="yearly">Yearly</option>
-                  <option value="monthly">Monthly</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="ba-form-group">
-              <label className="ba-form-label">Min Service (Months)</label>
-              <input
-                type="number"
-                value={formData.min_service_months}
-                onChange={(e) => setFormData({ ...formData, min_service_months: parseInt(e.target.value) || 0 })}
-                className="ba-form-input"
-                min="0"
-              />
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1rem' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={formData.pro_rated}
-                  onChange={(e) => setFormData({ ...formData, pro_rated: e.target.checked })}
-                  style={{ width: '18px', height: '18px' }}
-                />
-                <span style={{ fontSize: '0.95rem', fontWeight: '500' }}>Pro-rate based on joining date</span>
-              </label>
-
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={formData.can_carry_forward}
-                  onChange={(e) => setFormData({ ...formData, can_carry_forward: e.target.checked })}
-                  style={{ width: '18px', height: '18px' }}
-                />
-                <span style={{ fontSize: '0.95rem', fontWeight: '500' }}>Allow Carry Forward</span>
-              </label>
-            </div>
-
-            {formData.can_carry_forward && (
-              <div className="ba-form-group" style={{ marginTop: '1rem' }}>
-                <label className="ba-form-label">Max Carry Forward Days (Optional)</label>
-                <input
-                  type="number"
-                  step="0.5"
-                  value={formData.max_carry_forward}
-                  onChange={(e) => setFormData({ ...formData, max_carry_forward: e.target.value })}
-                  className="ba-form-input"
-                  placeholder="Leave empty for no limit"
-                  min="0"
-                />
-              </div>
-            )}
-          </div>
-
-          <div className="ba-modal-footer">
-            <button type="button" onClick={onClose} className="btn btn-secondary" disabled={submitting}>
-              Cancel
-            </button>
-            <button type="submit" className="btn btn-primary" disabled={submitting}>
-              {submitting ? (
-                <>
-                  <div className="spinner spinner-sm"></div>
-                  <span>Updating...</span>
-                </>
-              ) : (
-                <>
-                  <Edit className="w-4 h-4" />
-                  <span>Update Policy</span>
-                </>
-              )}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
   );
 }

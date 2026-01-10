@@ -5,7 +5,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.database import connect_to_mongo, close_mongo_connection
 from app.api.routes import auth, hr, employee, tasks, messages, agent, notes
 from app.api.routes import super_admin, teams, projects, clients, ba_projects, team_lead, payments, meetings, ba_dashboard
-from app.api.routes import  super_admin_leave, employee_leave, hr_leave, team_lead_leave
+
+# ==================== NEW LEAVE MANAGEMENT ROUTES ====================
+from app.api.routes import leave_admin, leave_hr, leave_team_lead, leave_employee
 
 app = FastAPI(title="Employee Tracker API")
 
@@ -56,10 +58,12 @@ app.include_router(tasks.router, prefix="/api/tasks", tags=["tasks"])
 app.include_router(messages.router, prefix="/api/messages", tags=["messages"])
 app.include_router(agent.router, prefix="/api/agent", tags=["agent"])
 app.include_router(notes.router, prefix="/api/notes", tags=["notes"])
-app.include_router(super_admin_leave.router, prefix="/api/super-admin", tags=["Super Admin - Leave Management"])
-app.include_router(employee_leave.router, prefix="/api/employee", tags=["Employee - Leave Management"])
-app.include_router(hr_leave.router, prefix="/api/hr", tags=["HR - Leave Management"])
-app.include_router(team_lead_leave.router, prefix="/api/team-lead", tags=["Team Lead - Leave Management"])
+
+# ==================== NEW LEAVE MANAGEMENT ROUTES ====================
+app.include_router(leave_admin.router, prefix="/api/admin/leave", tags=["Admin - Leave Management"])
+app.include_router(leave_hr.router, prefix="/api/hr/leave", tags=["HR - Leave Management"])
+app.include_router(leave_team_lead.router, prefix="/api/team-lead/leave", tags=["Team Lead - Leave Management"])
+app.include_router(leave_employee.router, prefix="/api/employee/leave", tags=["Employee - Leave Management"])
 
 @app.get("/")
 async def root():

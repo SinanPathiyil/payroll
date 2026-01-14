@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Users, Plus, Search, X, Save } from "lucide-react";
+import { Users, Plus, Search, X, Save, Eye, Calendar } from "lucide-react";
 import Layout from "../components/common/Layout";
 import axios from "axios";
 
@@ -10,6 +10,9 @@ export default function HRLeaveAllocation() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [showBalanceModal, setShowBalanceModal] = useState(false);
+  const [employeeBalances, setEmployeeBalances] = useState([]);
+  const [loadingBalances, setLoadingBalances] = useState(false);
   const [formData, setFormData] = useState({
     user_id: "",
     year: new Date().getFullYear(),
@@ -37,13 +40,10 @@ export default function HRLeaveAllocation() {
 
       // Load leave types
       const leaveTypesRes = await axios.get(
-        // ✅ Correct variable name
         `${import.meta.env.VITE_API_URL}/hr/leave/leave-types`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-
-      // The endpoint returns an array directly, not an object with leave_types property
-      setLeaveTypes(leaveTypesRes.data || []); // ✅ Fixed: use leaveTypesRes and access data directly
+      setLeaveTypes(leaveTypesRes.data || []);
     } catch (error) {
       console.error("Failed to load data:", error);
     } finally {
@@ -51,17 +51,23 @@ export default function HRLeaveAllocation() {
     }
   };
 
-  const loadEmployeeBalance = async (employeeId) => {
+  const loadEmployeeBalance = async (employee) => {
     try {
+      setLoadingBalances(true);
+      setSelectedEmployee(employee);
+      setShowBalanceModal(true);
+      
       const token = localStorage.getItem("token");
       const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/hr/leave/balances/${employeeId}?year=${formData.year}`,
+        `${import.meta.env.VITE_API_URL}/hr/leave/balances/${employee.id}?year=${new Date().getFullYear()}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      return response.data.balances || [];
+      setEmployeeBalances(response.data.balances || []);
     } catch (error) {
       console.error("Failed to load balance:", error);
-      return [];
+      setEmployeeBalances([]);
+    } finally {
+      setLoadingBalances(false);
     }
   };
 
@@ -81,9 +87,13 @@ export default function HRLeaveAllocation() {
       setShowModal(false);
       setSelectedEmployee(null);
       alert("Leave allocated successfully!");
+      loadData(); // Refresh data
     } catch (error) {
       console.error("Failed to allocate:", error);
-      setError(error.response?.data?.detail || "Failed to allocate leaves");
+      const errorMessage = error.response?.data?.detail || 
+                           error.response?.data?.message || 
+                           "Failed to allocate leaves";
+      setError(errorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -109,7 +119,7 @@ export default function HRLeaveAllocation() {
   return (
     <Layout>
       <div className="ba-dashboard">
-        <div className="ba-dashboard-header">
+        <div className="ba-dashboard-header" style={{ marginBottom: "2rem" }}>
           <div>
             <h1 className="ba-dashboard-title">Leave Allocation</h1>
             <p className="ba-dashboard-subtitle">
@@ -118,7 +128,7 @@ export default function HRLeaveAllocation() {
           </div>
         </div>
 
-        <div className="ba-card">
+        <div className="ba-card" style={{ marginBottom: "1.5rem" }}>
           <div className="ba-card-header">
             <div className="ba-card-title">
               <Search className="w-5 h-5" />
@@ -158,7 +168,7 @@ export default function HRLeaveAllocation() {
                       display: "flex",
                       justifyContent: "space-between",
                       alignItems: "center",
-                      padding: "1rem",
+                      padding: "1.25rem",
                       backgroundColor: "#f9fafb",
                       borderRadius: "8px",
                       border: "1px solid #e5e7eb",
@@ -182,7 +192,6 @@ export default function HRLeaveAllocation() {
                         >
                           {employee.full_name}
                         </h3>
-                        {/* ✅ Add role badge */}
                         <span
                           style={{
                             fontSize: "0.75rem",
@@ -220,22 +229,40 @@ export default function HRLeaveAllocation() {
                         {employee.email}
                       </p>
                     </div>
-                    <button
-                      onClick={() => {
-                        setSelectedEmployee(employee);
-                        setFormData({ ...formData, user_id: employee.id });
-                        setShowModal(true);
-                      }}
-                      className="btn btn-primary"
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.5rem",
-                      }}
-                    >
-                      <Plus className="w-4 h-4" />
-                      <span>Allocate Leave</span>
-                    </button>
+                    
+                    {/* Button Group */}
+                    <div style={{ display: "flex", gap: "0.75rem" }}>
+                      <button
+                        onClick={() => loadEmployeeBalance(employee)}
+                        className="btn btn-secondary"
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.5rem",
+                        }}
+                      >
+                        <Eye className="w-4 h-4" />
+                        <span>View Balance</span>
+                      </button>
+                      
+                      <button
+                        onClick={() => {
+                          setSelectedEmployee(employee);
+                          setFormData({ ...formData, user_id: employee.id });
+                          setShowModal(true);
+                          setError("");
+                        }}
+                        className="btn btn-primary"
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.5rem",
+                        }}
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>Allocate Leave</span>
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -244,6 +271,7 @@ export default function HRLeaveAllocation() {
         </div>
       </div>
 
+      {/* Allocate Leave Modal */}
       {showModal && selectedEmployee && (
         <div className="ba-modal-overlay" onClick={() => setShowModal(false)}>
           <div
@@ -267,9 +295,58 @@ export default function HRLeaveAllocation() {
             <form onSubmit={handleAllocate}>
               <div className="ba-modal-body">
                 {error && (
-                  <div className="ba-alert ba-alert-error">
-                    <X className="w-5 h-5" />
-                    <span>{error}</span>
+                  <div 
+                    style={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: "0.75rem",
+                      padding: "1rem",
+                      backgroundColor: "#fef2f2",
+                      border: "1px solid #fecaca",
+                      borderRadius: "8px",
+                      marginBottom: "1.5rem"
+                    }}
+                  >
+                    <X 
+                      className="w-5 h-5" 
+                      style={{ 
+                        flexShrink: 0, 
+                        marginTop: "0.125rem",
+                        color: "#dc2626" 
+                      }} 
+                    />
+                    <div style={{ flex: 1 }}>
+                      <p style={{ 
+                        fontWeight: "600", 
+                        marginBottom: "0.25rem",
+                        color: "#991b1b",
+                        fontSize: "0.875rem",
+                        margin: "0 0 0.25rem 0"
+                      }}>
+                        Allocation Failed
+                      </p>
+                      <p style={{ 
+                        fontSize: "0.875rem", 
+                        margin: 0,
+                        color: "#7f1d1d",
+                        lineHeight: "1.5"
+                      }}>
+                        {error}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setError("")}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        padding: "0.25rem",
+                        color: "#dc2626"
+                      }}
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
                   </div>
                 )}
 
@@ -397,6 +474,149 @@ export default function HRLeaveAllocation() {
           </div>
         </div>
       )}
+
+     {/* View Balance Modal */}
+      {showBalanceModal && selectedEmployee && (
+        <div className="ba-modal-overlay" onClick={() => setShowBalanceModal(false)}>
+          <div
+            className="ba-modal-container"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: "700px" }}
+          >
+            <div className="ba-modal-header">
+              <div className="ba-modal-header-content">
+                <Calendar className="w-6 h-6" />
+                <h2 className="ba-modal-title">Leave Balance - {selectedEmployee.full_name}</h2>
+              </div>
+              <button
+                onClick={() => setShowBalanceModal(false)}
+                className="ba-modal-close-btn"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="ba-modal-body" style={{ padding: "1.5rem" }}>
+              {loadingBalances ? (
+                <div style={{ textAlign: "center", padding: "3rem 0" }}>
+                  <div className="spinner spinner-lg" style={{ margin: "0 auto 1rem" }}></div>
+                  <p style={{ color: "#6b7280" }}>Loading balances...</p>
+                </div>
+              ) : employeeBalances.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "3rem 0" }}>
+                  <Calendar className="w-12 h-12" style={{ margin: "0 auto 1rem", color: "#9ca3af" }} />
+                  <p style={{ color: "#6b7280", fontSize: "0.875rem" }}>
+                    No leave balances found for {new Date().getFullYear()}
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {/* Summary Cards */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem", marginBottom: "2rem" }}>
+                    <div style={{
+                      padding: "1rem",
+                      backgroundColor: "#f9fafb",
+                      borderRadius: "8px",
+                      border: "1px solid #e5e7eb"
+                    }}>
+                      <p style={{ fontSize: "0.75rem", color: "#6b7280", margin: "0 0 0.5rem 0", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>Total Allocated</p>
+                      <p style={{ fontSize: "1.5rem", fontWeight: "700", color: "#111827", margin: 0 }}>
+                        {employeeBalances.reduce((sum, b) => sum + b.allocated, 0)}
+                      </p>
+                    </div>
+                    <div style={{
+                      padding: "1rem",
+                      backgroundColor: "#f9fafb",
+                      borderRadius: "8px",
+                      border: "1px solid #e5e7eb"
+                    }}>
+                      <p style={{ fontSize: "0.75rem", color: "#6b7280", margin: "0 0 0.5rem 0", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>Available</p>
+                      <p style={{ fontSize: "1.5rem", fontWeight: "700", color: "#111827", margin: 0 }}>
+                        {employeeBalances.reduce((sum, b) => sum + b.available, 0)}
+                      </p>
+                    </div>
+                    <div style={{
+                      padding: "1rem",
+                      backgroundColor: "#f9fafb",
+                      borderRadius: "8px",
+                      border: "1px solid #e5e7eb"
+                    }}>
+                      <p style={{ fontSize: "0.75rem", color: "#6b7280", margin: "0 0 0.5rem 0", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>Used</p>
+                      <p style={{ fontSize: "1.5rem", fontWeight: "700", color: "#111827", margin: 0 }}>
+                        {employeeBalances.reduce((sum, b) => sum + b.used, 0)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Detailed Balance Table */}
+                  <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                      <thead>
+                        <tr style={{ backgroundColor: "#f9fafb", borderBottom: "2px solid #e5e7eb" }}>
+                          <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.75rem", fontWeight: "600", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em" }}>Leave Type</th>
+                          <th style={{ padding: "0.75rem", textAlign: "center", fontSize: "0.75rem", fontWeight: "600", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em" }}>Allocated</th>
+                          <th style={{ padding: "0.75rem", textAlign: "center", fontSize: "0.75rem", fontWeight: "600", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em" }}>Used</th>
+                          <th style={{ padding: "0.75rem", textAlign: "center", fontSize: "0.75rem", fontWeight: "600", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em" }}>Pending</th>
+                          <th style={{ padding: "0.75rem", textAlign: "center", fontSize: "0.75rem", fontWeight: "600", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em" }}>Available</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {employeeBalances.map((balance, index) => (
+                          <tr 
+                            key={balance.id} 
+                            style={{ 
+                              borderBottom: "1px solid #f3f4f6",
+                              backgroundColor: index % 2 === 0 ? "#ffffff" : "#f9fafb"
+                            }}
+                          >
+                            <td style={{ padding: "1rem", fontSize: "0.875rem", fontWeight: "500", color: "#111827" }}>
+                              {balance.leave_type_name}
+                            </td>
+                            <td style={{ padding: "1rem", textAlign: "center", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>
+                              {balance.allocated}
+                            </td>
+                            <td style={{ padding: "1rem", textAlign: "center", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>
+                              {balance.used}
+                            </td>
+                            <td style={{ padding: "1rem", textAlign: "center", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>
+                              {balance.pending}
+                            </td>
+                            <td style={{ padding: "1rem", textAlign: "center", fontSize: "0.875rem", fontWeight: "700", color: "#111827" }}>
+                              {balance.available}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div style={{ 
+                    marginTop: "1.5rem", 
+                    padding: "1rem", 
+                    backgroundColor: "#f9fafb", 
+                    borderRadius: "8px",
+                    borderLeft: "3px solid #6b7280",
+                    fontSize: "0.8125rem",
+                    color: "#4b5563"
+                  }}>
+                    <strong>Note:</strong> Balance shown for year {new Date().getFullYear()}. Carried forward leaves expire as per policy.
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="ba-modal-footer">
+              <button
+                onClick={() => setShowBalanceModal(false)}
+                className="btn btn-secondary"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </Layout>
   );
 }

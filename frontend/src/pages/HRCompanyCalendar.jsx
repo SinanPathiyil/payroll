@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Filter,
   Download,
+  AlertCircle,
 } from "lucide-react";
 import Layout from "../components/common/Layout";
 import axios from "axios";
@@ -14,7 +15,7 @@ export default function HRCompanyCalendar() {
   const [loading, setLoading] = useState(true);
   const [leaves, setLeaves] = useState([]);
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState("month"); // 'month' or 'list'
+  const [viewMode, setViewMode] = useState("month");
   const [filterDepartment, setFilterDepartment] = useState("all");
   const [departments, setDepartments] = useState([]);
 
@@ -49,11 +50,9 @@ export default function HRCompanyCalendar() {
         }
       );
 
-      // Handle new response structure
       const events = response.data.events || [];
       setLeaves(events);
 
-      // Extract unique leave types for filter
       const leaveEvents = events.filter((e) => e.type === "leave");
       const types = [...new Set(leaveEvents.map((l) => l.leave_type))];
       setDepartments(types);
@@ -76,28 +75,23 @@ export default function HRCompanyCalendar() {
   };
 
   const getLeavesForDay = (day) => {
-    const dateStr = new Date(
-      currentDate.getFullYear(),
-      currentDate.getMonth(),
-      day
-    )
-      .toISOString()
-      .split("T")[0];
+    // Create date string for comparison (YYYY-MM-DD format)
+    const year = currentDate.getFullYear();
+    const month = String(currentDate.getMonth() + 1).padStart(2, "0");
+    const dayStr = String(day).padStart(2, "0");
+    const checkDateStr = `${year}-${month}-${dayStr}`;
 
     let dayEvents = leaves.filter((event) => {
-      // Handle holidays (single day events)
       if (event.type === "holiday") {
-        return event.date === dateStr;
+        const holidayDateStr = event.date.split("T")[0];
+        return holidayDateStr === checkDateStr;
+      } else {
+        const startDateStr = event.start_date.split("T")[0];
+        const endDateStr = event.end_date.split("T")[0];
+        return checkDateStr >= startDateStr && checkDateStr <= endDateStr;
       }
-
-      // Handle leaves (range events)
-      const start = new Date(event.start_date);
-      const end = new Date(event.end_date);
-      const current = new Date(dateStr);
-      return current >= start && current <= end;
     });
 
-    // Apply department filter (only for leaves)
     if (filterDepartment !== "all") {
       dayEvents = dayEvents.filter(
         (e) => e.type === "holiday" || e.leave_type === filterDepartment
@@ -132,7 +126,6 @@ export default function HRCompanyCalendar() {
   };
 
   const exportCalendar = () => {
-    // TODO: Implement export functionality
     alert("Export functionality - To be implemented");
   };
 
@@ -153,11 +146,10 @@ export default function HRCompanyCalendar() {
     year: "numeric",
   });
 
-  // Get filtered leaves for list view
   const filteredLeaves =
     filterDepartment === "all"
       ? leaves
-      : leaves.filter((l) => l.leave_type === filterDepartment);
+      : leaves.filter((l) => l.type === "holiday" || l.leave_type === filterDepartment);
 
   return (
     <Layout>
@@ -191,6 +183,7 @@ export default function HRCompanyCalendar() {
           className="ba-stats-grid"
           style={{
             gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+            marginBottom: "1.5rem",
           }}
         >
           <div className="ba-stat-card">
@@ -224,26 +217,6 @@ export default function HRCompanyCalendar() {
           <div className="ba-stat-card">
             <div className="ba-stat-content">
               <div className="ba-stat-info">
-                <p className="ba-stat-label">Unique Employees</p>
-                <p className="ba-stat-value">
-                  {
-                    new Set(
-                      leaves
-                        .filter((e) => e.type === "leave")
-                        .map((l) => l.user_name)
-                    ).size
-                  }
-                </p>
-              </div>
-              <div className="ba-stat-icon ba-stat-icon-purple">
-                <Users className="w-6 h-6" />
-              </div>
-            </div>
-          </div>
-
-          <div className="ba-stat-card">
-            <div className="ba-stat-content">
-              <div className="ba-stat-info">
                 <p className="ba-stat-label">Viewing</p>
                 <p className="ba-stat-value" style={{ fontSize: "1.25rem" }}>
                   {monthName}
@@ -257,7 +230,7 @@ export default function HRCompanyCalendar() {
         </div>
 
         {/* Filters */}
-        <div className="ba-card">
+        <div className="ba-card" style={{ marginBottom: "1.5rem" }}>
           <div className="ba-card-header">
             <div className="ba-card-title">
               <Filter className="w-5 h-5" />
@@ -265,45 +238,36 @@ export default function HRCompanyCalendar() {
             </div>
           </div>
           <div className="ba-card-body">
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr",
-                gap: "1rem",
-                maxWidth: "400px",
-              }}
-            >
-              <div>
-                <label
-                  style={{
-                    fontSize: "0.875rem",
-                    fontWeight: "500",
-                    marginBottom: "0.5rem",
-                    display: "block",
-                  }}
-                >
-                  Filter by Leave Type
-                </label>
-                <select
-                  value={filterDepartment}
-                  onChange={(e) => setFilterDepartment(e.target.value)}
-                  className="ba-form-input"
-                >
-                  <option value="all">All Leave Types</option>
-                  {departments.map((dept) => (
-                    <option key={dept} value={dept}>
-                      {dept}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <div style={{ maxWidth: "400px" }}>
+              <label
+                style={{
+                  fontSize: "0.875rem",
+                  fontWeight: "500",
+                  marginBottom: "0.5rem",
+                  display: "block",
+                }}
+              >
+                Filter by Leave Type
+              </label>
+              <select
+                value={filterDepartment}
+                onChange={(e) => setFilterDepartment(e.target.value)}
+                className="ba-form-input"
+              >
+                <option value="all">All Leave Types</option>
+                {departments.map((dept) => (
+                  <option key={dept} value={dept}>
+                    {dept}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         </div>
 
         {viewMode === "month" ? (
           /* Calendar View */
-          <div className="ba-card">
+          <div className="ba-card" style={{ marginBottom: "1.5rem" }}>
             <div className="ba-card-header">
               <div className="ba-card-title">
                 <Calendar className="w-5 h-5" />
@@ -415,13 +379,11 @@ export default function HRCompanyCalendar() {
                             gap: "0.25rem",
                           }}
                         >
-                          {dayLeaves.slice(0, 3).map((event, index) => {
-                            // ← Add index here
-                            // Show holidays differently
+                          {dayLeaves.slice(0, 3).map((event, idx) => {
                             if (event.type === "holiday") {
                               return (
                                 <div
-                                  key={`${event.id}-${index}`} // ← Changed key to be unique
+                                  key={`${event.id}-${idx}`}
                                   style={{
                                     fontSize: "0.7rem",
                                     padding: "0.25rem 0.375rem",
@@ -437,10 +399,9 @@ export default function HRCompanyCalendar() {
                               );
                             }
 
-                            // Show employee leaves
                             return (
                               <div
-                                key={`${event.id}-${index}`} // ← Changed key to be unique
+                                key={`${event.id}-${idx}`}
                                 style={{
                                   fontSize: "0.7rem",
                                   padding: "0.25rem 0.375rem",
@@ -501,7 +462,7 @@ export default function HRCompanyCalendar() {
           </div>
         ) : (
           /* List View */
-          <div className="ba-card">
+          <div className="ba-card" style={{ marginBottom: "1.5rem" }}>
             <div className="ba-card-header">
               <div className="ba-card-title">
                 <Users className="w-5 h-5" />
@@ -524,7 +485,9 @@ export default function HRCompanyCalendar() {
                       />
                       <div className="ba-activity-content">
                         <p className="ba-activity-message">
-                          <strong>{leave.user_name}</strong>
+                          <strong>
+                            {leave.type === "holiday" ? `🎉 ${leave.name}` : leave.user_name}
+                          </strong>
                           {leave.user_email && (
                             <span
                               style={{
@@ -538,9 +501,9 @@ export default function HRCompanyCalendar() {
                           )}
                         </p>
                         <p className="ba-activity-time">
-                          {formatDate(leave.start_date)} →{" "}
-                          {formatDate(leave.end_date)} ({leave.total_days}{" "}
-                          {leave.total_days === 1 ? "day" : "days"})
+                          {leave.type === "holiday"
+                            ? formatDate(leave.date)
+                            : `${formatDate(leave.start_date)} → ${formatDate(leave.end_date)} (${leave.total_days} ${leave.total_days === 1 ? "day" : "days"})`}
                         </p>
                       </div>
                       <span
@@ -551,7 +514,7 @@ export default function HRCompanyCalendar() {
                           border: `1px solid ${leave.color}40`,
                         }}
                       >
-                        {leave.leave_type}
+                        {leave.type === "holiday" ? "Holiday" : leave.leave_type}
                       </span>
                     </div>
                   ))}
@@ -565,149 +528,75 @@ export default function HRCompanyCalendar() {
         <div className="ba-card">
           <div className="ba-card-header">
             <div className="ba-card-title">
-              <Calendar className="w-5 h-5" />
-              <span>Legend</span>
+              <AlertCircle className="w-5 h-5" />
+              <span>Event Legend</span>
             </div>
           </div>
           <div className="ba-card-body">
-            {/* Leave Types */}
-            {Array.from(
-              new Set(
-                leaves
-                  .filter((l) => l.type === "leave")
-                  .map((l) => l.leave_type)
-              )
-            ).length > 0 && (
-              <>
-                <h3
-                  style={{
-                    fontSize: "0.875rem",
-                    fontWeight: "600",
-                    marginBottom: "0.75rem",
-                  }}
-                >
-                  Leave Types
-                </h3>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
+                gap: "1rem",
+              }}
+            >
+              {/* Leave Types */}
+              {Array.from(
+                new Set(
+                  leaves
+                    .filter((l) => l.type === "leave")
+                    .map((l) => l.leave_type)
+                )
+              ).map((type) => {
+                const leave = leaves.find(
+                  (l) => l.type === "leave" && l.leave_type === type
+                );
+                return (
+                  <div
+                    key={`leave-${type}`}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: "16px",
+                        height: "16px",
+                        borderRadius: "4px",
+                        backgroundColor: leave.color,
+                      }}
+                    />
+                    <span style={{ fontSize: "0.875rem" }}>{type}</span>
+                  </div>
+                );
+              })}
+
+              {/* Holiday Types */}
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                 <div
                   style={{
-                    display: "grid",
-                    gridTemplateColumns:
-                      "repeat(auto-fill, minmax(180px, 1fr))",
-                    gap: "1rem",
-                    marginBottom: "1.5rem",
+                    width: "16px",
+                    height: "16px",
+                    borderRadius: "4px",
+                    backgroundColor: "#10b981",
                   }}
-                >
-                  {Array.from(
-                    new Set(
-                      leaves
-                        .filter((l) => l.type === "leave")
-                        .map((l) => l.leave_type)
-                    )
-                  ).map((type) => {
-                    const leave = leaves.find(
-                      (l) => l.type === "leave" && l.leave_type === type
-                    );
-                    const count = leaves.filter(
-                      (l) => l.type === "leave" && l.leave_type === type
-                    ).length;
-
-                    return (
-                      <div
-                        key={type}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "0.75rem",
-                          padding: "0.75rem",
-                          backgroundColor: "#f9fafb",
-                          borderRadius: "8px",
-                          border: "1px solid #e5e7eb",
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: "20px",
-                            height: "20px",
-                            borderRadius: "6px",
-                            backgroundColor: leave.color,
-                            flexShrink: 0,
-                          }}
-                        />
-                        <div style={{ flex: 1 }}>
-                          <div
-                            style={{ fontSize: "0.875rem", fontWeight: "500" }}
-                          >
-                            {type}
-                          </div>
-                          <div
-                            style={{ fontSize: "0.75rem", color: "#6b7280" }}
-                          >
-                            {count} {count === 1 ? "request" : "requests"}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-
-            {/* Public Holidays */}
-            {leaves.filter((l) => l.type === "holiday").length > 0 && (
-              <>
-                <h3
-                  style={{
-                    fontSize: "0.875rem",
-                    fontWeight: "600",
-                    marginBottom: "0.75rem",
-                  }}
-                >
-                  Public Holidays
-                </h3>
+                />
+                <span style={{ fontSize: "0.875rem" }}>Public Holiday</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                 <div
                   style={{
-                    display: "grid",
-                    gridTemplateColumns:
-                      "repeat(auto-fill, minmax(180px, 1fr))",
-                    gap: "1rem",
+                    width: "16px",
+                    height: "16px",
+                    borderRadius: "4px",
+                    backgroundColor: "#f59e0b",
                   }}
-                >
-                  {leaves
-                    .filter((l) => l.type === "holiday")
-                    .map((holiday) => (
-                      <div
-                        key={holiday.id}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "0.75rem",
-                          padding: "0.75rem",
-                          backgroundColor: "#f0fdf4",
-                          borderRadius: "8px",
-                          border: "1px solid #bbf7d0",
-                        }}
-                      >
-                        <div style={{ fontSize: "1.25rem" }}>🎉</div>
-                        <div style={{ flex: 1 }}>
-                          <div
-                            style={{ fontSize: "0.875rem", fontWeight: "500" }}
-                          >
-                            {holiday.name}
-                          </div>
-                          <div
-                            style={{ fontSize: "0.75rem", color: "#6b7280" }}
-                          >
-                            {new Date(holiday.date).toLocaleDateString(
-                              "en-US",
-                              { month: "short", day: "numeric" }
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </>
-            )}
+                />
+                <span style={{ fontSize: "0.875rem" }}>Optional Holiday</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>

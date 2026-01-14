@@ -187,30 +187,73 @@ class LeaveService:
     # ==================== LEAVE BALANCE OPERATIONS ====================
     
     async def allocate_leaves(self, user_id: str, year: int, leave_type_code: str, days: float) -> dict:
-        """Allocate leaves to a user"""
-        # Check if balance already exists
+        """Allocate leaves to a user with policy validation"""
+        
+        # ==================== GET USER ROLE ====================
+        user = await self.users_collection.find_one({"_id": ObjectId(user_id)})
+        if not user:
+            raise ValueError("User not found")
+        
+        user_role = user.get("role", "employee")
+        
+        # ==================== GET LEAVE POLICY ====================
+        policy = await self.get_policy_by_year(year)
+        if not policy:
+            raise ValueError(f"No leave policy found for year {year}")
+        
+        # ==================== FIND MAX ALLOWED FROM POLICY ====================
+        max_allowed = None
+        
+        for role_allocation in policy.get("role_allocations", []):
+            if role_allocation["role"] == user_role:
+                for allocation in role_allocation["allocations"]:
+                    if allocation["leave_type_code"] == leave_type_code:
+                        max_allowed = allocation["days"]
+                        break
+                break
+        
+        if max_allowed is None:
+            raise ValueError(
+                f"No policy found for role '{user_role}' and leave type '{leave_type_code}'. "
+                f"Please contact Super Admin to configure leave policy first."
+            )
+        
+        # ==================== CHECK EXISTING BALANCE ====================
         existing = await self.leave_balances_collection.find_one({
             "user_id": user_id,
             "year": year,
             "leave_type_code": leave_type_code
         })
         
+        current_allocated = existing["allocated"] if existing else 0
+        new_total_allocated = current_allocated + days
+        
+        # ==================== VALIDATE AGAINST POLICY ====================
+        if new_total_allocated > max_allowed:
+            raise ValueError(
+                f"Cannot allocate {days} days. "
+                f"Current allocated: {current_allocated} days, "
+                f"Trying to add: {days} days, "
+                f"New total would be: {new_total_allocated} days, "
+                f"but policy maximum for {user_role} is {max_allowed} days."
+            )
+        
+        # ==================== PROCEED WITH ALLOCATION ====================
         if existing:
             # Update existing allocation
-            new_allocated = existing["allocated"] + days
-            new_total = new_allocated + existing["carried_forward"]
+            new_total = new_total_allocated + existing["carried_forward"]
             new_available = new_total - existing["used"] - existing["pending"]
             
             await self.leave_balances_collection.update_one(
                 {"_id": existing["_id"]},
                 {"$set": {
-                    "allocated": new_allocated,
+                    "allocated": new_total_allocated,
                     "total_available": new_total,
                     "available": new_available,
                     "last_updated": datetime.now()
                 }}
             )
-            existing["allocated"] = new_allocated
+            existing["allocated"] = new_total_allocated
             existing["total_available"] = new_total
             existing["available"] = new_available
             return existing

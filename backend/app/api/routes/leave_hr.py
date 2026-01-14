@@ -389,12 +389,27 @@ async def allocate_leaves_to_employee(
             detail="Invalid leave type code"
         )
     
-    balance = await leave_service.allocate_leaves(
-        user_id=allocation_data.user_id,
-        year=allocation_data.year,
-        leave_type_code=allocation_data.leave_type_code,
-        days=allocation_data.days
-    )
+    # ==================== ✅ ADD THIS TRY-EXCEPT BLOCK ====================
+    try:
+        balance = await leave_service.allocate_leaves(
+            user_id=allocation_data.user_id,
+            year=allocation_data.year,
+            leave_type_code=allocation_data.leave_type_code,
+            days=allocation_data.days
+        )
+    except ValueError as e:
+        # This catches the policy validation error from leave_service
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)  # This returns the detailed error message
+        )
+    except Exception as e:
+        # Catch any other unexpected errors
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to allocate leaves: {str(e)}"
+        )
+    # ==================== END OF FIX ====================
     
     return {
         "message": f"Successfully allocated {allocation_data.days} days of {leave_type['name']}",

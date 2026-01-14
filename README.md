@@ -224,6 +224,7 @@ payroll
 │  │  │  ├─ SuperAdminTeams.jsx
 │  │  │  ├─ SuperAdminUsers.jsx
 │  │  │  ├─ TLDashboard.jsx
+│  │  │  ├─ TLLeaveHistory.jsx
 │  │  │  ├─ TLLeaveRequests.jsx
 │  │  │  ├─ TLMessages.jsx
 │  │  │  ├─ TLMyLeave.jsx

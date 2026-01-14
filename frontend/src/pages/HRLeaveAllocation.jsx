@@ -165,15 +165,51 @@ export default function HRLeaveAllocation() {
                     }}
                   >
                     <div>
-                      <h3
+                      <div
                         style={{
-                          fontSize: "1rem",
-                          fontWeight: "600",
-                          margin: "0 0 0.25rem 0",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.5rem",
+                          marginBottom: "0.25rem",
                         }}
                       >
-                        {employee.full_name}
-                      </h3>
+                        <h3
+                          style={{
+                            fontSize: "1rem",
+                            fontWeight: "600",
+                            margin: 0,
+                          }}
+                        >
+                          {employee.full_name}
+                        </h3>
+                        {/* ✅ Add role badge */}
+                        <span
+                          style={{
+                            fontSize: "0.75rem",
+                            padding: "0.25rem 0.5rem",
+                            backgroundColor:
+                              employee.role === "team_lead"
+                                ? "#dbeafe"
+                                : employee.role === "business_analyst"
+                                  ? "#fef3c7"
+                                  : "#f3f4f6",
+                            color:
+                              employee.role === "team_lead"
+                                ? "#1e40af"
+                                : employee.role === "business_analyst"
+                                  ? "#92400e"
+                                  : "#4b5563",
+                            borderRadius: "9999px",
+                            fontWeight: "500",
+                          }}
+                        >
+                          {employee.role === "team_lead"
+                            ? "Team Lead"
+                            : employee.role === "business_analyst"
+                              ? "BA"
+                              : "Employee"}
+                        </span>
+                      </div>
                       <p
                         style={{
                           fontSize: "0.875rem",

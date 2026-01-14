@@ -99,7 +99,7 @@ async def get_employees(
     db = Depends(get_database)
 ):
     employees = []
-    cursor = db.users.find({"role": "employee"})
+    cursor = db.users.find({"role": {"$in": ["employee", "team_lead", "business_analyst"]}}) 
     
     today = datetime.now().strftime("%Y-%m-%d")
     week_ago = datetime.now() - timedelta(days=7)
@@ -181,6 +181,7 @@ async def get_employees(
             "id": employee_id,
             "email": employee["email"],
             "full_name": employee["full_name"],
+            "role": employee["role"],
             "is_active": employee["is_active"],
             "today_status": "active" if is_active else "inactive",
             "today_hours": round(today_hours, 2),

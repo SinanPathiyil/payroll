@@ -80,18 +80,18 @@ class LeaveService:
             
             for holiday_date, holiday_name in country_holidays.items():
                 # Convert date to datetime
-                holiday_datetime = datetime.combine(holiday_date, datetime.min.time())  # ← FIX
+                holiday_datetime = datetime.combine(holiday_date, datetime.min.time())
                 
                 # Check if already exists
                 exists = await self.public_holidays_collection.find_one({
-                    "date": holiday_datetime,  # ← FIX: use datetime
+                    "date": holiday_datetime,
                     "country": country
                 })
                 
                 if not exists:
                     holiday_data = {
                         "name": holiday_name,
-                        "date": holiday_datetime,  # ← FIX: use datetime
+                        "date": holiday_datetime,
                         "country": country,
                         "is_optional": False,
                         "description": f"Imported from {country} calendar",
@@ -111,8 +111,8 @@ class LeaveService:
     
     async def get_holidays_by_year(self, year: int) -> List[dict]:
         """Get all holidays for a specific year"""
-        start_date = datetime(year, 1, 1)  # ← FIX: datetime object
-        end_date = datetime(year, 12, 31, 23, 59, 59)  # ← FIX: datetime object
+        start_date = datetime(year, 1, 1)
+        end_date = datetime(year, 12, 31, 23, 59, 59)
         
         cursor = self.public_holidays_collection.find({
             "date": {"$gte": start_date, "$lte": end_date},
@@ -124,7 +124,8 @@ class LeaveService:
     async def get_holiday_dates(self, year: int) -> List[date]:
         """Get list of holiday dates for calculations"""
         holidays_list = await self.get_holidays_by_year(year)
-        return [h["date"] for h in holidays_list]
+        # Convert datetime back to date for calculation purposes
+        return [h["date"].date() if isinstance(h["date"], datetime) else h["date"] for h in holidays_list]
     
     async def update_holiday(self, holiday_id: str, update_data: dict) -> bool:
         """Update holiday"""
@@ -396,7 +397,7 @@ class LeaveService:
         )
         
         # Check balance
-        balance = await self.get_user_balance_by_type(user["_id"], year, request_data["leave_type_code"])
+        balance = await self.get_user_balance_by_type(str(user["_id"]), year, request_data["leave_type_code"])
         if balance and balance["available"] < total_days:
             # Check if unpaid leave is allowed
             if request_data["leave_type_code"] != "UNPAID":
@@ -417,6 +418,14 @@ class LeaveService:
         # Generate request number
         request_number = await self.generate_request_number(year)
         
+        # Convert date objects to datetime for MongoDB compatibility
+        start_datetime = request_data["start_date"]
+        end_datetime = request_data["end_date"]
+        if isinstance(start_datetime, date) and not isinstance(start_datetime, datetime):
+            start_datetime = datetime.combine(start_datetime, datetime.min.time())
+        if isinstance(end_datetime, date) and not isinstance(end_datetime, datetime):
+            end_datetime = datetime.combine(end_datetime, datetime.min.time())
+        
         # Create request
         leave_request = {
             "request_number": request_number,
@@ -429,8 +438,8 @@ class LeaveService:
             "leave_type_code": request_data["leave_type_code"],
             "leave_type_name": leave_type["name"],
             "leave_type_color": leave_type["color"],
-            "start_date": request_data["start_date"],
-            "end_date": request_data["end_date"],
+            "start_date": start_datetime,
+            "end_date": end_datetime,
             "is_half_day": request_data.get("is_half_day", False),
             "half_day_period": request_data.get("half_day_period"),
             "total_days": total_days,
@@ -492,7 +501,10 @@ class LeaveService:
         )
         
         # Update balance (from pending to used)
-        year = leave_request["start_date"].year
+        # Extract year from start_date (which is now datetime)
+        start_date = leave_request["start_date"]
+        year = start_date.year if isinstance(start_date, datetime) else start_date.year
+        
         await self.update_balance_on_request(
             user_id=leave_request["user_id"],
             year=year,
@@ -530,7 +542,10 @@ class LeaveService:
         )
         
         # Return balance
-        year = leave_request["start_date"].year
+        # Extract year from start_date (which is now datetime)
+        start_date = leave_request["start_date"]
+        year = start_date.year if isinstance(start_date, datetime) else start_date.year
+        
         await self.update_balance_on_request(
             user_id=leave_request["user_id"],
             year=year,
@@ -568,7 +583,10 @@ class LeaveService:
         )
         
         # Return balance
-        year = leave_request["start_date"].year
+        # Extract year from start_date (which is now datetime)
+        start_date = leave_request["start_date"]
+        year = start_date.year if isinstance(start_date, datetime) else start_date.year
+        
         await self.update_balance_on_request(
             user_id=leave_request["user_id"],
             year=year,
@@ -593,8 +611,8 @@ class LeaveService:
         """Get all leave requests for a user"""
         filters = {"user_id": user_id}
         if year:
-            start_date = date(year, 1, 1)
-            end_date = date(year, 12, 31)
+            start_date = datetime(year, 1, 1)
+            end_date = datetime(year, 12, 31, 23, 59, 59)
             filters["start_date"] = {"$gte": start_date, "$lte": end_date}
         
         return await self.get_leave_requests(filters)
@@ -613,7 +631,7 @@ class LeaveService:
     
     async def get_leave_stats(self) -> dict:
         """Get leave statistics for HR dashboard"""
-        today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)  # ← FIX: datetime object
+        today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
         
         # Pending approvals
         pending_count = await self.leave_requests_collection.count_documents({"status": "pending"})
@@ -631,8 +649,8 @@ class LeaveService:
         # On leave today
         on_leave_today_count = await self.leave_requests_collection.count_documents({
             "status": "approved",
-            "start_date": {"$lte": today},  # ← Now works with datetime
-            "end_date": {"$gte": today}      # ← Now works with datetime
+            "start_date": {"$lte": today},
+            "end_date": {"$gte": today}
         })
         
         # Total requests
@@ -647,7 +665,7 @@ class LeaveService:
     
     async def get_employees_on_leave_today(self) -> List[dict]:
         """Get list of employees on leave today"""
-        today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)  # ← FIX
+        today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
         
         cursor = self.leave_requests_collection.find({
             "status": "approved",

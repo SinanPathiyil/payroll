@@ -3,7 +3,7 @@ import { X, AlertCircle, Calendar, Plus, Upload } from 'lucide-react';
 import axios from 'axios';
 import '../../styles/ba-modal.css';
 
-export default function ApplyLeaveModal({ onClose, onSuccess }) {
+export default function ApplyLeaveModal({ onClose, onSuccess, userRole = 'employee' }) { // ← Add userRole prop
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [leaveTypes, setLeaveTypes] = useState([]);
@@ -18,6 +18,14 @@ export default function ApplyLeaveModal({ onClose, onSuccess }) {
     attachment_url: null
   });
 
+  // ✅ Determine API base path based on role
+  const getApiBasePath = () => {
+    if (userRole === 'team_lead') {
+      return '/team-lead/leave';
+    }
+    return '/employee/leave';
+  };
+
   useEffect(() => {
     loadLeaveTypes();
     loadBalances();
@@ -26,13 +34,16 @@ export default function ApplyLeaveModal({ onClose, onSuccess }) {
   const loadLeaveTypes = async () => {
     try {
       const token = localStorage.getItem('token');
+      const basePath = getApiBasePath();
+      
       const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/employee/leave/available-leave-types`,
+        `${import.meta.env.VITE_API_URL}${basePath}/available-leave-types`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setLeaveTypes(response.data.leave_types || []);
     } catch (error) {
       console.error('Failed to load leave types:', error);
+      setError('Failed to load leave types. Please try again.');
     }
   };
 
@@ -40,8 +51,10 @@ export default function ApplyLeaveModal({ onClose, onSuccess }) {
     try {
       const token = localStorage.getItem('token');
       const currentYear = new Date().getFullYear();
+      const basePath = getApiBasePath();
+      
       const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/employee/leave/balance?year=${currentYear}`,
+        `${import.meta.env.VITE_API_URL}${basePath}/balance?year=${currentYear}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setBalances(response.data.balances || []);
@@ -103,11 +116,17 @@ export default function ApplyLeaveModal({ onClose, onSuccess }) {
     try {
       setSubmitting(true);
       const token = localStorage.getItem('token');
-      await axios.post(
-        `${import.meta.env.VITE_API_URL}/employee/leave/apply`,
-        formData,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const basePath = getApiBasePath();
+      
+      // ✅ Use role-based endpoint
+      const endpoint = userRole === 'team_lead' 
+        ? `${import.meta.env.VITE_API_URL}${basePath}/my-leave/apply`
+        : `${import.meta.env.VITE_API_URL}${basePath}/apply`;
+      
+      await axios.post(endpoint, formData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
       onSuccess();
     } catch (error) {
       console.error('Failed to apply:', error);

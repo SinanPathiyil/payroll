@@ -24,6 +24,7 @@ export default function SuperAdminTeams() {
   const [teams, setTeams] = useState([]);
   const [filteredTeams, setFilteredTeams] = useState([]);
   const [teamLeads, setTeamLeads] = useState([]);
+  const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -43,6 +44,7 @@ export default function SuperAdminTeams() {
     team_name: "",
     description: "",
     team_lead_id: "",
+    member_ids: [],
   });
 
   const [editForm, setEditForm] = useState({
@@ -55,6 +57,7 @@ export default function SuperAdminTeams() {
   useEffect(() => {
     fetchTeams();
     fetchTeamLeads();
+    fetchEmployees();
   }, []);
 
   useEffect(() => {
@@ -89,6 +92,20 @@ export default function SuperAdminTeams() {
       setTeamLeads(response.data);
     } catch (err) {
       console.error("Error fetching team leads:", err);
+    }
+  };
+
+  const fetchEmployees = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/super-admin/users?role=employee`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      // Filter only active employees
+      setEmployees(response.data.filter((emp) => emp.is_active));
+    } catch (err) {
+      console.error("Error fetching employees:", err);
     }
   };
 
@@ -133,6 +150,7 @@ export default function SuperAdminTeams() {
         team_name: "",
         description: "",
         team_lead_id: "",
+        member_ids: [],
       });
       fetchTeams();
       alert("Team created successfully!");
@@ -452,6 +470,103 @@ export default function SuperAdminTeams() {
                       </small>
                     )}
                   </div>
+
+                  {/* ========== ✅ ADD THIS NEW FIELD ========== */}
+                  <div className="sat-form-group">
+                    <label>Team Members (Optional)</label>
+                    <div
+                      style={{
+                        maxHeight: "200px",
+                        overflowY: "auto",
+                        border: "1px solid #e5e7eb",
+                        borderRadius: "8px",
+                        padding: "0.75rem",
+                        backgroundColor: "#f9fafb",
+                      }}
+                    >
+                      {employees.length === 0 ? (
+                        <small className="sat-help-text">
+                          No employees available
+                        </small>
+                      ) : (
+                        employees.map((emp) => (
+                          <div
+                            key={emp.id}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "0.5rem",
+                              padding: "0.5rem",
+                              borderBottom: "1px solid #e5e7eb",
+                              cursor: "pointer",
+                              transition: "background 0.2s",
+                            }}
+                            onMouseEnter={(e) =>
+                              (e.currentTarget.style.backgroundColor =
+                                "#f3f4f6")
+                            }
+                            onMouseLeave={(e) =>
+                              (e.currentTarget.style.backgroundColor =
+                                "transparent")
+                            }
+                          >
+                            <input
+                              type="checkbox"
+                              id={`emp-${emp.id}`}
+                              checked={createForm.member_ids.includes(emp.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setCreateForm({
+                                    ...createForm,
+                                    member_ids: [
+                                      ...createForm.member_ids,
+                                      emp.id,
+                                    ],
+                                  });
+                                } else {
+                                  setCreateForm({
+                                    ...createForm,
+                                    member_ids: createForm.member_ids.filter(
+                                      (id) => id !== emp.id
+                                    ),
+                                  });
+                                }
+                              }}
+                              style={{ cursor: "pointer" }}
+                            />
+                            <label
+                              htmlFor={`emp-${emp.id}`}
+                              style={{
+                                cursor: "pointer",
+                                fontSize: "0.875rem",
+                                flex: 1,
+                                margin: 0,
+                              }}
+                            >
+                              {emp.full_name}
+                              <span
+                                style={{
+                                  color: "#6b7280",
+                                  marginLeft: "0.5rem",
+                                }}
+                              >
+                                ({emp.email})
+                              </span>
+                            </label>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                    {createForm.member_ids.length > 0 && (
+                      <small
+                        className="sat-help-text"
+                        style={{ color: "#3b82f6" }}
+                      >
+                        {createForm.member_ids.length} member(s) selected
+                      </small>
+                    )}
+                  </div>
+                  {/* ========== END OF NEW FIELD ========== */}
                 </div>
 
                 <div className="sat-modal-footer">

@@ -101,13 +101,45 @@ async def create_team(
     # Get team lead details
     team_lead = await get_user_details(team_data.team_lead_id, db)
     
+    # ==================== ✅ VALIDATE MEMBER IDS ====================
+    member_ids = team_data.member_ids or []
+    validated_members = []
+    
+    if member_ids:
+        for member_id in member_ids:
+            # Validate member exists and is employee role
+            member = await get_user_details(member_id, db)
+            if not member:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Member {member_id} not found"
+                )
+            if member["role"] not in ["employee", "team_lead"]:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"User {member['full_name']} must be an employee or team lead"
+                )
+            if not member.get("is_active", True):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"User {member['full_name']} is inactive"
+                )
+            # Check if already in another team
+            if member.get("team_id"):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"User {member['full_name']} is already in another team"
+                )
+            validated_members.append(member_id)
+    # ==================== END OF VALIDATION ====================
+    
     # Create team
     new_team = {
         "team_name": team_data.team_name,
         "description": team_data.description,
         "team_lead_id": team_data.team_lead_id,
         "created_by": str(current_user["_id"]),
-        "members": [],  # Empty initially
+        "members": validated_members,  # ← Use validated members instead of empty array
         "is_active": True,
         "created_at": datetime.now(),
         "updated_at": None
@@ -119,6 +151,12 @@ async def create_team(
     # Add team to team lead's managed_teams
     await add_team_to_lead(team_data.team_lead_id, team_id, db)
     
+    # ==================== ✅ UPDATE EACH MEMBER'S USER RECORD ====================
+    if validated_members:
+        for member_id in validated_members:
+            await update_user_team(member_id, team_id, team_data.team_lead_id, db)
+    # ==================== END OF MEMBER UPDATE ====================
+    
     # Create audit log
     await db.audit_logs.insert_one({
         "action_type": "team_created",
@@ -127,7 +165,8 @@ async def create_team(
         "details": {
             "team_id": team_id,
             "team_name": team_data.team_name,
-            "team_lead_id": team_data.team_lead_id
+            "team_lead_id": team_data.team_lead_id,
+            "members_count": len(validated_members)  # ← Add member count to audit
         },
         "timestamp": datetime.now()
     })

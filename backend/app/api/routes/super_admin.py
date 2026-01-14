@@ -48,12 +48,12 @@ class OverrideRequestResponse(BaseModel):
 class AuditLogResponse(BaseModel):
     id: str
     action_type: str
-    performed_by: str
-    performer_name: str
-    user_role: str
+    performed_by: Optional[str] = None
+    performer_name: Optional[str] = None
+    user_role: Optional[str] = None
     target_user: Optional[str] = None
     target_user_name: Optional[str] = None
-    details: dict
+    details: Optional[dict] = {}
     ip_address: Optional[str] = None
     timestamp: datetime
 
@@ -963,7 +963,9 @@ async def reject_override_request(
 
 # ============= AUDIT LOG MANAGEMENT =============
 
-@router.get("/audit-logs", response_model=List[AuditLogResponse])
+# ============= AUDIT LOG MANAGEMENT =============
+
+@router.get("/audit-logs")
 async def get_audit_logs(
     action_type: Optional[str] = None,
     user_id: Optional[str] = None,
@@ -977,36 +979,58 @@ async def get_audit_logs(
     if action_type:
         query["action_type"] = action_type
     if user_id:
-        query["performed_by"] = user_id
+        # Support both field names for backward compatibility
+        query["$or"] = [
+            {"performed_by": user_id},
+            {"user_id": user_id}
+        ]
     
     logs = await db.audit_logs.find(query).sort("timestamp", -1).limit(limit).to_list(length=None)
     
     result = []
     for log in logs:
-        # Get performer details
-        performer = await db.users.find_one({"_id": ObjectId(log["performed_by"])})
-        performer_name = performer["full_name"] if performer else "Unknown"
+        # Handle both old and new field names
+        performer_id = log.get("performed_by") or log.get("user_id")
+        performer_name = log.get("performer_name") or log.get("user_name") or "Unknown"
+        user_role = log.get("user_role", "unknown")
+        
+        # Try to fetch user details if we have an ID
+        if performer_id:
+            try:
+                performer = await db.users.find_one({"_id": ObjectId(performer_id)})
+                if performer:
+                    performer_name = performer["full_name"]
+                    user_role = performer["role"]
+            except:
+                pass
         
         # Get target user details if exists
         target_user_name = None
-        if log.get("target_user"):
-            target = await db.users.find_one({"_id": ObjectId(log["target_user"])})
-            target_user_name = target["full_name"] if target else "Deleted User"
+        target_user_id = log.get("target_user")
+        if target_user_id:
+            try:
+                target = await db.users.find_one({"_id": ObjectId(target_user_id)})
+                target_user_name = target["full_name"] if target else "Deleted User"
+            except:
+                target_user_name = "Unknown"
         
-        result.append(AuditLogResponse(
-            id=str(log["_id"]),
-            action_type=log["action_type"],
-            performed_by=log["performed_by"],
-            performer_name=performer_name,
-            user_role=log["user_role"],
-            target_user=log.get("target_user"),
-            target_user_name=target_user_name,
-            details=log["details"],
-            ip_address=log.get("ip_address"),
-            timestamp=log["timestamp"]
-        ))
+        result.append({
+            "id": str(log["_id"]),
+            "action_type": log.get("action_type", "unknown"),
+            "performed_by": performer_id or "system",
+            "performer_name": performer_name,
+            "user_role": user_role,
+            "target_user": target_user_id,
+            "target_user_name": target_user_name,
+            "details": log.get("details", {}),
+            "ip_address": log.get("ip_address"),
+            "timestamp": log.get("timestamp", datetime.now())
+        })
     
-    return result
+    return {
+        "total": len(result),
+        "logs": result
+    }
 
 # ============= SYSTEM STATISTICS =============
 
@@ -1023,13 +1047,34 @@ async def get_system_stats(
     team_lead_count = await db.users.count_documents({"role": "team_lead"})
     employee_count = await db.users.count_documents({"role": "employee"})
     super_admin_count = await db.users.count_documents({"role": "super_admin"})
+    business_analyst_count = await db.users.count_documents({"role": "business_analyst"})
     
     pending_requests = await db.override_requests.count_documents({"status": "pending"})
     
-    recent_logins = await db.audit_logs.count_documents({
-        "action_type": "login",
-        "timestamp": {"$gte": datetime.now().replace(hour=0, minute=0, second=0)}
-    })
+    total_teams = await db.teams.count_documents({"is_active": True})
+    
+    # ==================== ✅ COUNT UNIQUE USERS WHO LOGGED IN TODAY ====================
+    today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    unique_logins_pipeline = [
+        {
+            "$match": {
+                "action_type": "login",
+                "timestamp": {"$gte": today_start}
+            }
+        },
+        {
+            "$group": {
+                "_id": "$user_id"  # Group by unique user_id
+            }
+        },
+        {
+            "$count": "unique_users"
+        }
+    ]
+    
+    unique_logins_result = await db.audit_logs.aggregate(unique_logins_pipeline).to_list(length=1)
+    recent_logins = unique_logins_result[0]["unique_users"] if unique_logins_result else 0
+    # ==================== END OF FIX ====================
     
     return {
         "total_users": total_users,
@@ -1039,8 +1084,10 @@ async def get_system_stats(
             "super_admin": super_admin_count,
             "hr": hr_count,
             "team_lead": team_lead_count,
+            "business_analyst": business_analyst_count,
             "employee": employee_count
         },
         "pending_override_requests": pending_requests,
-        "todays_logins": recent_logins
+        "todays_logins": recent_logins,
+        "total_teams": total_teams
     }

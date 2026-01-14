@@ -6,6 +6,7 @@ class TeamCreate(BaseModel):
     team_name: str
     description: Optional[str] = None
     team_lead_id: str  # User ID who will lead this team
+    member_ids: Optional[List[str]] = []
 
 class TeamUpdate(BaseModel):
     team_name: Optional[str] = None

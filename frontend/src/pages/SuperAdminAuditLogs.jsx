@@ -51,21 +51,30 @@ export default function SuperAdminAuditLogs() {
         `${import.meta.env.VITE_API_URL}/super-admin/audit-logs?${params}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setLogs(response.data);
+      
+      // Handle both { logs: [...] } and [...] response formats
+      setLogs(response.data.logs || response.data || []);
     } catch (err) {
       console.error('Error fetching audit logs:', err);
+      setLogs([]); // Set empty array on error
     } finally {
       setLoading(false);
     }
   };
 
   const filterLogs = () => {
+    // Safety check: ensure logs is an array
+    if (!Array.isArray(logs)) {
+      setFilteredLogs([]);
+      return;
+    }
+    
     if (!searchTerm) {
       setFilteredLogs(logs);
     } else {
       const filtered = logs.filter(log =>
-        log.performer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        log.action_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        log.performer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        log.action_type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (log.target_user_name && log.target_user_name.toLowerCase().includes(searchTerm.toLowerCase()))
       );
       setFilteredLogs(filtered);

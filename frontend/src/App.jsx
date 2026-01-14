@@ -20,6 +20,7 @@ import TLDashboard from './pages/TLDashboard';
 import TLLeaveRequests from './pages/TLLeaveRequests';
 import TLTeamCalendar from './pages/TLTeamCalendar';
 import TLMyLeave from './pages/TLMyLeave';
+import TLLeaveHistory from './pages/TLLeaveHistory';
 import TLMessages from './pages/TLMessages';
 import TLProjects from './pages/TLProjects';
 import TLRequirements from './pages/TLRequirements';
@@ -84,6 +85,7 @@ function App() {
         <Route path="/tl/leave/team-requests" element={<ProtectedRoute allowedRoles={['team_lead']}><TLLeaveRequests /></ProtectedRoute>} />
         <Route path="/tl/leave/team-calendar" element={<ProtectedRoute allowedRoles={['team_lead']}><TLTeamCalendar /></ProtectedRoute>} />
         <Route path="/tl/leave/my-leave" element={<ProtectedRoute allowedRoles={['team_lead']}><TLMyLeave /></ProtectedRoute>} />
+        <Route path="/tl/leave/my-history" element={<ProtectedRoute allowedRoles={['team_lead']}><TLLeaveHistory /></ProtectedRoute>} />
         <Route path="/tl/messages" element={<ProtectedRoute allowedRoles={['team_lead']}><TLMessages /></ProtectedRoute>} />
         <Route path="/tl/projects" element={<ProtectedRoute allowedRoles={['team_lead']}><TLProjects /></ProtectedRoute>} />
         <Route path="/tl/requirements" element={<ProtectedRoute allowedRoles={['team_lead']}><TLRequirements /></ProtectedRoute>} />

@@ -1,85 +1,62 @@
 import { useState, useEffect } from "react";
-import { Calendar, Plus, Clock, TrendingUp } from "lucide-react";
+import { Calendar, Plus, TrendingUp, RefreshCw, AlertCircle, Clock } from "lucide-react";
 import Layout from "../components/common/Layout";
 import ApplyLeaveModal from "../components/employee/ApplyLeaveModal";
 import axios from "axios";
 
 export default function TLMyLeave() {
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("balance"); // 'balance' or 'history'
   const [balances, setBalances] = useState([]);
-  const [requests, setRequests] = useState([]);
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [currentYear] = useState(new Date().getFullYear());
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    loadData();
+    loadBalances();
   }, []);
 
-  const loadData = async () => {
+  const loadBalances = async () => {
     try {
       setLoading(true);
+      setError("");
       const token = localStorage.getItem("token");
 
-      // Load balance
-      const balanceResponse = await axios.get(
+      const response = await axios.get(
         `${import.meta.env.VITE_API_URL}/team-lead/leave/my-leave/balance?year=${currentYear}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setBalances(balanceResponse.data.balances || []);
-
-      // Load history
-      const historyResponse = await axios.get(
-        `${import.meta.env.VITE_API_URL}/team-lead/leave/my-leave/history`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setRequests(historyResponse.data.requests || []);
+      setBalances(response.data.balances || []);
     } catch (error) {
-      console.error("Failed to load data:", error);
+      console.error("Failed to load balances:", error);
+      setError("Failed to load leave balances. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  const getStatusBadge = (status) => {
-    const styles = {
-      pending: { bg: "#fef3c7", text: "#92400e" },
-      approved: { bg: "#d1fae5", text: "#065f46" },
-      rejected: { bg: "#fee2e2", text: "#991b1b" },
-      cancelled: { bg: "#f3f4f6", text: "#4b5563" },
-    };
-    const s = styles[status] || styles.pending;
-    return (
-      <span
-        style={{
-          display: "inline-block",
-          padding: "0.375rem 0.75rem",
-          backgroundColor: s.bg,
-          color: s.text,
-          borderRadius: "9999px",
-          fontSize: "0.875rem",
-          fontWeight: "500",
-        }}
-      >
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </span>
-    );
+  const getProgressPercentage = (used, allocated) => {
+    if (allocated === 0) return 0;
+    return (used / allocated) * 100;
   };
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
+  const getProgressColor = (percentage) => {
+    if (percentage >= 80) return "#ef4444"; // Red
+    if (percentage >= 50) return "#f59e0b"; // Orange
+    return "#10b981"; // Green
   };
 
   if (loading) {
     return (
       <Layout>
-        <div className="layout-loading">
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column',
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          minHeight: '400px' 
+        }}>
           <div className="spinner spinner-lg"></div>
-          <p className="layout-loading-text">Loading...</p>
+          <p style={{ marginTop: '1rem', color: '#6b7280' }}>Loading...</p>
         </div>
       </Layout>
     );
@@ -93,295 +70,335 @@ export default function TLMyLeave() {
 
   return (
     <Layout>
-      <div className="ba-dashboard">
-        <div className="ba-dashboard-header">
+      <div style={{ padding: "2rem" }}>
+        {/* Header */}
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          marginBottom: '2rem'
+        }}>
           <div>
-            <h1 className="ba-dashboard-title">My Leave Management</h1>
-            <p className="ba-dashboard-subtitle">
-              Manage your own leave requests and balance
+            <h1 style={{ fontSize: '1.875rem', fontWeight: '700', margin: '0 0 0.5rem 0' }}>
+              My Leave Balance
+            </h1>
+            <p style={{ color: '#6b7280', margin: 0 }}>
+              Year: {currentYear}
             </p>
           </div>
-          <button
-            className="btn btn-primary"
-            onClick={() => setShowApplyModal(true)}
-          >
-            <Plus className="w-4 h-4" />
-            <span>Apply for Leave</span>
-          </button>
-        </div>
-
-        <div className="ba-stats-grid">
-          <div className="ba-stat-card">
-            <div className="ba-stat-content">
-              <div className="ba-stat-info">
-                <p className="ba-stat-label">Total Allocated</p>
-                <p className="ba-stat-value">{summary.total_allocated}</p>
-              </div>
-              <div className="ba-stat-icon ba-stat-icon-blue">
-                <Calendar className="w-6 h-6" />
-              </div>
-            </div>
-          </div>
-          <div className="ba-stat-card">
-            <div className="ba-stat-content">
-              <div className="ba-stat-info">
-                <p className="ba-stat-label">Used</p>
-                <p className="ba-stat-value">{summary.total_used}</p>
-              </div>
-              <div className="ba-stat-icon ba-stat-icon-orange">
-                <Clock className="w-6 h-6" />
-              </div>
-            </div>
-          </div>
-          <div className="ba-stat-card">
-            <div className="ba-stat-content">
-              <div className="ba-stat-info">
-                <p className="ba-stat-label">Available</p>
-                <p className="ba-stat-value">{summary.total_available}</p>
-              </div>
-              <div className="ba-stat-icon ba-stat-icon-green">
-                <TrendingUp className="w-6 h-6" />
-              </div>
-            </div>
+          <div style={{ display: 'flex', gap: '1rem' }}>
+            <button 
+              onClick={loadBalances}
+              className="btn btn-secondary"
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+            >
+              <RefreshCw className="w-4 h-4" />
+              <span>Refresh</span>
+            </button>
+            <button 
+              onClick={() => setShowApplyModal(true)}
+              className="btn btn-primary"
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+            >
+              <Plus className="w-4 h-4" />
+              <span>Apply for Leave</span>
+            </button>
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: "1rem", marginBottom: "1.5rem" }}>
-          <button
-            className={`btn ${activeTab === "balance" ? "btn-primary" : "btn-secondary"}`}
-            onClick={() => setActiveTab("balance")}
-          >
-            Leave Balance
-          </button>
-          <button
-            className={`btn ${activeTab === "history" ? "btn-primary" : "btn-secondary"}`}
-            onClick={() => setActiveTab("history")}
-          >
-            Leave History
-          </button>
-        </div>
+        {error && (
+          <div style={{
+            padding: '1rem',
+            backgroundColor: '#fee2e2',
+            border: '1px solid #ef4444',
+            borderRadius: '8px',
+            marginBottom: '2rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            color: '#991b1b'
+          }}>
+            <AlertCircle className="w-5 h-5" />
+            <span>{error}</span>
+          </div>
+        )}
 
-        {activeTab === "balance" ? (
-          <div className="ba-card">
-            <div className="ba-card-header">
-              <div className="ba-card-title">
-                <Calendar className="w-5 h-5" />
-                <span>Leave Balance by Type ({currentYear})</span>
+        {/* Summary Cards */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+          gap: '1.5rem',
+          marginBottom: '2rem'
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            padding: '1.5rem',
+            borderRadius: '12px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            border: '1px solid #e5e7eb'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '12px',
+                backgroundColor: '#dbeafe',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Calendar className="w-6 h-6" style={{ color: '#3b82f6' }} />
+              </div>
+              <div>
+                <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>Total Allocated</p>
+                <p style={{ fontSize: '2rem', fontWeight: '700', margin: 0, color: '#3b82f6' }}>
+                  {summary.total_allocated}
+                </p>
               </div>
             </div>
-            <div className="ba-card-body">
-              {balances.length === 0 ? (
-                <div className="ba-empty-state">
-                  <Calendar className="ba-empty-icon" />
-                  <p>No leave balances found</p>
-                </div>
-              ) : (
-                <div style={{ display: "grid", gap: "1.5rem" }}>
-                  {balances.map((balance) => (
+            <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>
+              Total days allocated for {currentYear}
+            </p>
+          </div>
+
+          <div style={{
+            backgroundColor: 'white',
+            padding: '1.5rem',
+            borderRadius: '12px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            border: '1px solid #e5e7eb'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '12px',
+                backgroundColor: '#fee2e2',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Clock className="w-6 h-6" style={{ color: '#ef4444' }} />
+              </div>
+              <div>
+                <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>Total Used</p>
+                <p style={{ fontSize: '2rem', fontWeight: '700', margin: 0, color: '#ef4444' }}>
+                  {summary.total_used}
+                </p>
+              </div>
+            </div>
+            <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>
+              Days already taken
+            </p>
+          </div>
+
+          <div style={{
+            backgroundColor: 'white',
+            padding: '1.5rem',
+            borderRadius: '12px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            border: '1px solid #e5e7eb'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '12px',
+                backgroundColor: '#d1fae5',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <TrendingUp className="w-6 h-6" style={{ color: '#10b981' }} />
+              </div>
+              <div>
+                <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>Available</p>
+                <p style={{ fontSize: '2rem', fontWeight: '700', margin: 0, color: '#10b981' }}>
+                  {summary.total_available}
+                </p>
+              </div>
+            </div>
+            <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>
+              Days you can still apply for
+            </p>
+          </div>
+        </div>
+
+        {/* Leave Balance by Type */}
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '12px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          border: '1px solid #e5e7eb',
+          overflow: 'hidden'
+        }}>
+          <div style={{
+            padding: '1.5rem',
+            borderBottom: '1px solid #e5e7eb'
+          }}>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: '600', margin: 0 }}>
+              Leave Balance by Type
+            </h2>
+          </div>
+
+          {balances.length === 0 ? (
+            <div style={{ 
+              padding: '3rem', 
+              textAlign: 'center',
+              color: '#6b7280'
+            }}>
+              <Calendar className="w-16 h-16" style={{ margin: '0 auto 1rem', opacity: 0.5 }} />
+              <p style={{ fontSize: '1.125rem', margin: 0 }}>No leave balances found</p>
+              <p style={{ fontSize: '0.875rem', marginTop: '0.5rem' }}>
+                Contact HR if you believe this is an error
+              </p>
+            </div>
+          ) : (
+            <div style={{ padding: '1.5rem' }}>
+              <div style={{ display: 'grid', gap: '1.5rem' }}>
+                {balances.map((balance) => {
+                  const usagePercentage = getProgressPercentage(balance.used, balance.allocated);
+                  const progressColor = getProgressColor(usagePercentage);
+
+                  return (
                     <div
                       key={balance.id}
                       style={{
-                        padding: "1.5rem",
-                        border: "2px solid #e5e7eb",
-                        borderRadius: "12px",
-                        backgroundColor: "#fafafa",
+                        padding: '1.5rem',
+                        border: '2px solid #e5e7eb',
+                        borderRadius: '12px',
+                        backgroundColor: '#fafafa'
                       }}
                     >
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "flex-start",
-                          marginBottom: "1rem",
-                        }}
-                      >
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'flex-start',
+                        marginBottom: '1rem'
+                      }}>
                         <div>
-                          <h3
-                            style={{
-                              fontSize: "1.125rem",
-                              fontWeight: "600",
-                              margin: "0 0 0.25rem 0",
-                            }}
-                          >
+                          <h3 style={{
+                            fontSize: '1.125rem',
+                            fontWeight: '600',
+                            margin: '0 0 0.25rem 0',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem'
+                          }}>
+                            <span
+                              style={{
+                                width: '12px',
+                                height: '12px',
+                                borderRadius: '50%',
+                                backgroundColor: progressColor
+                              }}
+                            />
                             {balance.leave_type_name}
                           </h3>
-                          <p
-                            style={{
-                              fontSize: "0.875rem",
-                              color: "#6b7280",
-                              margin: 0,
-                            }}
-                          >
+                          <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>
                             {balance.leave_type_code}
                           </p>
                         </div>
-                        <div style={{ textAlign: "right" }}>
-                          <p
-                            style={{
-                              fontSize: "2rem",
-                              fontWeight: "700",
-                              margin: 0,
-                              color: "#10b981",
-                            }}
-                          >
+
+                        <div style={{ textAlign: 'right' }}>
+                          <p style={{ fontSize: '2rem', fontWeight: '700', margin: 0, color: progressColor }}>
                             {balance.available}
                           </p>
-                          <p
-                            style={{
-                              fontSize: "0.875rem",
-                              color: "#6b7280",
-                              margin: 0,
-                            }}
-                          >
+                          <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>
                             days available
                           </p>
                         </div>
                       </div>
-                      <div
-                        style={{
-                          display: "grid",
-                          gridTemplateColumns: "repeat(4, 1fr)",
-                          gap: "1rem",
-                        }}
-                      >
+
+                      {/* Progress Bar */}
+                      <div style={{
+                        width: '100%',
+                        height: '8px',
+                        backgroundColor: '#e5e7eb',
+                        borderRadius: '4px',
+                        overflow: 'hidden',
+                        marginBottom: '1rem'
+                      }}>
+                        <div
+                          style={{
+                            width: `${Math.min(usagePercentage, 100)}%`,
+                            height: '100%',
+                            backgroundColor: progressColor,
+                            transition: 'width 0.3s ease'
+                          }}
+                        />
+                      </div>
+
+                      {/* Stats Grid */}
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(4, 1fr)',
+                        gap: '1rem'
+                      }}>
                         <div>
-                          <p
-                            style={{
-                              fontSize: "0.75rem",
-                              color: "#6b7280",
-                              margin: "0 0 0.25rem 0",
-                            }}
-                          >
+                          <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: '0 0 0.25rem 0' }}>
                             Allocated
                           </p>
-                          <p
-                            style={{
-                              fontSize: "1.25rem",
-                              fontWeight: "600",
-                              margin: 0,
-                            }}
-                          >
+                          <p style={{ fontSize: '1.25rem', fontWeight: '600', margin: 0 }}>
                             {balance.allocated}
                           </p>
                         </div>
                         <div>
-                          <p
-                            style={{
-                              fontSize: "0.75rem",
-                              color: "#6b7280",
-                              margin: "0 0 0.25rem 0",
-                            }}
-                          >
+                          <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: '0 0 0.25rem 0' }}>
                             Used
                           </p>
-                          <p
-                            style={{
-                              fontSize: "1.25rem",
-                              fontWeight: "600",
-                              margin: 0,
-                            }}
-                          >
+                          <p style={{ fontSize: '1.25rem', fontWeight: '600', margin: 0 }}>
                             {balance.used}
                           </p>
                         </div>
                         <div>
-                          <p
-                            style={{
-                              fontSize: "0.75rem",
-                              color: "#6b7280",
-                              margin: "0 0 0.25rem 0",
-                            }}
-                          >
+                          <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: '0 0 0.25rem 0' }}>
                             Pending
                           </p>
-                          <p
-                            style={{
-                              fontSize: "1.25rem",
-                              fontWeight: "600",
-                              margin: 0,
-                            }}
-                          >
+                          <p style={{ fontSize: '1.25rem', fontWeight: '600', margin: 0 }}>
                             {balance.pending}
                           </p>
                         </div>
                         <div>
-                          <p
-                            style={{
-                              fontSize: "0.75rem",
-                              color: "#6b7280",
-                              margin: "0 0 0.25rem 0",
-                            }}
-                          >
+                          <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: '0 0 0.25rem 0' }}>
                             Carried Forward
                           </p>
-                          <p
-                            style={{
-                              fontSize: "1.25rem",
-                              fontWeight: "600",
-                              margin: 0,
-                            }}
-                          >
+                          <p style={{ fontSize: '1.25rem', fontWeight: '600', margin: 0 }}>
                             {balance.carried_forward}
                           </p>
                         </div>
                       </div>
+
+                      {balance.carry_forward_expires_on && (
+                        <div style={{
+                          marginTop: '1rem',
+                          padding: '0.75rem',
+                          backgroundColor: '#fef3c7',
+                          border: '1px solid #fbbf24',
+                          borderRadius: '6px',
+                          fontSize: '0.875rem',
+                          color: '#92400e'
+                        }}>
+                          ⚠️ Carried forward balance expires on: {new Date(balance.carry_forward_expires_on).toLocaleDateString()}
+                        </div>
+                      )}
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        ) : (
-          <div className="ba-card">
-            <div className="ba-card-header">
-              <div className="ba-card-title">
-                <Clock className="w-5 h-5" />
-                <span>Leave History ({requests.length})</span>
+                  );
+                })}
               </div>
             </div>
-            <div className="ba-card-body">
-              {requests.length === 0 ? (
-                <div className="ba-empty-state">
-                  <Calendar className="ba-empty-icon" />
-                  <p>No leave requests found</p>
-                </div>
-              ) : (
-                <div className="ba-activity-list">
-                  {requests.map((request) => (
-                    <div key={request.id} className="ba-activity-item">
-                      <div
-                        className="ba-activity-indicator"
-                        style={{ backgroundColor: request.leave_type_color }}
-                      />
-                      <div className="ba-activity-content">
-                        <p className="ba-activity-message">
-                          <strong>{request.leave_type_name}</strong> -{" "}
-                          {request.request_number}
-                        </p>
-                        <p className="ba-activity-time">
-                          {formatDate(request.start_date)} →{" "}
-                          {formatDate(request.end_date)} ({request.total_days}{" "}
-                          days)
-                        </p>
-                      </div>
-                      {getStatusBadge(request.status)}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
+      {/* Apply Leave Modal */}
       {showApplyModal && (
         <ApplyLeaveModal
           onClose={() => setShowApplyModal(false)}
           onSuccess={() => {
             setShowApplyModal(false);
-            loadData();
+            loadBalances();
           }}
-          userRole="team_lead" // ← Add this prop
         />
       )}
     </Layout>

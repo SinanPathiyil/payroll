@@ -279,7 +279,12 @@ class LeaveService:
         """Update balance when leave is requested/approved/rejected/cancelled"""
         balance = await self.get_user_balance_by_type(user_id, year, leave_type_code)
         if not balance:
+            print(f"⚠️ No balance found for user {user_id}, year {year}, type {leave_type_code}")
             return
+        
+        print(f"🔍 BEFORE UPDATE - User: {user_id}, Leave Type: {leave_type_code}")
+        print(f"   Status: {status}, Days: {days}")
+        print(f"   Current Balance: allocated={balance['allocated']}, used={balance['used']}, pending={balance['pending']}, available={balance['available']}")
         
         if status == "pending":
             # Add to pending, subtract from available
@@ -290,6 +295,7 @@ class LeaveService:
                     "available": -days
                 }, "$set": {"last_updated": datetime.now()}}
             )
+            print(f"   ✅ PENDING: Added {days} to pending, removed from available")
         elif status == "approved":
             # Move from pending to used
             await self.leave_balances_collection.update_one(
@@ -299,6 +305,7 @@ class LeaveService:
                     "used": days
                 }, "$set": {"last_updated": datetime.now()}}
             )
+            print(f"   ✅ APPROVED: Removed {days} from pending, added to used")
         elif status in ["rejected", "cancelled"]:
             # Return to available
             await self.leave_balances_collection.update_one(
@@ -308,6 +315,12 @@ class LeaveService:
                     "available": days
                 }, "$set": {"last_updated": datetime.now()}}
             )
+            print(f"   ✅ REJECTED/CANCELLED: Removed {days} from pending, returned to available")
+        
+        # Verify the update
+        updated_balance = await self.get_user_balance_by_type(user_id, year, leave_type_code)
+        if updated_balance:
+            print(f"   AFTER UPDATE: allocated={updated_balance['allocated']}, used={updated_balance['used']}, pending={updated_balance['pending']}, available={updated_balance['available']}")
     
     # ==================== LEAVE CALCULATION ====================
     

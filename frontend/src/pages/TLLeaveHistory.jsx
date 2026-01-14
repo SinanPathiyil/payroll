@@ -1,35 +1,39 @@
 import { useState, useEffect } from 'react';
-import { Eye, Users, Filter, Search, Clock, CheckCircle, XCircle, AlertCircle, Calendar } from 'lucide-react';
+import { Calendar, Clock, CheckCircle, XCircle, AlertCircle, Plus, Filter, Search } from 'lucide-react';
 import Layout from '../components/common/Layout';
+import ApplyLeaveModal from '../components/employee/ApplyLeaveModal';
 import axios from 'axios';
 
-export default function TLLeaveRequests() {
+export default function TLLeaveHistory() {
   const [loading, setLoading] = useState(true);
   const [requests, setRequests] = useState([]);
   const [filteredRequests, setFilteredRequests] = useState([]);
+  const [showApplyModal, setShowApplyModal] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRequest, setSelectedRequest] = useState(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancellingId, setCancellingId] = useState(null);
 
   useEffect(() => {
-    loadTeamRequests();
+    loadLeaveHistory();
   }, []);
 
   useEffect(() => {
     applyFilters();
   }, [requests, statusFilter, searchTerm]);
 
-  const loadTeamRequests = async () => {
+  const loadLeaveHistory = async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
       const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/team-lead/leave/team-requests`,
+        `${import.meta.env.VITE_API_URL}/team-lead/leave/my-leave/history`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setRequests(response.data.requests || []);
     } catch (error) {
-      console.error('Failed to load team requests:', error);
+      console.error('Failed to load leave history:', error);
     } finally {
       setLoading(false);
     }
@@ -46,13 +50,40 @@ export default function TLLeaveRequests() {
     // Search filter
     if (searchTerm) {
       filtered = filtered.filter(req =>
-        req.user_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         req.leave_type_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        req.reason.toLowerCase().includes(searchTerm.toLowerCase()) ||
         req.request_number.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
     setFilteredRequests(filtered);
+  };
+
+  const handleCancelRequest = async (requestId) => {
+    if (!cancelReason.trim()) {
+      alert('Please provide a reason for cancellation');
+      return;
+    }
+
+    try {
+      setCancellingId(requestId);
+      const token = localStorage.getItem('token');
+      await axios.delete(
+        `${import.meta.env.VITE_API_URL}/team-lead/leave/my-leave/${requestId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          data: { cancelled_reason: cancelReason }
+        }
+      );
+      setSelectedRequest(null);
+      setCancelReason('');
+      loadLeaveHistory();
+    } catch (error) {
+      console.error('Failed to cancel request:', error);
+      alert(error.response?.data?.detail || 'Failed to cancel request');
+    } finally {
+      setCancellingId(null);
+    }
   };
 
   const getStatusBadge = (status) => {
@@ -109,104 +140,20 @@ export default function TLLeaveRequests() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
           <div>
             <h1 style={{ fontSize: '1.875rem', fontWeight: '700', margin: '0 0 0.5rem 0' }}>
-              Team Leave Requests
+              My Leave History
             </h1>
             <p style={{ color: '#6b7280', margin: 0 }}>
-              View your team members' leave requests (Read-only)
+              Total Requests: {requests.length}
             </p>
           </div>
-        </div>
-
-        {/* Stats Cards */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '1.5rem',
-          marginBottom: '2rem'
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            padding: '1.5rem',
-            borderRadius: '12px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-            border: '1px solid #e5e7eb'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <div style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '12px',
-                backgroundColor: '#dbeafe',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <Users className="w-6 h-6" style={{ color: '#3b82f6' }} />
-              </div>
-              <div>
-                <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>Total Requests</p>
-                <p style={{ fontSize: '2rem', fontWeight: '700', margin: 0, color: '#3b82f6' }}>
-                  {requests.length}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div style={{
-            backgroundColor: 'white',
-            padding: '1.5rem',
-            borderRadius: '12px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-            border: '1px solid #e5e7eb'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <div style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '12px',
-                backgroundColor: '#fef3c7',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <Clock className="w-6 h-6" style={{ color: '#f59e0b' }} />
-              </div>
-              <div>
-                <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>Pending</p>
-                <p style={{ fontSize: '2rem', fontWeight: '700', margin: 0, color: '#f59e0b' }}>
-                  {requests.filter(r => r.status === 'pending').length}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div style={{
-            backgroundColor: 'white',
-            padding: '1.5rem',
-            borderRadius: '12px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-            border: '1px solid #e5e7eb'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <div style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '12px',
-                backgroundColor: '#d1fae5',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <CheckCircle className="w-6 h-6" style={{ color: '#10b981' }} />
-              </div>
-              <div>
-                <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>Approved</p>
-                <p style={{ fontSize: '2rem', fontWeight: '700', margin: 0, color: '#10b981' }}>
-                  {requests.filter(r => r.status === 'approved').length}
-                </p>
-              </div>
-            </div>
-          </div>
+          <button 
+            onClick={() => setShowApplyModal(true)}
+            className="btn btn-primary"
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+          >
+            <Plus className="w-4 h-4" />
+            <span>Apply for Leave</span>
+          </button>
         </div>
 
         {/* Filters */}
@@ -243,7 +190,7 @@ export default function TLLeaveRequests() {
               </label>
               <input
                 type="text"
-                placeholder="Search by employee, leave type, or request number..."
+                placeholder="Search by leave type, reason, or request number..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="ba-form-input"
@@ -252,7 +199,7 @@ export default function TLLeaveRequests() {
           </div>
         </div>
 
-        {/* Leave Requests Table */}
+        {/* Leave Requests List */}
         <div style={{
           backgroundColor: 'white',
           borderRadius: '12px',
@@ -262,9 +209,9 @@ export default function TLLeaveRequests() {
         }}>
           {filteredRequests.length === 0 ? (
             <div style={{ padding: '3rem', textAlign: 'center', color: '#6b7280' }}>
-              <Users className="w-16 h-16" style={{ margin: '0 auto 1rem', opacity: 0.5 }} />
+              <Calendar className="w-16 h-16" style={{ margin: '0 auto 1rem', opacity: 0.5 }} />
               <p style={{ fontSize: '1.125rem', margin: 0 }}>
-                {requests.length === 0 ? 'No team leave requests found' : 'No requests match your filters'}
+                {requests.length === 0 ? 'No leave requests found' : 'No requests match your filters'}
               </p>
             </div>
           ) : (
@@ -274,9 +221,6 @@ export default function TLLeaveRequests() {
                   <tr>
                     <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>
                       Request #
-                    </th>
-                    <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>
-                      Employee
                     </th>
                     <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>
                       Leave Type
@@ -289,6 +233,9 @@ export default function TLLeaveRequests() {
                     </th>
                     <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>
                       Status
+                    </th>
+                    <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>
+                      Applied On
                     </th>
                     <th style={{ padding: '1rem', textAlign: 'center', fontSize: '0.875rem', fontWeight: '600', color: '#374151' }}>
                       Actions
@@ -308,12 +255,6 @@ export default function TLLeaveRequests() {
                         <span style={{ fontFamily: 'monospace', fontSize: '0.875rem', fontWeight: '500' }}>
                           {request.request_number}
                         </span>
-                      </td>
-                      <td style={{ padding: '1rem' }}>
-                        <div>
-                          <div style={{ fontWeight: '500' }}>{request.user_name}</div>
-                          <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>{request.user_email}</div>
-                        </div>
                       </td>
                       <td style={{ padding: '1rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -340,15 +281,37 @@ export default function TLLeaveRequests() {
                       <td style={{ padding: '1rem' }}>
                         {getStatusBadge(request.status)}
                       </td>
+                      <td style={{ padding: '1rem', fontSize: '0.875rem', color: '#6b7280' }}>
+                        {formatDate(request.requested_at)}
+                      </td>
                       <td style={{ padding: '1rem', textAlign: 'center' }}>
-                        <button
-                          onClick={() => setSelectedRequest(request)}
-                          className="btn btn-secondary"
-                          style={{ padding: '0.375rem 0.75rem', fontSize: '0.875rem' }}
-                        >
-                          <Eye className="w-4 h-4" style={{ marginRight: '0.25rem' }} />
-                          View
-                        </button>
+                        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                          <button
+                            onClick={() => setSelectedRequest(request)}
+                            className="btn btn-secondary"
+                            style={{ padding: '0.375rem 0.75rem', fontSize: '0.875rem' }}
+                          >
+                            View
+                          </button>
+                          {(request.status === 'pending' || request.status === 'approved') && (
+                            <button
+                              onClick={() => {
+                                setSelectedRequest(request);
+                                setCancelReason('');
+                              }}
+                              className="btn"
+                              style={{ 
+                                padding: '0.375rem 0.75rem', 
+                                fontSize: '0.875rem',
+                                backgroundColor: '#fee2e2',
+                                color: '#991b1b',
+                                border: '1px solid #fca5a5'
+                              }}
+                            >
+                              Cancel
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -359,7 +322,7 @@ export default function TLLeaveRequests() {
         </div>
       </div>
 
-      {/* View Request Details Modal */}
+      {/* View/Cancel Request Modal */}
       {selectedRequest && (
         <div className="ba-modal-overlay" onClick={() => setSelectedRequest(null)}>
           <div className="ba-modal-container" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
@@ -380,14 +343,6 @@ export default function TLLeaveRequests() {
                   <span style={{ fontFamily: 'monospace', fontWeight: '500' }}>{selectedRequest.request_number}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                  <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Employee</span>
-                  <span style={{ fontWeight: '500' }}>{selectedRequest.user_name}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                  <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Email</span>
-                  <span>{selectedRequest.user_email}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                   <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Status</span>
                   {getStatusBadge(selectedRequest.status)}
                 </div>
@@ -406,10 +361,6 @@ export default function TLLeaveRequests() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                   <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>To</span>
                   <span style={{ fontWeight: '500' }}>{formatDate(selectedRequest.end_date)}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                  <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Applied On</span>
-                  <span style={{ fontSize: '0.875rem' }}>{formatDate(selectedRequest.requested_at)}</span>
                 </div>
               </div>
 
@@ -445,16 +396,18 @@ export default function TLLeaveRequests() {
                 </div>
               )}
 
-              {selectedRequest.status === 'pending' && (
-                <div style={{
-                  padding: '1rem',
-                  backgroundColor: '#fef3c7',
-                  border: '1px solid #fbbf24',
-                  borderRadius: '8px',
-                  fontSize: '0.875rem',
-                  color: '#92400e'
-                }}>
-                  ℹ️ This request is awaiting HR approval. You can view it but cannot approve/reject.
+              {(selectedRequest.status === 'pending' || selectedRequest.status === 'approved') && (
+                <div>
+                  <label style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem', display: 'block' }}>
+                    Cancellation Reason <span style={{ color: '#ef4444' }}>*</span>
+                  </label>
+                  <textarea
+                    value={cancelReason}
+                    onChange={(e) => setCancelReason(e.target.value)}
+                    className="ba-form-textarea"
+                    rows="3"
+                    placeholder="Please provide a reason for cancellation..."
+                  />
                 </div>
               )}
             </div>
@@ -463,9 +416,37 @@ export default function TLLeaveRequests() {
               <button onClick={() => setSelectedRequest(null)} className="btn btn-secondary">
                 Close
               </button>
+              {(selectedRequest.status === 'pending' || selectedRequest.status === 'approved') && (
+                <button 
+                  onClick={() => handleCancelRequest(selectedRequest.id)}
+                  className="btn"
+                  style={{ backgroundColor: '#ef4444', color: 'white' }}
+                  disabled={cancellingId === selectedRequest.id || !cancelReason.trim()}
+                >
+                  {cancellingId === selectedRequest.id ? (
+                    <>
+                      <div className="spinner spinner-sm"></div>
+                      <span>Cancelling...</span>
+                    </>
+                  ) : (
+                    'Cancel Request'
+                  )}
+                </button>
+              )}
             </div>
           </div>
         </div>
+      )}
+
+      {/* Apply Leave Modal */}
+      {showApplyModal && (
+        <ApplyLeaveModal
+          onClose={() => setShowApplyModal(false)}
+          onSuccess={() => {
+            setShowApplyModal(false);
+            loadLeaveHistory();
+          }}
+        />
       )}
     </Layout>
   );

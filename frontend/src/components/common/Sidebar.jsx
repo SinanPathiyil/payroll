@@ -77,7 +77,8 @@ export default function Sidebar() {
             icon: Clock,
             label: "Leave Management",
             subItems: [
-              { path: "/tl/leave/my-leave", label: "My Leave" },
+              { path: "/tl/leave/my-leave", label: "Leave Balance" },    
+              { path: "/tl/leave/my-history", label: "Leave History" },
               { path: "/tl/leave/team-requests", label: "Team Requests" },
               { path: "/tl/leave/team-calendar", label: "Team Calendar" },
             ],

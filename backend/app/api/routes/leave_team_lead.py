@@ -141,7 +141,7 @@ async def get_team_leave_calendar(
     current_user: dict = Depends(get_current_team_lead),
     db = Depends(get_database)
 ):
-    """Get team leave calendar - shows approved leaves for team members"""
+    """Get team leave calendar - shows approved leaves for team members, TL's own leaves, and public holidays"""
     
     if start_date > end_date:
         raise HTTPException(
@@ -149,38 +149,71 @@ async def get_team_leave_calendar(
             detail="Start date must be before end date"
         )
     
+    # Convert date to datetime for MongoDB query
+    start_datetime = datetime.combine(start_date, datetime.min.time())
+    end_datetime = datetime.combine(end_date, datetime.max.time())
+    
     team_lead_id = str(current_user["_id"])
     
-    # Get all approved leaves for team members in date range
-    cursor = db.leave_requests.find({
-        "team_lead_id": team_lead_id,
-        "status": "approved",
-        "start_date": {"$lte": end_date},
-        "end_date": {"$gte": start_date}
-    }).sort("start_date", 1)
+    calendar_events = []
     
+    # Build query to get relevant leaves (team members + TL's own leaves)
+    leave_query = {
+        "status": "approved",
+        "start_date": {"$lte": end_datetime},
+        "end_date": {"$gte": start_datetime},
+        "$or": [
+            {"team_lead_id": team_lead_id},  # Team members' leaves
+            {"user_id": team_lead_id}         # TL's own leaves
+        ]
+    }
+    
+    cursor = db.leave_requests.find(leave_query).sort("start_date", 1)
     leaves = await cursor.to_list(length=None)
     
-    calendar_events = []
     for leave in leaves:
+        is_own_leave = leave["user_id"] == team_lead_id
         calendar_events.append({
             "id": str(leave["_id"]),
+            "type": "leave",
             "request_number": leave["request_number"],
             "user_name": leave["user_name"],
+            "user_id": leave["user_id"],
+            "is_own": is_own_leave,
             "user_email": leave["user_email"],
             "leave_type": leave["leave_type_name"],
             "color": leave["leave_type_color"],
-            "start_date": leave["start_date"].isoformat(),
-            "end_date": leave["end_date"].isoformat(),
+            "start_date": leave["start_date"].isoformat() if isinstance(leave["start_date"], datetime) else leave["start_date"],
+            "end_date": leave["end_date"].isoformat() if isinstance(leave["end_date"], datetime) else leave["end_date"],
             "total_days": leave["total_days"],
             "is_half_day": leave["is_half_day"]
+        })
+    
+    # Get public holidays in date range
+    holiday_cursor = db.public_holidays.find({
+        "date": {"$gte": start_datetime, "$lte": end_datetime},
+        "is_active": True
+    }).sort("date", 1)
+    
+    holidays = await holiday_cursor.to_list(length=None)
+    
+    for holiday in holidays:
+        calendar_events.append({
+            "id": str(holiday["_id"]),
+            "type": "holiday",
+            "name": holiday["name"],
+            "date": holiday["date"].isoformat() if isinstance(holiday["date"], datetime) else holiday["date"],
+            "is_optional": holiday.get("is_optional", False),
+            "color": "#10b981" if not holiday.get("is_optional", False) else "#f59e0b",
+            "description": holiday.get("description")
         })
     
     return {
         "start_date": start_date.isoformat(),
         "end_date": end_date.isoformat(),
-        "total_leaves": len(calendar_events),
-        "leaves": calendar_events
+        "total_events": len(calendar_events),
+        "events": calendar_events,
+        "has_team": True
     }
 
 @router.get("/team-members-balances")

@@ -25,7 +25,7 @@ import { getBAProject } from "../services/api";
 import "../styles/ba-project-details.css";
 
 export default function BAProjectDetails() {
-  const { projectId } = useParams();
+  const { id } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [project, setProject] = useState(null);
@@ -35,12 +35,12 @@ export default function BAProjectDetails() {
 
   useEffect(() => {
     loadProjectDetails();
-  }, [projectId]);
+  }, [id]);
 
   const loadProjectDetails = async () => {
     try {
       setLoading(true);
-      const response = await getBAProject(projectId);
+      const response = await getBAProject(id);
       console.log("📊 Project Details:", response.data);
       setProject(response.data);
       setLoading(false);
@@ -430,75 +430,89 @@ export default function BAProjectDetails() {
                 {project.requirement_documents &&
                 project.requirement_documents.length > 0 ? (
                   <div className="ba-documents-list">
-                    {project.requirement_documents.map((doc) => (
-                      <div key={doc.doc_id} className="ba-document-item">
-                        <FileText className="w-4 h-4" />
-                        <div className="ba-document-info">
-                          <p className="ba-document-name">{doc.filename}</p>
-                          <p className="ba-document-meta">
-                            Version {doc.version} •{" "}
-                            {formatDate(doc.uploaded_at)}
-                          </p>
-                          {doc.shared_with_team_lead && (
-                            <div className="ba-document-badges">
-                              <span className="ba-badge ba-badge-success">
-                                Shared with TL
-                              </span>
-                              {doc.team_lead_approved && (
+                    {project.requirement_documents.map((doc) => {
+                      console.log("📄 Document Data:", doc);
+                      return (
+                        <div key={doc.doc_id} className="ba-document-item">
+                          <FileText className="w-4 h-4" />
+                          <div className="ba-document-info">
+                            <p className="ba-document-name">{doc.filename}</p>
+                            <p className="ba-document-meta">
+                              Version {doc.version} •{" "}
+                              {formatDate(doc.uploaded_at)}
+                            </p>
+                            {doc.shared_with_team_lead && (
+                              <div className="ba-document-badges">
                                 <span className="ba-badge ba-badge-success">
-                                  Approved
+                                  Shared with TL
                                 </span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                        <button
-                          className="btn btn-secondary btn-sm"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
+                                {doc.team_lead_approved ? (
+                                  <span className="ba-badge ba-badge-success">
+                                    Approved
+                                  </span>
+                                ) : doc.rejected_at ? (
+                                  <span className="ba-badge ba-badge-danger">
+                                    Rejected
+                                  </span>
+                                ) : null}
+                              </div>
+                            )}
+                          </div>
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
 
-                            if (
-                              doc.file_path &&
-                              doc.file_path.startsWith("data:")
-                            ) {
-                              try {
-                                // Convert base64 to blob
-                                const base64Data = doc.file_path.split(",")[1];
-                                const binaryString = window.atob(base64Data);
-                                const bytes = new Uint8Array(
-                                  binaryString.length
-                                );
-                                for (let i = 0; i < binaryString.length; i++) {
-                                  bytes[i] = binaryString.charCodeAt(i);
+                              if (
+                                doc.file_path &&
+                                doc.file_path.startsWith("data:")
+                              ) {
+                                try {
+                                  // Convert base64 to blob
+                                  const base64Data =
+                                    doc.file_path.split(",")[1];
+                                  const binaryString = window.atob(base64Data);
+                                  const bytes = new Uint8Array(
+                                    binaryString.length
+                                  );
+                                  for (
+                                    let i = 0;
+                                    i < binaryString.length;
+                                    i++
+                                  ) {
+                                    bytes[i] = binaryString.charCodeAt(i);
+                                  }
+                                  const blob = new Blob([bytes], {
+                                    type: "application/pdf",
+                                  });
+                                  const blobUrl = URL.createObjectURL(blob);
+
+                                  // Open in new window
+                                  window.open(blobUrl, "_blank");
+
+                                  // Clean up after 1 minute
+                                  setTimeout(
+                                    () => URL.revokeObjectURL(blobUrl),
+                                    60000
+                                  );
+                                } catch (error) {
+                                  console.error("Error opening PDF:", error);
+                                  alert(
+                                    "Failed to open PDF. Please try again."
+                                  );
                                 }
-                                const blob = new Blob([bytes], {
-                                  type: "application/pdf",
-                                });
-                                const blobUrl = URL.createObjectURL(blob);
-
-                                // Open in new window
-                                window.open(blobUrl, "_blank");
-
-                                // Clean up after 1 minute
-                                setTimeout(
-                                  () => URL.revokeObjectURL(blobUrl),
-                                  60000
-                                );
-                              } catch (error) {
-                                console.error("Error opening PDF:", error);
-                                alert("Failed to open PDF. Please try again.");
+                              } else {
+                                alert("PDF data not available");
                               }
-                            } else {
-                              alert("PDF data not available");
-                            }
-                          }}
-                        >
-                          <Eye className="w-4 h-4" />
-                          <span>View</span>
-                        </button>
-                      </div>
-                    ))}
+                            }}
+                          >
+                            <Eye className="w-4 h-4" />
+                            <span>View</span>
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="ba-empty-state-small">

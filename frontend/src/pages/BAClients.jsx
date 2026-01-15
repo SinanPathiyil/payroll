@@ -143,7 +143,7 @@ export default function BAClients() {
             <Briefcase className="w-5 h-5" />
             <div>
               <p className="ba-clients-stat-value">
-                {clients.reduce((sum, c) => sum + c.projects_count, 0)}
+                {clients.reduce((sum, c) => sum + (c.total_projects || 0), 0)}
               </p>
               <p className="ba-clients-stat-label">Total Projects</p>
             </div>
@@ -153,7 +153,7 @@ export default function BAClients() {
             <div>
               <p className="ba-clients-stat-value">
                 {formatCurrency(
-                  clients.reduce((sum, c) => sum + c.total_revenue, 0)
+                  clients.reduce((sum, c) => sum + (c.total_revenue || 0), 0)
                 )}
               </p>
               <p className="ba-clients-stat-label">Total Revenue</p>
@@ -326,11 +326,11 @@ export default function BAClients() {
                   <div className="ba-client-stats">
                     <div className="ba-client-stat">
                       <Briefcase className="w-4 h-4" />
-                      <span>{client.projects_count} Projects</span>
+                      <span>{client.total_projects || 0} Projects</span>
                     </div>
                     <div className="ba-client-stat">
                       <DollarSign className="w-4 h-4" />
-                      <span>{formatCurrency(client.total_revenue)}</span>
+                      <span>{formatCurrency(client.total_revenue || 0)}</span>
                     </div>
                   </div>
                 </div>
@@ -339,7 +339,7 @@ export default function BAClients() {
                 <div className="ba-client-card-footer">
                   <div className="ba-client-footer-info">
                     <Calendar className="w-3.5 h-3.5" />
-                    <span>Since {formatDate(client.contract_start)}</span>
+                    <span>Since {formatDate(client.contract_start_date)}</span>
                   </div>
                   <button
                     className="ba-client-view-btn"

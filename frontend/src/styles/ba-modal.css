@@ -964,3 +964,15 @@ form {
     min-width: 100%;
   }
 }
+/* Badge Variants */
+.ba-badge-danger {
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.1), rgba(220, 38, 38, 0.15));
+  border-color: rgba(220, 38, 38, 0.3);
+  color: rgba(220, 38, 38, 0.9);
+}
+
+.ba-badge-warning {
+  background: linear-gradient(135deg, rgba(255, 179, 0, 0.1), rgba(255, 179, 0, 0.15));
+  border-color: rgba(255, 179, 0, 0.3);
+  color: rgba(11, 11, 13, 0.8);
+}

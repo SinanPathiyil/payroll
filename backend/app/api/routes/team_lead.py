@@ -135,6 +135,7 @@ async def get_project_requirements(
                 "shared_at": doc.get("shared_at"),
                 "team_lead_approved": doc.get("team_lead_approved", False),
                 "approved_at": doc.get("approved_at"),
+                "rejected_at": doc.get("rejected_at"),
                 "approval_notes": doc.get("approval_notes"),
                 "is_latest": doc.get("is_latest", False)
             })
@@ -210,7 +211,7 @@ async def approve_requirement_document(
                     f"requirement_documents.{doc_index}.team_lead_approved": True,
                     f"requirement_documents.{doc_index}.approved_at": datetime.now(),
                     f"requirement_documents.{doc_index}.approval_notes": approval_data.approval_notes,
-                    "requirements_approved": True,
+                    "requirements_approved": True,  # ✅ Reviewed and approved
                     "status": "approved_ready_to_start",
                     "updated_at": datetime.now()
                 }
@@ -234,12 +235,20 @@ async def approve_requirement_document(
             {
                 "$set": {
                     f"requirement_documents.{doc_index}.team_lead_approved": False,
+                    f"requirement_documents.{doc_index}.rejected_at": datetime.now(),
                     f"requirement_documents.{doc_index}.approval_notes": approval_data.approval_notes,
-                    "status": "requirement_uploaded",  # Back to uploaded status
+                    "requirements_approved": True,  # ✅ Reviewed (but rejected)
+                    "status": "requirement_rejected",  # ← CHANGED status to show rejection
                     "updated_at": datetime.now()
                 }
             }
         )
+        
+        message_content = f"Requirements need revision for project: {project['project_name']}\n"
+        if approval_data.approval_notes:
+            message_content += f"Reason: {approval_data.approval_notes}"
+        
+        log_action = "requirement_rejected"
         
         message_content = f"Requirements need revision for project: {project['project_name']}\n"
         if approval_data.approval_notes:

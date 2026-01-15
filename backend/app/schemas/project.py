@@ -55,6 +55,10 @@ class ProjectResponse(BaseModel):
     id: str
     project_name: str
     description: Optional[str] = None
+    project_id: Optional[str] = None  
+    project_name_display: Optional[str] = None 
+    client_id: Optional[str] = None  
+    client_name: Optional[str] = None
     assigned_to_team_lead: str
     team_lead_name: Optional[str] = None  # For display
     team_id: Optional[str] = None

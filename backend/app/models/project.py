@@ -55,6 +55,7 @@ class RequirementDocument(BaseModel):
     shared_at: Optional[datetime] = None
     team_lead_approved: bool = False
     approved_at: Optional[datetime] = None
+    rejected_at: Optional[datetime] = None
     approval_notes: Optional[str] = None
     is_latest: bool = True
 

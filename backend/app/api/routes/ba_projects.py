@@ -108,6 +108,7 @@ class RequirementDocumentResponse(BaseModel):
     shared_at: Optional[datetime]
     team_lead_approved: bool
     approved_at: Optional[datetime]
+    rejected_at: Optional[datetime]
     approval_notes: Optional[str]
     is_latest: bool
 
@@ -313,6 +314,8 @@ async def get_ba_projects(
             description=project.get("description"),
             project_id=None,
             project_name_display=f"{project['project_name']} ({client['company_name'] if client else 'Unknown Client'})",
+            client_id=project.get("client_id"), 
+            client_name=client['company_name'] if client else None,
             assigned_to_team_lead=project["assigned_to_team_lead"],
             team_lead_name=team_lead["full_name"] if team_lead else "Unknown",
             team_id=project.get("team_id"),
@@ -399,6 +402,7 @@ async def get_ba_project_details(
             "uploaded_at": doc["uploaded_at"],
             "shared_with_team_lead": doc.get("shared_with_team_lead", False),
             "team_lead_approved": doc.get("team_lead_approved", False),
+            "rejected_at": doc.get("rejected_at"),
             "is_latest": doc.get("is_latest", False)
         })
     
@@ -738,6 +742,7 @@ async def upload_requirement_document(
         "shared_at": None,
         "team_lead_approved": False,
         "approved_at": None,
+        "rejected_at": None,
         "approval_notes": notes,
         "is_latest": True
     }
@@ -749,6 +754,7 @@ async def upload_requirement_document(
             "$push": {"requirement_documents": new_doc},
             "$set": {
                 "status": "requirement_uploaded",
+                "requirements_approved": False,  # ← ADD THIS - reset when new doc uploaded
                 "updated_at": datetime.now()
             }
         }
@@ -780,6 +786,7 @@ async def upload_requirement_document(
         shared_at=None,
         team_lead_approved=False,
         approved_at=None,
+        rejected_at=None,
         approval_notes=notes,
         is_latest=True
     )
@@ -919,6 +926,7 @@ async def get_requirement_documents(
             shared_at=doc.get("shared_at"),
             team_lead_approved=doc.get("team_lead_approved", False),
             approved_at=doc.get("approved_at"),
+            rejected_at=doc.get("rejected_at"),
             approval_notes=doc.get("approval_notes"),
             is_latest=doc.get("is_latest", False)
         ))

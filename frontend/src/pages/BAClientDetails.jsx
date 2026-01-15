@@ -26,7 +26,7 @@ import { getClient } from "../services/api";
 import "../styles/ba-client-details.css";
 
 export default function BAClientDetails() {
-  const { clientId } = useParams();
+  const { id } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [client, setClient] = useState(null);
@@ -35,12 +35,12 @@ export default function BAClientDetails() {
 
   useEffect(() => {
     loadClientDetails();
-  }, [clientId]);
+  }, [id]);
 
   const loadClientDetails = async () => {
     try {
       setLoading(true);
-      const response = await getClient(clientId);
+      const response = await getClient(id);
       console.log("📊 Client Details:", response.data);
       setClient(response.data);
       setLoading(false);

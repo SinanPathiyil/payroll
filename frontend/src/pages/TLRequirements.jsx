@@ -14,10 +14,10 @@ import {
   User,
   Building,
   Briefcase,
-  MessageSquare,
   AlertCircle,
   ThumbsUp,
   ThumbsDown,
+  X,
 } from "lucide-react";
 
 import {
@@ -38,8 +38,9 @@ export default function TLRequirements() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [selectedDoc, setSelectedDoc] = useState(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
-  const [approvalAction, setApprovalAction] = useState(null); // 'approve' or 'reject'
+  const [approvalAction, setApprovalAction] = useState(null);
   const [approvalNotes, setApprovalNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -49,9 +50,10 @@ export default function TLRequirements() {
 
   useEffect(() => {
     if (highlightDocId && requirements.length > 0) {
-      const doc = requirements.find((r) => r.id === parseInt(highlightDocId));
+      const doc = requirements.find((r) => r.id === highlightDocId);
       if (doc) {
         setSelectedDoc(doc);
+        setShowDetailsModal(true);
       }
     }
   }, [highlightDocId, requirements]);
@@ -60,11 +62,9 @@ export default function TLRequirements() {
     try {
       setLoading(true);
 
-      // Get all active projects
       const projectsResponse = await getTLActiveProjects();
       const projects = projectsResponse.data;
 
-      // Get requirements for all projects
       const allRequirements = [];
 
       for (const project of projects) {
@@ -72,7 +72,6 @@ export default function TLRequirements() {
           const requirementsResponse = await getTLRequirements(project.id);
           const projectRequirements = requirementsResponse.data || [];
 
-          // Add project context to each requirement
           projectRequirements.forEach((req) => {
             allRequirements.push({
               id: req.doc_id,
@@ -87,7 +86,6 @@ export default function TLRequirements() {
               uploaded_by_role: "Business Analyst",
               uploaded_at: req.uploaded_at,
               shared_at: req.shared_at,
-              approval_deadline: req.shared_at, // Use shared_at as placeholder
               file_size: req.file_size
                 ? `${(req.file_size / 1024 / 1024).toFixed(2)} MB`
                 : "Unknown",
@@ -95,24 +93,25 @@ export default function TLRequirements() {
               version: req.version,
               is_latest: req.is_latest,
 
-              // Determine status
-              status: req.team_lead_approved
-                ? "approved"
-                : req.team_lead_approved === false
-                  ? "rejected"
-                  : "pending",
+              // Determine status - FIXED
+              status:
+                req.team_lead_approved === true
+                  ? "approved"
+                  : req.shared_with_team_lead === false
+                    ? "not_shared"
+                    : req.rejected_at
+                      ? "rejected"
+                      : "pending",
 
               // Approval/rejection info
               approved_by: req.team_lead_approved ? "You" : null,
               approved_at: req.approved_at,
               approval_notes: req.approval_notes,
-              rejected_by: req.team_lead_approved === false ? "You" : null,
-              rejected_at: req.approved_at,
+              rejected_by: req.rejected_at ? "You" : null,
+              rejected_at: req.rejected_at,
               rejection_notes: req.approval_notes,
 
-              // Additional fields
               description: `Requirement document v${req.version} for ${project.project_name}`,
-              sections: [], // Can be populated if backend provides it
             });
           });
         } catch (error) {
@@ -120,7 +119,6 @@ export default function TLRequirements() {
             `Failed to load requirements for project ${project.id}:`,
             error
           );
-          // Continue with other projects even if one fails
         }
       }
 
@@ -162,48 +160,40 @@ export default function TLRequirements() {
   const getStatusIcon = (status) => {
     switch (status) {
       case "approved":
-        return <CheckCircle className="w-5 h-5" />;
+        return <CheckCircle className="w-4 h-4" />;
       case "rejected":
-        return <XCircle className="w-5 h-5" />;
+        return <XCircle className="w-4 h-4" />;
       case "pending":
-        return <Clock className="w-5 h-5" />;
+        return <Clock className="w-4 h-4" />;
       default:
-        return <AlertCircle className="w-5 h-5" />;
+        return <AlertCircle className="w-4 h-4" />;
     }
   };
 
-  const isDeadlineNear = (deadline) => {
-    const deadlineDate = new Date(deadline);
-    const now = new Date();
-    const hoursLeft = (deadlineDate - now) / (1000 * 60 * 60);
-    return hoursLeft <= 24 && hoursLeft > 0;
-  };
-
-  const isOverdue = (deadline, status) => {
-    if (status !== "pending") return false;
-    return new Date(deadline) < new Date();
+  const handleViewDetails = (doc) => {
+    setSelectedDoc(doc);
+    setShowDetailsModal(true);
   };
 
   const handleApprovalAction = (action) => {
     setApprovalAction(action);
+    setShowDetailsModal(false);
     setShowApprovalModal(true);
   };
 
   const submitApproval = async () => {
     setSubmitting(true);
     try {
-      // Real API call
       if (approvalAction === "approve") {
         await approveRequirement(selectedDoc.project_id, selectedDoc.doc_id, {
-          notes: approvalNotes,
+          notes: approvalNotes || "", // Send empty string if no notes
         });
       } else {
         await rejectRequirement(selectedDoc.project_id, selectedDoc.doc_id, {
-          notes: approvalNotes,
+          notes: approvalNotes || "", // Send empty string if no notes
         });
       }
 
-      // Success - reload data
       setShowApprovalModal(false);
       setSelectedDoc(null);
       setApprovalNotes("");
@@ -211,7 +201,9 @@ export default function TLRequirements() {
       setSubmitting(false);
     } catch (error) {
       console.error("Failed to submit approval:", error);
-      alert("Failed to submit approval. Please try again.");
+      alert(
+        error.response?.data?.detail || "Failed to submit. Please try again."
+      );
       setSubmitting(false);
     }
   };
@@ -299,7 +291,7 @@ export default function TLRequirements() {
           </div>
         </div>
 
-        {/* Requirements List */}
+        {/* Requirements List - COMPACT CARDS */}
         {filteredRequirements.length === 0 ? (
           <div className="ba-empty-state">
             <FileText className="ba-empty-icon" />
@@ -315,212 +307,112 @@ export default function TLRequirements() {
             {filteredRequirements.map((req) => (
               <div
                 key={req.id}
-                className={`tl-req-card ${req.status === "pending" ? "pending" : ""} ${isOverdue(req.approval_deadline, req.status) ? "overdue" : ""}`}
+                className={`tl-req-card-compact ${req.status === "pending" ? "pending" : ""}`}
               >
-                {/* Card Header */}
-                <div className="tl-req-card-header">
-                  <div className="tl-req-header-left">
-                    <div className="tl-req-icon">
-                      <FileText className="w-5 h-5" />
+                <div className="tl-req-card-compact-content">
+                  {/* Icon */}
+                  <div className="tl-req-compact-icon">
+                    <FileText className="w-5 h-5" />
+                  </div>
+
+                  {/* Info */}
+                  <div className="tl-req-compact-info">
+                    <div className="tl-req-compact-header">
+                      <h3 className="tl-req-compact-title">
+                        {req.document_name}
+                      </h3>
                     </div>
-                    <div className="tl-req-header-info">
-                      <div className="tl-req-doc-id">{req.doc_id}</div>
-                      <h3 className="tl-req-title">{req.document_name}</h3>
-                      <div className="tl-req-meta">
-                        <span className="tl-req-project">
-                          <Briefcase className="w-3.5 h-3.5" />
-                          {req.project_name}
-                        </span>
-                        <span className="tl-req-separator">•</span>
-                        <span className="tl-req-client">
-                          <Building className="w-3.5 h-3.5" />
-                          {req.client_name}
-                        </span>
-                      </div>
+                    <div className="tl-req-compact-meta">
+                      <span>
+                        <Briefcase className="w-3.5 h-3.5" />
+                        {req.project_name}
+                      </span>
+                      <span className="tl-req-separator">•</span>
+                      <span>
+                        <Building className="w-3.5 h-3.5" />
+                        {req.client_name}
+                      </span>
                     </div>
                   </div>
-                  <div className="tl-req-header-right">
-                    <span
-                      className={`status-chip ${req.status === "approved" ? "success" : req.status === "rejected" ? "danger" : "warning"}`}
+
+                  {/* Status */}
+                  <span
+                    className={`status-chip ${
+                      req.status === "approved"
+                        ? "success"
+                        : req.status === "rejected"
+                          ? "danger"
+                          : "warning"
+                    }`}
+                  >
+                    {getStatusIcon(req.status)}
+                    <span>{req.status}</span>
+                  </span>
+
+                  {/* Actions */}
+                  <div className="tl-req-compact-actions">
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => handleViewDetails(req)}
                     >
-                      {getStatusIcon(req.status)}
-                      <span>{req.status}</span>
-                    </span>
-                    {isOverdue(req.approval_deadline, req.status) && (
-                      <span className="tl-req-overdue-badge">OVERDUE</span>
-                    )}
-                    {isDeadlineNear(req.approval_deadline) &&
-                      req.status === "pending" && (
-                        <span className="tl-req-urgent-badge">URGENT</span>
-                      )}
-                  </div>
-                </div>
-
-                {/* Card Body */}
-                <div className="tl-req-card-body">
-                  <p className="tl-req-description">{req.description}</p>
-
-                  {/* Document Info */}
-                  <div className="tl-req-info-grid">
-                    <div className="tl-req-info-item">
-                      <User className="w-4 h-4" />
-                      <div>
-                        <p className="tl-req-info-label">Uploaded By</p>
-                        <p className="tl-req-info-value">{req.uploaded_by}</p>
-                        <p className="tl-req-info-hint">
-                          {req.uploaded_by_role}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="tl-req-info-item">
-                      <Calendar className="w-4 h-4" />
-                      <div>
-                        <p className="tl-req-info-label">Uploaded On</p>
-                        <p className="tl-req-info-value">
-                          {formatDateTime(req.uploaded_at)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="tl-req-info-item">
-                      <Clock className="w-4 h-4" />
-                      <div>
-                        <p className="tl-req-info-label">Deadline</p>
-                        <p
-                          className={`tl-req-info-value ${isOverdue(req.approval_deadline, req.status) ? "text-danger" : isDeadlineNear(req.approval_deadline) && req.status === "pending" ? "text-warning" : ""}`}
+                      <Eye className="w-4 h-4" />
+                      <span>View</span>
+                    </button>
+                    {req.status === "pending" && (
+                      <>
+                        <button
+                          className="btn btn-success btn-sm"
+                          onClick={() => {
+                            setSelectedDoc(req);
+                            handleApprovalAction("approve");
+                          }}
                         >
-                          {formatDateTime(req.approval_deadline)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="tl-req-info-item">
-                      <FileText className="w-4 h-4" />
-                      <div>
-                        <p className="tl-req-info-label">File Size</p>
-                        <p className="tl-req-info-value">{req.file_size}</p>
-                      </div>
-                    </div>
+                          <ThumbsUp className="w-4 h-4" />
+                          <span>Approve</span>
+                        </button>
+                        <button
+                          className="btn btn-danger btn-sm"
+                          onClick={() => {
+                            setSelectedDoc(req);
+                            handleApprovalAction("reject");
+                          }}
+                        >
+                          <ThumbsDown className="w-4 h-4" />
+                          <span>Reject</span>
+                        </button>
+                      </>
+                    )}
                   </div>
-
-                  {/* Sections */}
-                  {req.sections && req.sections.length > 0 && (
-                    <div className="tl-req-sections">
-                      <p className="tl-req-sections-label">
-                        Document Sections:
-                      </p>
-                      <div className="tl-req-sections-list">
-                        {req.sections.map((section, index) => (
-                          <span key={index} className="tl-req-section-badge">
-                            {section}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Approval/Rejection Info */}
-                  {req.status === "approved" && (
-                    <div className="tl-req-decision approved">
-                      <div className="tl-req-decision-header">
-                        <CheckCircle className="w-5 h-5" />
-                        <span>
-                          Approved by {req.approved_by} on{" "}
-                          {formatDateTime(req.approved_at)}
-                        </span>
-                      </div>
-                      {req.approval_notes && (
-                        <p className="tl-req-decision-notes">
-                          {req.approval_notes}
-                        </p>
-                      )}
-                    </div>
-                  )}
-
-                  {req.status === "rejected" && (
-                    <div className="tl-req-decision rejected">
-                      <div className="tl-req-decision-header">
-                        <XCircle className="w-5 h-5" />
-                        <span>
-                          Rejected by {req.rejected_by} on{" "}
-                          {formatDateTime(req.rejected_at)}
-                        </span>
-                      </div>
-                      {req.rejection_notes && (
-                        <p className="tl-req-decision-notes">
-                          {req.rejection_notes}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* Card Footer */}
-                <div className="tl-req-card-footer">
-                  <a
-                    href={req.document_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn btn-secondary btn-sm"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span>Download</span>
-                  </a>
-                  <button
-                    className="btn btn-secondary btn-sm"
-                    onClick={() => setSelectedDoc(req)}
-                  >
-                    <Eye className="w-4 h-4" />
-                    <span>View Details</span>
-                  </button>
-                  {req.status === "pending" && (
-                    <>
-                      <button
-                        className="btn btn-success btn-sm"
-                        onClick={() => {
-                          setSelectedDoc(req);
-                          handleApprovalAction("approve");
-                        }}
-                      >
-                        <ThumbsUp className="w-4 h-4" />
-                        <span>Approve</span>
-                      </button>
-                      <button
-                        className="btn btn-danger btn-sm"
-                        onClick={() => {
-                          setSelectedDoc(req);
-                          handleApprovalAction("reject");
-                        }}
-                      >
-                        <ThumbsDown className="w-4 h-4" />
-                        <span>Reject</span>
-                      </button>
-                    </>
-                  )}
                 </div>
               </div>
             ))}
           </div>
         )}
 
-        {/* Document Details Modal */}
-        {selectedDoc && !showApprovalModal && (
-          <div className="modal-backdrop" onClick={() => setSelectedDoc(null)}>
+        {/* View Details Modal */}
+        {showDetailsModal && selectedDoc && (
+          <div
+            className="ba-modal-overlay"
+            onClick={() => setShowDetailsModal(false)}
+          >
             <div
-              className="modal-container modal-xl"
+              className="ba-modal-container ba-modal-large"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="modal-header">
-                <div className="modal-header-content">
-                  <FileText className="modal-header-icon" />
-                  <h2 className="modal-title">Requirement Details</h2>
+              <div className="ba-modal-header">
+                <div className="ba-modal-header-content">
+                  <FileText className="w-5 h-5" />
+                  <h2 className="ba-modal-title">Requirement Details</h2>
                 </div>
                 <button
-                  className="modal-close-btn"
-                  onClick={() => setSelectedDoc(null)}
+                  className="ba-modal-close-btn"
+                  onClick={() => setShowDetailsModal(false)}
                 >
-                  ×
+                  <X className="w-5 h-5" />
                 </button>
               </div>
-              <div className="modal-body">
+
+              <div className="ba-modal-body">
                 <div className="tl-req-details">
                   {/* Status Banner */}
                   <div
@@ -547,7 +439,7 @@ export default function TLRequirements() {
                       className="btn btn-primary"
                     >
                       <Download className="w-4 h-4" />
-                      <span>Download Document</span>
+                      <span>Download</span>
                     </a>
                   </div>
 
@@ -576,6 +468,18 @@ export default function TLRequirements() {
                       </p>
                     </div>
                     <div className="tl-req-detail-item">
+                      <p className="tl-req-detail-label">Version</p>
+                      <p className="tl-req-detail-value">
+                        {selectedDoc.version}
+                      </p>
+                    </div>
+                    <div className="tl-req-detail-item">
+                      <p className="tl-req-detail-label">File Size</p>
+                      <p className="tl-req-detail-value">
+                        {selectedDoc.file_size}
+                      </p>
+                    </div>
+                    <div className="tl-req-detail-item">
                       <p className="tl-req-detail-label">Uploaded By</p>
                       <p className="tl-req-detail-value">
                         {selectedDoc.uploaded_by}
@@ -591,38 +495,18 @@ export default function TLRequirements() {
                       </p>
                     </div>
                     <div className="tl-req-detail-item">
-                      <p className="tl-req-detail-label">Approval Deadline</p>
+                      <p className="tl-req-detail-label">Shared On</p>
                       <p className="tl-req-detail-value">
-                        {formatDateTime(selectedDoc.approval_deadline)}
+                        {formatDateTime(selectedDoc.shared_at)}
                       </p>
                     </div>
                     <div className="tl-req-detail-item">
-                      <p className="tl-req-detail-label">File Size</p>
+                      <p className="tl-req-detail-label">Latest Version</p>
                       <p className="tl-req-detail-value">
-                        {selectedDoc.file_size}
+                        {selectedDoc.is_latest ? "Yes" : "No"}
                       </p>
                     </div>
                   </div>
-
-                  {/* Document Sections */}
-                  {selectedDoc.sections && selectedDoc.sections.length > 0 && (
-                    <div className="tl-req-details-section">
-                      <h4 className="tl-req-details-section-title">
-                        Document Sections
-                      </h4>
-                      <div className="tl-req-details-sections">
-                        {selectedDoc.sections.map((section, index) => (
-                          <div
-                            key={index}
-                            className="tl-req-details-section-item"
-                          >
-                            <CheckCircle className="w-4 h-4" />
-                            <span>{section}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
 
                   {/* Decision Info */}
                   {selectedDoc.status === "approved" && (
@@ -699,33 +583,34 @@ export default function TLRequirements() {
         {/* Approval/Rejection Modal */}
         {showApprovalModal && selectedDoc && (
           <div
-            className="modal-backdrop"
+            className="ba-modal-overlay"
             onClick={() => setShowApprovalModal(false)}
           >
             <div
-              className="modal-container modal-md"
+              className="ba-modal-container"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="modal-header">
-                <div className="modal-header-content">
+              <div className="ba-modal-header">
+                <div className="ba-modal-header-content">
                   {approvalAction === "approve" ? (
-                    <ThumbsUp className="modal-header-icon" />
+                    <ThumbsUp className="w-5 h-5" />
                   ) : (
-                    <ThumbsDown className="modal-header-icon" />
+                    <ThumbsDown className="w-5 h-5" />
                   )}
-                  <h2 className="modal-title">
+                  <h2 className="ba-modal-title">
                     {approvalAction === "approve" ? "Approve" : "Reject"}{" "}
                     Requirements
                   </h2>
                 </div>
                 <button
-                  className="modal-close-btn"
+                  className="ba-modal-close-btn"
                   onClick={() => setShowApprovalModal(false)}
                 >
-                  ×
+                  <X className="w-5 h-5" />
                 </button>
               </div>
-              <div className="modal-body">
+
+              <div className="ba-modal-body">
                 <div className="tl-approval-form">
                   <div className="tl-approval-doc-info">
                     <p className="tl-approval-doc-name">
@@ -736,26 +621,32 @@ export default function TLRequirements() {
                     </p>
                   </div>
 
-                  <div className="modal-input-group">
-                    <label className="modal-label">
+                  <div className="ba-form-group">
+                    <label className="ba-form-label">
                       {approvalAction === "approve"
                         ? "Approval Notes"
                         : "Rejection Reason"}{" "}
-                      <span className="modal-required">*</span>
+                      <span
+                        style={{
+                          color: "rgba(11, 11, 13, 0.5)",
+                          fontStyle: "italic",
+                        }}
+                      >
+                        (Optional)
+                      </span>
                     </label>
                     <textarea
                       value={approvalNotes}
                       onChange={(e) => setApprovalNotes(e.target.value)}
-                      className="modal-textarea"
+                      className="ba-form-textarea"
                       rows="6"
                       placeholder={
                         approvalAction === "approve"
                           ? "Add any notes or comments about the approval..."
-                          : "Please provide a detailed reason for rejection..."
+                          : "Please provide a reason for rejection..."
                       }
-                      required
                     />
-                    <p className="modal-hint">
+                    <p className="ba-form-hint">
                       {approvalAction === "approve"
                         ? "This will notify the Business Analyst that requirements are approved for development."
                         : "The Business Analyst will be notified and can revise the document based on your feedback."}
@@ -763,7 +654,8 @@ export default function TLRequirements() {
                   </div>
                 </div>
               </div>
-              <div className="modal-footer">
+
+              <div className="ba-modal-footer">
                 <button
                   className="btn btn-secondary"
                   onClick={() => setShowApprovalModal(false)}
@@ -774,7 +666,7 @@ export default function TLRequirements() {
                 <button
                   className={`btn ${approvalAction === "approve" ? "btn-success" : "btn-danger"}`}
                   onClick={submitApproval}
-                  disabled={!approvalNotes.trim() || submitting}
+                  disabled={submitting}
                 >
                   {submitting ? (
                     <>

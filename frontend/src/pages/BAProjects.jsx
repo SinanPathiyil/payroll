@@ -24,6 +24,7 @@ import {
   FileText,
   Target,
   Activity,
+  Building,
 } from "lucide-react";
 
 import {
@@ -305,85 +306,83 @@ export default function BAProjects() {
               <div key={project.id} className="ba-project-card">
                 {/* Card Header */}
                 <div className="ba-project-card-header">
-                  <div className="ba-project-header-left">
-                    <div className="ba-project-icon">
-                      <Briefcase className="w-5 h-5" />
-                    </div>
-                    <div>
+                  <div className="ba-project-header-top">
+                    <div className="ba-project-title-section">
                       <h3 className="ba-project-name">
                         {project.project_name}
                       </h3>
                       <p className="ba-project-client">
-                        {project.project_name_display || "N/A"}
+                        <Building className="w-3.5 h-3.5" />
+                        {project.client_name || "No Client Assigned"}
                       </p>
                     </div>
-                  </div>
-                  <div className="ba-project-header-right">
-                    <span
-                      className={`status-chip ${getStatusColor(project.status)}`}
-                    >
-                      {getStatusLabel(project.status)}
-                    </span>
-                    <span
-                      className={`ba-project-priority priority-${project.priority || "medium"}`}
-                    >
-                      {(project.priority || "medium").toUpperCase()}
-                    </span>
-                    <div className="ba-project-actions">
-                      <button
-                        className="ba-project-action-btn"
-                        onClick={() =>
-                          setShowActionMenu(
-                            showActionMenu === project.id ? null : project.id
-                          )
-                        }
+                    <div className="ba-project-header-actions">
+                      <span
+                        className={`status-chip ${getStatusColor(project.status)}`}
                       >
-                        <MoreVertical className="w-4 h-4" />
-                      </button>
-                      {showActionMenu === project.id && (
-                        <div className="ba-project-action-menu">
-                          <button
-                            onClick={() => {
-                              navigate(`/ba/projects/${project.id}`);
-                              setShowActionMenu(null);
-                            }}
-                          >
-                            <Eye className="w-4 h-4" />
-                            <span>View Details</span>
-                          </button>
-                          <button
-                            onClick={() => {
-                              setSelectedProject(project);
-                              setShowEditModal(true);
-                              setShowActionMenu(null);
-                            }}
-                          >
-                            <Edit className="w-4 h-4" />
-                            <span>Edit</span>
-                          </button>
-                          <button
-                            onClick={() => {
-                              setSelectedProject(project);
-                              setShowRequirementsModal(true);
-                              setShowActionMenu(null);
-                            }}
-                          >
-                            <FileText className="w-4 h-4" />
-                            <span>View Requirements</span>
-                          </button>
-                          <button
-                            className="danger"
-                            onClick={() => {
-                              setSelectedProject(project);
-                              setShowDeleteModal(true);
-                              setShowActionMenu(null);
-                            }}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                            <span>Delete</span>
-                          </button>
-                        </div>
-                      )}
+                        {getStatusLabel(project.status)}
+                      </span>
+                      <span
+                        className={`ba-project-priority priority-${project.priority || "medium"}`}
+                      >
+                        {(project.priority || "medium").toUpperCase()}
+                      </span>
+                      <div className="ba-project-actions">
+                        <button
+                          className="ba-project-action-btn"
+                          onClick={() =>
+                            setShowActionMenu(
+                              showActionMenu === project.id ? null : project.id
+                            )
+                          }
+                        >
+                          <MoreVertical className="w-4 h-4" />
+                        </button>
+                        {showActionMenu === project.id && (
+                          <div className="ba-project-action-menu">
+                            <button
+                              onClick={() => {
+                                navigate(`/ba/projects/${project.id}`);
+                                setShowActionMenu(null);
+                              }}
+                            >
+                              <Eye className="w-4 h-4" />
+                              <span>View Details</span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedProject(project);
+                                setShowEditModal(true);
+                                setShowActionMenu(null);
+                              }}
+                            >
+                              <Edit className="w-4 h-4" />
+                              <span>Edit</span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedProject(project);
+                                setShowRequirementsModal(true);
+                                setShowActionMenu(null);
+                              }}
+                            >
+                              <FileText className="w-4 h-4" />
+                              <span>Requirements</span>
+                            </button>
+                            <button
+                              className="danger"
+                              onClick={() => {
+                                setSelectedProject(project);
+                                setShowDeleteModal(true);
+                                setShowActionMenu(null);
+                              }}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              <span>Delete</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -400,7 +399,7 @@ export default function BAProjects() {
                   <div className="ba-project-progress">
                     <div className="ba-project-progress-header">
                       <span className="ba-project-progress-label">
-                        Overall Progress
+                        Progress
                       </span>
                       <span className="ba-project-progress-value">
                         {project.progress_percentage || 0}%
@@ -420,7 +419,7 @@ export default function BAProjects() {
                   <div className="ba-project-info-grid">
                     <div className="ba-project-info-item">
                       <Users className="w-4 h-4" />
-                      <div>
+                      <div className="ba-project-info-content">
                         <p className="ba-project-info-label">Team Lead</p>
                         <p className="ba-project-info-value">
                           {project.team_lead_name || "Not Assigned"}
@@ -429,7 +428,7 @@ export default function BAProjects() {
                     </div>
                     <div className="ba-project-info-item">
                       <FileText className="w-4 h-4" />
-                      <div>
+                      <div className="ba-project-info-content">
                         <p className="ba-project-info-label">Documents</p>
                         <p className="ba-project-info-value">
                           {project.document_count || 0} files
@@ -438,7 +437,7 @@ export default function BAProjects() {
                     </div>
                     <div className="ba-project-info-item">
                       <DollarSign className="w-4 h-4" />
-                      <div>
+                      <div className="ba-project-info-content">
                         <p className="ba-project-info-label">Budget</p>
                         <p className="ba-project-info-value">
                           {formatCurrency(project.estimated_budget)}
@@ -447,8 +446,8 @@ export default function BAProjects() {
                     </div>
                     <div className="ba-project-info-item">
                       <TrendingUp className="w-4 h-4" />
-                      <div>
-                        <p className="ba-project-info-label">Contract Value</p>
+                      <div className="ba-project-info-content">
+                        <p className="ba-project-info-label">Contract</p>
                         <p className="ba-project-info-value">
                           {formatCurrency(project.total_contract_value)}
                         </p>
@@ -463,7 +462,7 @@ export default function BAProjects() {
                     {project.start_date && (
                       <div className="ba-project-footer-date">
                         <Calendar className="w-3.5 h-3.5" />
-                        <span>Started: {formatDate(project.start_date)}</span>
+                        <span>Start: {formatDate(project.start_date)}</span>
                       </div>
                     )}
                     {project.due_date && (

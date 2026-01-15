@@ -1,13 +1,18 @@
 import { useState, useEffect } from "react";
 import { X, Upload, FileText, Share2, Download, Trash2 } from "lucide-react";
-import { 
-  getProjectRequirements, 
+import {
+  getProjectRequirements,
   uploadRequirementDocument,
-  shareRequirementWithTL 
+  shareRequirementWithTL,
 } from "../../services/api";
 import "../../styles/ba-modal.css";
 
-export default function RequirementsModal({ isOpen, onClose, onSuccess, project }) {
+export default function RequirementsModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  project,
+}) {
   const [loading, setLoading] = useState(false);
   const [loadingDocs, setLoadingDocs] = useState(false);
   const [requirements, setRequirements] = useState([]);
@@ -67,10 +72,10 @@ export default function RequirementsModal({ isOpen, onClose, onSuccess, project 
       setError(null);
 
       const formData = new FormData();
-      formData.append('file', selectedFile);
-      formData.append('version', version);
+      formData.append("file", selectedFile);
+      formData.append("version", version);
       if (notes) {
-        formData.append('notes', notes);
+        formData.append("notes", notes);
       }
 
       console.log("📤 Uploading requirement document...");
@@ -83,7 +88,7 @@ export default function RequirementsModal({ isOpen, onClose, onSuccess, project 
       setSelectedFile(null);
       setVersion("v1.0");
       setNotes("");
-      document.getElementById('file-input').value = null;
+      document.getElementById("file-input").value = null;
 
       // Reload requirements
       await loadRequirements();
@@ -92,7 +97,7 @@ export default function RequirementsModal({ isOpen, onClose, onSuccess, project 
       console.error("❌ Failed to upload document:", error);
       setError(
         error.response?.data?.detail ||
-        "Failed to upload document. Please try again."
+          "Failed to upload document. Please try again."
       );
     } finally {
       setUploading(false);
@@ -103,18 +108,18 @@ export default function RequirementsModal({ isOpen, onClose, onSuccess, project 
     try {
       setLoading(true);
       console.log("📤 Sharing document with Team Lead...");
-      
+
       await shareRequirementWithTL(project.id, docId);
-      
+
       console.log("✅ Document shared successfully");
-      
+
       await loadRequirements();
       onSuccess();
     } catch (error) {
       console.error("❌ Failed to share document:", error);
       setError(
         error.response?.data?.detail ||
-        "Failed to share document. Please try again."
+          "Failed to share document. Please try again."
       );
     } finally {
       setLoading(false);
@@ -159,9 +164,7 @@ export default function RequirementsModal({ isOpen, onClose, onSuccess, project 
         {/* Body */}
         <div className="ba-modal-body">
           {/* Error Message */}
-          {error && (
-            <div className="ba-alert ba-alert-error">{error}</div>
-          )}
+          {error && <div className="ba-alert ba-alert-error">{error}</div>}
 
           {/* Upload Section */}
           <div className="ba-form-section">
@@ -191,7 +194,8 @@ export default function RequirementsModal({ isOpen, onClose, onSuccess, project 
                   />
                   {selectedFile && (
                     <span className="ba-form-hint">
-                      Selected: {selectedFile.name} ({formatFileSize(selectedFile.size)})
+                      Selected: {selectedFile.name} (
+                      {formatFileSize(selectedFile.size)})
                     </span>
                   )}
                 </div>
@@ -240,58 +244,80 @@ export default function RequirementsModal({ isOpen, onClose, onSuccess, project 
               </div>
             ) : requirements.length === 0 ? (
               <div className="ba-empty-state">
-                <FileText className="ba-empty-icon" style={{ width: '48px', height: '48px' }} />
+                <FileText
+                  className="ba-empty-icon"
+                  style={{ width: "48px", height: "48px" }}
+                />
                 <p className="ba-empty-text">No documents uploaded yet</p>
               </div>
             ) : (
               <div className="ba-requirements-list">
-                {requirements.map((doc) => (
-                  <div key={doc.doc_id} className="ba-requirement-item">
-                    <div className="ba-requirement-icon">
-                      <FileText className="w-5 h-5" />
-                    </div>
-                    <div className="ba-requirement-info">
-                      <div className="ba-requirement-header">
-                        <h4 className="ba-requirement-name">{doc.filename}</h4>
-                        <div className="ba-requirement-badges">
-                          {doc.is_latest && (
-                            <span className="ba-badge ba-badge-primary">Latest</span>
-                          )}
-                          {doc.shared_with_team_lead && (
-                            <span className="ba-badge ba-badge-success">Shared</span>
-                          )}
-                          {doc.team_lead_approved && (
-                            <span className="ba-badge ba-badge-success">Approved</span>
-                          )}
+                {requirements.map((doc) => {
+                  console.log("📄 Modal Document Data:", doc);
+                  return (
+                    <div key={doc.doc_id} className="ba-requirement-item">
+                      <div className="ba-requirement-icon">
+                        <FileText className="w-5 h-5" />
+                      </div>
+                      <div className="ba-requirement-info">
+                        <div className="ba-requirement-header">
+                          <h4 className="ba-requirement-name">
+                            {doc.filename}
+                          </h4>
+                          <div className="ba-requirement-badges">
+                            {doc.is_latest && (
+                              <span className="ba-badge ba-badge-primary">
+                                Latest
+                              </span>
+                            )}
+                            {doc.shared_with_team_lead && (
+                              <span className="ba-badge ba-badge-success">
+                                Shared
+                              </span>
+                            )}
+                            {doc.shared_with_team_lead && (
+                              <>
+                                {doc.team_lead_approved ? (
+                                  <span className="ba-badge ba-badge-success">
+                                    Approved
+                                  </span>
+                                ) : doc.rejected_at ? (
+                                  <span className="ba-badge ba-badge-danger">
+                                    Rejected
+                                  </span>
+                                ) : null}
+                              </>
+                            )}
+                          </div>
                         </div>
+                        <div className="ba-requirement-meta">
+                          <span>Version {doc.version}</span>
+                          <span>•</span>
+                          <span>{formatFileSize(doc.file_size)}</span>
+                          <span>•</span>
+                          <span>Uploaded {formatDate(doc.uploaded_at)}</span>
+                        </div>
+                        {doc.approval_notes && (
+                          <p className="ba-requirement-notes">
+                            Notes: {doc.approval_notes}
+                          </p>
+                        )}
                       </div>
-                      <div className="ba-requirement-meta">
-                        <span>Version {doc.version}</span>
-                        <span>•</span>
-                        <span>{formatFileSize(doc.file_size)}</span>
-                        <span>•</span>
-                        <span>Uploaded {formatDate(doc.uploaded_at)}</span>
+                      <div className="ba-requirement-actions">
+                        {!doc.shared_with_team_lead && (
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => handleShare(doc.doc_id)}
+                            disabled={loading}
+                          >
+                            <Share2 className="w-4 h-4" />
+                            <span>Share with TL</span>
+                          </button>
+                        )}
                       </div>
-                      {doc.approval_notes && (
-                        <p className="ba-requirement-notes">
-                          Notes: {doc.approval_notes}
-                        </p>
-                      )}
                     </div>
-                    <div className="ba-requirement-actions">
-                      {!doc.shared_with_team_lead && (
-                        <button
-                          className="btn btn-secondary btn-sm"
-                          onClick={() => handleShare(doc.doc_id)}
-                          disabled={loading}
-                        >
-                          <Share2 className="w-4 h-4" />
-                          <span>Share with TL</span>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -299,11 +325,7 @@ export default function RequirementsModal({ isOpen, onClose, onSuccess, project 
 
         {/* Footer */}
         <div className="ba-modal-footer">
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={onClose}
-          >
+          <button type="button" className="btn btn-secondary" onClick={onClose}>
             Close
           </button>
         </div>

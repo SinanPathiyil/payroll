@@ -14,19 +14,21 @@ export default function CreateOverrideRequestModal({ isOpen, onClose, onSuccess 
   const [selectedEmployee, setSelectedEmployee] = useState('');
   const [requestedRole, setRequestedRole] = useState('');
 
-  // Project Extension Fields
-  const [projectId, setProjectId] = useState('');
-  const [currentDueDate, setCurrentDueDate] = useState('');
-  const [requestedDueDate, setRequestedDueDate] = useState('');
-
-  // Employee Exception Fields
-  const [exceptionType, setExceptionType] = useState('');
-  const [durationDays, setDurationDays] = useState('');
-
   // Policy Override Fields
   const [policyName, setPolicyName] = useState('');
   const [overrideDetails, setOverrideDetails] = useState('');
   const [affectedUsers, setAffectedUsers] = useState([]);
+
+  // ========== COMMENTED OUT FOR FUTURE USE ==========
+  // Project Extension Fields
+  // const [projectId, setProjectId] = useState('');
+  // const [currentDueDate, setCurrentDueDate] = useState('');
+  // const [requestedDueDate, setRequestedDueDate] = useState('');
+
+  // Employee Exception Fields
+  // const [exceptionType, setExceptionType] = useState('');
+  // const [durationDays, setDurationDays] = useState('');
+  // ========== END OF COMMENTED SECTION ==========
 
   useEffect(() => {
     if (isOpen) {
@@ -49,15 +51,18 @@ export default function CreateOverrideRequestModal({ isOpen, onClose, onSuccess 
     setReason('');
     setSelectedEmployee('');
     setRequestedRole('');
-    setProjectId('');
-    setCurrentDueDate('');
-    setRequestedDueDate('');
-    setExceptionType('');
-    setDurationDays('');
     setPolicyName('');
     setOverrideDetails('');
     setAffectedUsers([]);
     setError('');
+    
+    // ========== COMMENTED OUT FOR FUTURE USE ==========
+    // setProjectId('');
+    // setCurrentDueDate('');
+    // setRequestedDueDate('');
+    // setExceptionType('');
+    // setDurationDays('');
+    // ========== END OF COMMENTED SECTION ==========
   };
 
   const handleSubmit = async (e) => {
@@ -82,32 +87,6 @@ export default function CreateOverrideRequestModal({ isOpen, onClose, onSuccess 
         };
         break;
 
-      case 'project_extension':
-        if (!projectId || !currentDueDate || !requestedDueDate) {
-          setError('Please fill all required fields');
-          return;
-        }
-        details = {
-          project_id: projectId,
-          current_due_date: currentDueDate,
-          requested_due_date: requestedDueDate,
-          justification: reason
-        };
-        break;
-
-      case 'employee_exception':
-        if (!selectedEmployee || !exceptionType || !durationDays) {
-          setError('Please fill all required fields');
-          return;
-        }
-        details = {
-          employee_id: selectedEmployee,
-          exception_type: exceptionType,
-          duration_days: parseInt(durationDays),
-          justification: reason
-        };
-        break;
-
       case 'policy_override':
         if (!policyName || !overrideDetails) {
           setError('Please fill all required fields');
@@ -120,6 +99,34 @@ export default function CreateOverrideRequestModal({ isOpen, onClose, onSuccess 
           justification: reason
         };
         break;
+
+      // ========== COMMENTED OUT FOR FUTURE USE ==========
+      // case 'project_extension':
+      //   if (!projectId || !currentDueDate || !requestedDueDate) {
+      //     setError('Please fill all required fields');
+      //     return;
+      //   }
+      //   details = {
+      //     project_id: projectId,
+      //     current_due_date: currentDueDate,
+      //     requested_due_date: requestedDueDate,
+      //     justification: reason
+      //   };
+      //   break;
+
+      // case 'employee_exception':
+      //   if (!selectedEmployee || !exceptionType || !durationDays) {
+      //     setError('Please fill all required fields');
+      //     return;
+      //   }
+      //   details = {
+      //     employee_id: selectedEmployee,
+      //     exception_type: exceptionType,
+      //     duration_days: parseInt(durationDays),
+      //     justification: reason
+      //   };
+      //   break;
+      // ========== END OF COMMENTED SECTION ==========
 
       default:
         setError('Invalid request type');
@@ -189,9 +196,11 @@ export default function CreateOverrideRequestModal({ isOpen, onClose, onSuccess 
                   required
                 >
                   <option value="role_change">Role Change</option>
-                  <option value="project_extension">Project Extension</option>
-                  <option value="employee_exception">Employee Exception</option>
                   <option value="policy_override">Policy Override</option>
+                  {/* ========== COMMENTED OUT FOR FUTURE USE ========== */}
+                  {/* <option value="project_extension">Project Extension</option> */}
+                  {/* <option value="employee_exception">Employee Exception</option> */}
+                  {/* ========== END OF COMMENTED SECTION ========== */}
                 </select>
               </div>
             </div>
@@ -241,8 +250,62 @@ export default function CreateOverrideRequestModal({ isOpen, onClose, onSuccess 
                 </div>
               )}
 
+              {/* Policy Override Fields */}
+              {requestType === 'policy_override' && (
+                <>
+                  <div className="ba-form-group">
+                    <label className="ba-form-label">
+                      Policy Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={policyName}
+                      onChange={(e) => setPolicyName(e.target.value)}
+                      className="ba-form-input"
+                      placeholder="e.g., Leave Policy, Attendance Policy"
+                      required
+                    />
+                  </div>
+
+                  <div className="ba-form-group">
+                    <label className="ba-form-label">
+                      Override Details <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      value={overrideDetails}
+                      onChange={(e) => setOverrideDetails(e.target.value)}
+                      className="ba-form-textarea"
+                      rows="3"
+                      placeholder="Describe what policy rules need to be overridden..."
+                      required
+                    />
+                  </div>
+
+                  <div className="ba-form-group">
+                    <label className="ba-form-label">Affected Employees (Optional)</label>
+                    <select
+                      multiple
+                      value={affectedUsers}
+                      onChange={(e) => setAffectedUsers(Array.from(e.target.selectedOptions, option => option.value))}
+                      className="ba-form-input"
+                      style={{ height: '120px' }}
+                    >
+                      {employees.map(emp => (
+                        <option key={emp.id} value={emp.id}>
+                          {emp.full_name}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="ba-form-hint">
+                      Hold Ctrl/Cmd to select multiple employees
+                    </p>
+                  </div>
+                </>
+              )}
+
+              {/* ========== COMMENTED OUT FOR FUTURE USE ========== */}
               {/* Project Extension Fields */}
-              {requestType === 'project_extension' && (
+              {/* {requestType === 'project_extension' && (
                 <div className="ba-form-grid">
                   <div className="ba-form-group ba-form-group-full">
                     <label className="ba-form-label">
@@ -284,10 +347,10 @@ export default function CreateOverrideRequestModal({ isOpen, onClose, onSuccess 
                     />
                   </div>
                 </div>
-              )}
+              )} */}
 
               {/* Employee Exception Fields */}
-              {requestType === 'employee_exception' && (
+              {/* {requestType === 'employee_exception' && (
                 <div className="ba-form-grid">
                   <div className="ba-form-group">
                     <label className="ba-form-label">
@@ -342,60 +405,8 @@ export default function CreateOverrideRequestModal({ isOpen, onClose, onSuccess 
                     />
                   </div>
                 </div>
-              )}
-
-              {/* Policy Override Fields */}
-              {requestType === 'policy_override' && (
-                <>
-                  <div className="ba-form-group">
-                    <label className="ba-form-label">
-                      Policy Name <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={policyName}
-                      onChange={(e) => setPolicyName(e.target.value)}
-                      className="ba-form-input"
-                      placeholder="e.g., Remote Work Policy"
-                      required
-                    />
-                  </div>
-
-                  <div className="ba-form-group">
-                    <label className="ba-form-label">
-                      Override Details <span className="text-red-500">*</span>
-                    </label>
-                    <textarea
-                      value={overrideDetails}
-                      onChange={(e) => setOverrideDetails(e.target.value)}
-                      className="ba-form-textarea"
-                      rows="3"
-                      placeholder="Describe what policy rules need to be overridden..."
-                      required
-                    />
-                  </div>
-
-                  <div className="ba-form-group">
-                    <label className="ba-form-label">Affected Employees (Optional)</label>
-                    <select
-                      multiple
-                      value={affectedUsers}
-                      onChange={(e) => setAffectedUsers(Array.from(e.target.selectedOptions, option => option.value))}
-                      className="ba-form-input"
-                      style={{ height: '120px' }}
-                    >
-                      {employees.map(emp => (
-                        <option key={emp.id} value={emp.id}>
-                          {emp.full_name}
-                        </option>
-                      ))}
-                    </select>
-                    <p className="ba-form-hint">
-                      Hold Ctrl/Cmd to select multiple employees
-                    </p>
-                  </div>
-                </>
-              )}
+              )} */}
+              {/* ========== END OF COMMENTED SECTION ========== */}
             </div>
 
             {/* Common Reason Field */}

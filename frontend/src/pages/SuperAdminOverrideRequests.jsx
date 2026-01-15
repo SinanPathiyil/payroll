@@ -112,6 +112,100 @@ export default function SuperAdminOverrideRequests() {
     }
   };
 
+  // ==================== ✅ ADD THIS FUNCTION ====================
+  const getRequestTypeLabel = (type) => {
+    const labels = {
+      'role_change': 'Role Change Request',
+      'policy_override': 'Policy Override Request',
+      'project_extension': 'Project Extension Request',
+      'employee_exception': 'Employee Exception Request'
+    };
+    return labels[type] || type;
+  };
+  // ==================== END OF NEW FUNCTION ====================
+
+  // ==================== ✅ ADD THIS FUNCTION ====================
+  const renderRequestDetails = (request) => {
+    switch (request.request_type) {
+      case 'role_change':
+        return (
+          <div className="saor-details">
+            <div className="saor-detail-item">
+              <span className="saor-detail-label">Current Role:</span>
+              <span className="saor-detail-value">{request.details.current_role}</span>
+            </div>
+            <div className="saor-detail-item">
+              <span className="saor-detail-label">Requested Role:</span>
+              <span className="saor-detail-value saor-highlight">{request.details.requested_role}</span>
+            </div>
+          </div>
+        );
+
+      case 'policy_override':
+        return (
+          <div className="saor-details">
+            <div className="saor-detail-item">
+              <span className="saor-detail-label">Policy Name:</span>
+              <span className="saor-detail-value saor-highlight">{request.details.policy_name}</span>
+            </div>
+            <div className="saor-detail-item" style={{ gridColumn: '1 / -1' }}>
+              <span className="saor-detail-label">Override Details:</span>
+              <span className="saor-detail-value">{request.details.override_details}</span>
+            </div>
+            {request.details.affected_users && request.details.affected_users.length > 0 && (
+              <div className="saor-detail-item" style={{ gridColumn: '1 / -1' }}>
+                <span className="saor-detail-label">Affected Users:</span>
+                <span className="saor-detail-value">{request.details.affected_users.length} employee(s)</span>
+              </div>
+            )}
+          </div>
+        );
+
+      case 'project_extension':
+        return (
+          <div className="saor-details">
+            <div className="saor-detail-item">
+              <span className="saor-detail-label">Project ID:</span>
+              <span className="saor-detail-value">{request.details.project_id}</span>
+            </div>
+            <div className="saor-detail-item">
+              <span className="saor-detail-label">Current Due Date:</span>
+              <span className="saor-detail-value">{new Date(request.details.current_due_date).toLocaleDateString()}</span>
+            </div>
+            <div className="saor-detail-item">
+              <span className="saor-detail-label">Requested Due Date:</span>
+              <span className="saor-detail-value saor-highlight">{new Date(request.details.requested_due_date).toLocaleDateString()}</span>
+            </div>
+          </div>
+        );
+
+      case 'employee_exception':
+        return (
+          <div className="saor-details">
+            <div className="saor-detail-item">
+              <span className="saor-detail-label">Exception Type:</span>
+              <span className="saor-detail-value saor-highlight">{request.details.exception_type}</span>
+            </div>
+            <div className="saor-detail-item">
+              <span className="saor-detail-label">Duration:</span>
+              <span className="saor-detail-value">{request.details.duration_days} days</span>
+            </div>
+          </div>
+        );
+
+      default:
+        return (
+          <div className="saor-details">
+            <div className="saor-detail-item" style={{ gridColumn: '1 / -1' }}>
+              <span className="saor-detail-label">Details:</span>
+              <span className="saor-detail-value">{JSON.stringify(request.details)}</span>
+            </div>
+          </div>
+        );
+    }
+  };
+  // ==================== END OF NEW FUNCTION ====================
+
   const pendingCount = requests.filter(r => r.status === 'pending').length;
   const approvedCount = requests.filter(r => r.status === 'approved').length;
   const rejectedCount = requests.filter(r => r.status === 'rejected').length;
@@ -135,7 +229,7 @@ export default function SuperAdminOverrideRequests() {
           <div>
             <h1 className="saor-title">Override Requests</h1>
             <p className="saor-subtitle">
-              Review and manage role change and permission override requests
+              Review and manage override requests from HR
             </p>
           </div>
         </div>
@@ -195,21 +289,14 @@ export default function SuperAdminOverrideRequests() {
                 </div>
 
                 <div className="saor-card-body">
+                  {/* ==================== ✅ UPDATED: Dynamic Request Type ==================== */}
                   <div className="saor-request-type">
                     <Shield className="w-5 h-5" />
-                    <span>Role Change Request</span>
+                    <span>{getRequestTypeLabel(request.request_type)}</span>
                   </div>
 
-                  <div className="saor-details">
-                    <div className="saor-detail-item">
-                      <span className="saor-detail-label">Current Role:</span>
-                      <span className="saor-detail-value">{request.details.current_role}</span>
-                    </div>
-                    <div className="saor-detail-item">
-                      <span className="saor-detail-label">Requested Role:</span>
-                      <span className="saor-detail-value saor-highlight">{request.details.requested_role}</span>
-                    </div>
-                  </div>
+                  {/* ==================== ✅ UPDATED: Dynamic Details Rendering ==================== */}
+                  {renderRequestDetails(request)}
 
                   <div className="saor-reason">
                     <FileText className="w-4 h-4" />
@@ -272,11 +359,18 @@ export default function SuperAdminOverrideRequests() {
               </div>
               <div className="saor-modal-body">
                 <p className="saor-modal-text">
-                  Are you sure you want to approve this role change request?
+                  Are you sure you want to approve this {getRequestTypeLabel(selectedRequest?.request_type).toLowerCase()}?
                 </p>
                 <div className="saor-modal-info">
                   <div><strong>User:</strong> {selectedRequest?.requested_by_name}</div>
-                  <div><strong>Change:</strong> {selectedRequest?.details.current_role} → {selectedRequest?.details.requested_role}</div>
+                  <div><strong>Type:</strong> {getRequestTypeLabel(selectedRequest?.request_type)}</div>
+                  {/* ==================== ✅ UPDATED: Dynamic Change Display ==================== */}
+                  {selectedRequest?.request_type === 'role_change' && (
+                    <div><strong>Change:</strong> {selectedRequest?.details.current_role} → {selectedRequest?.details.requested_role}</div>
+                  )}
+                  {selectedRequest?.request_type === 'policy_override' && (
+                    <div><strong>Policy:</strong> {selectedRequest?.details.policy_name}</div>
+                  )}
                 </div>
                 <div className="saor-form-group">
                   <label>Review Notes (Optional)</label>
@@ -311,11 +405,11 @@ export default function SuperAdminOverrideRequests() {
               </div>
               <div className="saor-modal-body">
                 <p className="saor-modal-text">
-                  Are you sure you want to reject this role change request?
+                  Are you sure you want to reject this {getRequestTypeLabel(selectedRequest?.request_type).toLowerCase()}?
                 </p>
                 <div className="saor-modal-info">
                   <div><strong>User:</strong> {selectedRequest?.requested_by_name}</div>
-                  <div><strong>Requested:</strong> {selectedRequest?.details.requested_role}</div>
+                  <div><strong>Type:</strong> {getRequestTypeLabel(selectedRequest?.request_type)}</div>
                 </div>
                 <div className="saor-form-group">
                   <label>Rejection Reason <span className="saor-required">*</span></label>

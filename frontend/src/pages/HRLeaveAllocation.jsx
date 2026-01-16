@@ -56,7 +56,7 @@ export default function HRLeaveAllocation() {
       setLoadingBalances(true);
       setSelectedEmployee(employee);
       setShowBalanceModal(true);
-      
+
       const token = localStorage.getItem("token");
       const response = await axios.get(
         `${import.meta.env.VITE_API_URL}/hr/leave/balances/${employee.id}?year=${new Date().getFullYear()}`,
@@ -90,9 +90,10 @@ export default function HRLeaveAllocation() {
       loadData(); // Refresh data
     } catch (error) {
       console.error("Failed to allocate:", error);
-      const errorMessage = error.response?.data?.detail || 
-                           error.response?.data?.message || 
-                           "Failed to allocate leaves";
+      const errorMessage =
+        error.response?.data?.detail ||
+        error.response?.data?.message ||
+        "Failed to allocate leaves";
       setError(errorMessage);
     } finally {
       setSubmitting(false);
@@ -229,7 +230,7 @@ export default function HRLeaveAllocation() {
                         {employee.email}
                       </p>
                     </div>
-                    
+
                     {/* Button Group */}
                     <div style={{ display: "flex", gap: "0.75rem" }}>
                       <button
@@ -244,7 +245,7 @@ export default function HRLeaveAllocation() {
                         <Eye className="w-4 h-4" />
                         <span>View Balance</span>
                       </button>
-                      
+
                       <button
                         onClick={() => {
                           setSelectedEmployee(employee);
@@ -295,55 +296,13 @@ export default function HRLeaveAllocation() {
             <form onSubmit={handleAllocate}>
               <div className="ba-modal-body">
                 {error && (
-                  <div 
-                    style={{
-                      display: "flex",
-                      alignItems: "flex-start",
-                      gap: "0.75rem",
-                      padding: "1rem",
-                      backgroundColor: "#fef2f2",
-                      border: "1px solid #fecaca",
-                      borderRadius: "8px",
-                      marginBottom: "1.5rem"
-                    }}
-                  >
-                    <X 
-                      className="w-5 h-5" 
-                      style={{ 
-                        flexShrink: 0, 
-                        marginTop: "0.125rem",
-                        color: "#dc2626" 
-                      }} 
-                    />
-                    <div style={{ flex: 1 }}>
-                      <p style={{ 
-                        fontWeight: "600", 
-                        marginBottom: "0.25rem",
-                        color: "#991b1b",
-                        fontSize: "0.875rem",
-                        margin: "0 0 0.25rem 0"
-                      }}>
-                        Allocation Failed
-                      </p>
-                      <p style={{ 
-                        fontSize: "0.875rem", 
-                        margin: 0,
-                        color: "#7f1d1d",
-                        lineHeight: "1.5"
-                      }}>
-                        {error}
-                      </p>
-                    </div>
+                  <div className="ba-alert ba-alert-error">
+                    <span style={{ flex: 1 }}>{error}</span>
                     <button
                       type="button"
                       onClick={() => setError("")}
-                      style={{
-                        background: "none",
-                        border: "none",
-                        cursor: "pointer",
-                        padding: "0.25rem",
-                        color: "#dc2626"
-                      }}
+                      className="ba-modal-close-btn"
+                      style={{ width: "28px", height: "28px", flexShrink: 0 }}
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -475,9 +434,12 @@ export default function HRLeaveAllocation() {
         </div>
       )}
 
-     {/* View Balance Modal */}
+      {/* View Balance Modal */}
       {showBalanceModal && selectedEmployee && (
-        <div className="ba-modal-overlay" onClick={() => setShowBalanceModal(false)}>
+        <div
+          className="ba-modal-overlay"
+          onClick={() => setShowBalanceModal(false)}
+        >
           <div
             className="ba-modal-container"
             onClick={(e) => e.stopPropagation()}
@@ -486,7 +448,9 @@ export default function HRLeaveAllocation() {
             <div className="ba-modal-header">
               <div className="ba-modal-header-content">
                 <Calendar className="w-6 h-6" />
-                <h2 className="ba-modal-title">Leave Balance - {selectedEmployee.full_name}</h2>
+                <h2 className="ba-modal-title">
+                  Leave Balance - {selectedEmployee.full_name}
+                </h2>
               </div>
               <button
                 onClick={() => setShowBalanceModal(false)}
@@ -499,12 +463,18 @@ export default function HRLeaveAllocation() {
             <div className="ba-modal-body" style={{ padding: "1.5rem" }}>
               {loadingBalances ? (
                 <div style={{ textAlign: "center", padding: "3rem 0" }}>
-                  <div className="spinner spinner-lg" style={{ margin: "0 auto 1rem" }}></div>
+                  <div
+                    className="spinner spinner-lg"
+                    style={{ margin: "0 auto 1rem" }}
+                  ></div>
                   <p style={{ color: "#6b7280" }}>Loading balances...</p>
                 </div>
               ) : employeeBalances.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "3rem 0" }}>
-                  <Calendar className="w-12 h-12" style={{ margin: "0 auto 1rem", color: "#9ca3af" }} />
+                  <Calendar
+                    className="w-12 h-12"
+                    style={{ margin: "0 auto 1rem", color: "#9ca3af" }}
+                  />
                   <p style={{ color: "#6b7280", fontSize: "0.875rem" }}>
                     No leave balances found for {new Date().getFullYear()}
                   </p>
@@ -512,37 +482,110 @@ export default function HRLeaveAllocation() {
               ) : (
                 <>
                   {/* Summary Cards */}
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem", marginBottom: "2rem" }}>
-                    <div style={{
-                      padding: "1rem",
-                      backgroundColor: "#f9fafb",
-                      borderRadius: "8px",
-                      border: "1px solid #e5e7eb"
-                    }}>
-                      <p style={{ fontSize: "0.75rem", color: "#6b7280", margin: "0 0 0.5rem 0", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>Total Allocated</p>
-                      <p style={{ fontSize: "1.5rem", fontWeight: "700", color: "#111827", margin: 0 }}>
-                        {employeeBalances.reduce((sum, b) => sum + b.allocated, 0)}
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(3, 1fr)",
+                      gap: "1rem",
+                      marginBottom: "2rem",
+                    }}
+                  >
+                    <div
+                      style={{
+                        padding: "1rem",
+                        backgroundColor: "#f9fafb",
+                        borderRadius: "8px",
+                        border: "1px solid #e5e7eb",
+                      }}
+                    >
+                      <p
+                        style={{
+                          fontSize: "0.75rem",
+                          color: "#6b7280",
+                          margin: "0 0 0.5rem 0",
+                          fontWeight: "600",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.05em",
+                        }}
+                      >
+                        Total Allocated
+                      </p>
+                      <p
+                        style={{
+                          fontSize: "1.5rem",
+                          fontWeight: "700",
+                          color: "#111827",
+                          margin: 0,
+                        }}
+                      >
+                        {employeeBalances.reduce(
+                          (sum, b) => sum + b.allocated,
+                          0
+                        )}
                       </p>
                     </div>
-                    <div style={{
-                      padding: "1rem",
-                      backgroundColor: "#f9fafb",
-                      borderRadius: "8px",
-                      border: "1px solid #e5e7eb"
-                    }}>
-                      <p style={{ fontSize: "0.75rem", color: "#6b7280", margin: "0 0 0.5rem 0", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>Available</p>
-                      <p style={{ fontSize: "1.5rem", fontWeight: "700", color: "#111827", margin: 0 }}>
-                        {employeeBalances.reduce((sum, b) => sum + b.available, 0)}
+                    <div
+                      style={{
+                        padding: "1rem",
+                        backgroundColor: "#f9fafb",
+                        borderRadius: "8px",
+                        border: "1px solid #e5e7eb",
+                      }}
+                    >
+                      <p
+                        style={{
+                          fontSize: "0.75rem",
+                          color: "#6b7280",
+                          margin: "0 0 0.5rem 0",
+                          fontWeight: "600",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.05em",
+                        }}
+                      >
+                        Available
+                      </p>
+                      <p
+                        style={{
+                          fontSize: "1.5rem",
+                          fontWeight: "700",
+                          color: "#111827",
+                          margin: 0,
+                        }}
+                      >
+                        {employeeBalances.reduce(
+                          (sum, b) => sum + b.available,
+                          0
+                        )}
                       </p>
                     </div>
-                    <div style={{
-                      padding: "1rem",
-                      backgroundColor: "#f9fafb",
-                      borderRadius: "8px",
-                      border: "1px solid #e5e7eb"
-                    }}>
-                      <p style={{ fontSize: "0.75rem", color: "#6b7280", margin: "0 0 0.5rem 0", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>Used</p>
-                      <p style={{ fontSize: "1.5rem", fontWeight: "700", color: "#111827", margin: 0 }}>
+                    <div
+                      style={{
+                        padding: "1rem",
+                        backgroundColor: "#f9fafb",
+                        borderRadius: "8px",
+                        border: "1px solid #e5e7eb",
+                      }}
+                    >
+                      <p
+                        style={{
+                          fontSize: "0.75rem",
+                          color: "#6b7280",
+                          margin: "0 0 0.5rem 0",
+                          fontWeight: "600",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.05em",
+                        }}
+                      >
+                        Used
+                      </p>
+                      <p
+                        style={{
+                          fontSize: "1.5rem",
+                          fontWeight: "700",
+                          color: "#111827",
+                          margin: 0,
+                        }}
+                      >
                         {employeeBalances.reduce((sum, b) => sum + b.used, 0)}
                       </p>
                     </div>
@@ -550,38 +593,145 @@ export default function HRLeaveAllocation() {
 
                   {/* Detailed Balance Table */}
                   <div style={{ overflowX: "auto" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <table
+                      style={{ width: "100%", borderCollapse: "collapse" }}
+                    >
                       <thead>
-                        <tr style={{ backgroundColor: "#f9fafb", borderBottom: "2px solid #e5e7eb" }}>
-                          <th style={{ padding: "0.75rem", textAlign: "left", fontSize: "0.75rem", fontWeight: "600", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em" }}>Leave Type</th>
-                          <th style={{ padding: "0.75rem", textAlign: "center", fontSize: "0.75rem", fontWeight: "600", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em" }}>Allocated</th>
-                          <th style={{ padding: "0.75rem", textAlign: "center", fontSize: "0.75rem", fontWeight: "600", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em" }}>Used</th>
-                          <th style={{ padding: "0.75rem", textAlign: "center", fontSize: "0.75rem", fontWeight: "600", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em" }}>Pending</th>
-                          <th style={{ padding: "0.75rem", textAlign: "center", fontSize: "0.75rem", fontWeight: "600", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em" }}>Available</th>
+                        <tr
+                          style={{
+                            backgroundColor: "#f9fafb",
+                            borderBottom: "2px solid #e5e7eb",
+                          }}
+                        >
+                          <th
+                            style={{
+                              padding: "0.75rem",
+                              textAlign: "left",
+                              fontSize: "0.75rem",
+                              fontWeight: "600",
+                              color: "#6b7280",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.05em",
+                            }}
+                          >
+                            Leave Type
+                          </th>
+                          <th
+                            style={{
+                              padding: "0.75rem",
+                              textAlign: "center",
+                              fontSize: "0.75rem",
+                              fontWeight: "600",
+                              color: "#6b7280",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.05em",
+                            }}
+                          >
+                            Allocated
+                          </th>
+                          <th
+                            style={{
+                              padding: "0.75rem",
+                              textAlign: "center",
+                              fontSize: "0.75rem",
+                              fontWeight: "600",
+                              color: "#6b7280",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.05em",
+                            }}
+                          >
+                            Used
+                          </th>
+                          <th
+                            style={{
+                              padding: "0.75rem",
+                              textAlign: "center",
+                              fontSize: "0.75rem",
+                              fontWeight: "600",
+                              color: "#6b7280",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.05em",
+                            }}
+                          >
+                            Pending
+                          </th>
+                          <th
+                            style={{
+                              padding: "0.75rem",
+                              textAlign: "center",
+                              fontSize: "0.75rem",
+                              fontWeight: "600",
+                              color: "#6b7280",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.05em",
+                            }}
+                          >
+                            Available
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
                         {employeeBalances.map((balance, index) => (
-                          <tr 
-                            key={balance.id} 
-                            style={{ 
+                          <tr
+                            key={balance.id}
+                            style={{
                               borderBottom: "1px solid #f3f4f6",
-                              backgroundColor: index % 2 === 0 ? "#ffffff" : "#f9fafb"
+                              backgroundColor:
+                                index % 2 === 0 ? "#ffffff" : "#f9fafb",
                             }}
                           >
-                            <td style={{ padding: "1rem", fontSize: "0.875rem", fontWeight: "500", color: "#111827" }}>
+                            <td
+                              style={{
+                                padding: "1rem",
+                                fontSize: "0.875rem",
+                                fontWeight: "500",
+                                color: "#111827",
+                              }}
+                            >
                               {balance.leave_type_name}
                             </td>
-                            <td style={{ padding: "1rem", textAlign: "center", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>
+                            <td
+                              style={{
+                                padding: "1rem",
+                                textAlign: "center",
+                                fontSize: "0.875rem",
+                                fontWeight: "600",
+                                color: "#374151",
+                              }}
+                            >
                               {balance.allocated}
                             </td>
-                            <td style={{ padding: "1rem", textAlign: "center", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>
+                            <td
+                              style={{
+                                padding: "1rem",
+                                textAlign: "center",
+                                fontSize: "0.875rem",
+                                fontWeight: "600",
+                                color: "#374151",
+                              }}
+                            >
                               {balance.used}
                             </td>
-                            <td style={{ padding: "1rem", textAlign: "center", fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>
+                            <td
+                              style={{
+                                padding: "1rem",
+                                textAlign: "center",
+                                fontSize: "0.875rem",
+                                fontWeight: "600",
+                                color: "#374151",
+                              }}
+                            >
                               {balance.pending}
                             </td>
-                            <td style={{ padding: "1rem", textAlign: "center", fontSize: "0.875rem", fontWeight: "700", color: "#111827" }}>
+                            <td
+                              style={{
+                                padding: "1rem",
+                                textAlign: "center",
+                                fontSize: "0.875rem",
+                                fontWeight: "700",
+                                color: "#111827",
+                              }}
+                            >
                               {balance.available}
                             </td>
                           </tr>
@@ -590,16 +740,20 @@ export default function HRLeaveAllocation() {
                     </table>
                   </div>
 
-                  <div style={{ 
-                    marginTop: "1.5rem", 
-                    padding: "1rem", 
-                    backgroundColor: "#f9fafb", 
-                    borderRadius: "8px",
-                    borderLeft: "3px solid #6b7280",
-                    fontSize: "0.8125rem",
-                    color: "#4b5563"
-                  }}>
-                    <strong>Note:</strong> Balance shown for year {new Date().getFullYear()}. Carried forward leaves expire as per policy.
+                  <div
+                    style={{
+                      marginTop: "1.5rem",
+                      padding: "1rem",
+                      backgroundColor: "#f9fafb",
+                      borderRadius: "8px",
+                      borderLeft: "3px solid #6b7280",
+                      fontSize: "0.8125rem",
+                      color: "#4b5563",
+                    }}
+                  >
+                    <strong>Note:</strong> Balance shown for year{" "}
+                    {new Date().getFullYear()}. Carried forward leaves expire as
+                    per policy.
                   </div>
                 </>
               )}
@@ -616,7 +770,6 @@ export default function HRLeaveAllocation() {
           </div>
         </div>
       )}
-
     </Layout>
   );
 }

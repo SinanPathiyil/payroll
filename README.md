@@ -14,6 +14,7 @@ payroll
 │  │  │     ├─ employee.py
 │  │  │     ├─ hr.py
 │  │  │     ├─ leave_admin.py
+│  │  │     ├─ leave_ba.py
 │  │  │     ├─ leave_employee.py
 │  │  │     ├─ leave_hr.py
 │  │  │     ├─ leave_team_lead.py
@@ -173,6 +174,7 @@ payroll
 │  │  │  │  ├─ AddLeaveTypeModal.jsx
 │  │  │  │  └─ ImportHolidaysModal.jsx
 │  │  │  └─ tl
+│  │  │     ├─ AddTeamMemberModal.jsx
 │  │  │     └─ SendMessageModal.jsx
 │  │  ├─ context
 │  │  │  └─ AuthContext.jsx
@@ -186,6 +188,8 @@ payroll
 │  │  │  ├─ BAClientDetails.jsx
 │  │  │  ├─ BAClients.jsx
 │  │  │  ├─ BADashboard.jsx
+│  │  │  ├─ BALeaveBalance.jsx
+│  │  │  ├─ BALeaveHistory.jsx
 │  │  │  ├─ BAMeetings.jsx
 │  │  │  ├─ BAPayments.jsx
 │  │  │  ├─ BAProjectDetails.jsx

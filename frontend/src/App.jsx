@@ -62,6 +62,8 @@ import BAProjects from './pages/BAProjects';
 import BAProjectDetails from './pages/BAProjectDetails';
 import BAPayments from './pages/BAPayments';
 import BAMeetings from './pages/BAMeetings';
+import BALeaveBalance from './pages/BALeaveBalance';
+import BALeaveHistory from './pages/BALeaveHistory';
 
 function App() {
   return (
@@ -130,6 +132,9 @@ function App() {
         <Route path="/ba/projects/:id" element={<ProtectedRoute allowedRoles={['business_analyst']}><BAProjectDetails /></ProtectedRoute>} />
         <Route path="/ba/payments" element={<ProtectedRoute allowedRoles={['business_analyst']}><BAPayments /></ProtectedRoute>} />
         <Route path="/ba/meetings" element={<ProtectedRoute allowedRoles={['business_analyst']}><BAMeetings /></ProtectedRoute>} />
+        {/* BA Leave Routes */}
+        <Route path="/ba/leave/balance" element={<ProtectedRoute allowedRoles={['business_analyst']}><BALeaveBalance /></ProtectedRoute>} />
+        <Route path="/ba/leave/history" element={<ProtectedRoute allowedRoles={['business_analyst']}><BALeaveHistory /></ProtectedRoute>} />
 
         {/* Redirect root based on role - handle in Login component */}
         <Route path="/" element={<Navigate to="/login" replace />} />

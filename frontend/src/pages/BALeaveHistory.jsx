@@ -13,7 +13,7 @@ import Layout from "../components/common/Layout";
 import ApplyLeaveModal from "../components/employee/ApplyLeaveModal";
 import axios from "axios";
 
-export default function EmployeeLeaveHistory() {
+export default function BALeaveHistory() {
   const [loading, setLoading] = useState(true);
   const [requests, setRequests] = useState([]);
   const [filteredRequests, setFilteredRequests] = useState([]);
@@ -37,7 +37,7 @@ export default function EmployeeLeaveHistory() {
       setLoading(true);
       const token = localStorage.getItem("token");
       const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/employee/leave/history`,
+        `${import.meta.env.VITE_API_URL}/ba/leave/history`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setRequests(response.data.requests || []);
@@ -81,7 +81,7 @@ export default function EmployeeLeaveHistory() {
       setCancellingId(requestId);
       const token = localStorage.getItem("token");
       await axios.delete(
-        `${import.meta.env.VITE_API_URL}/employee/leave/requests/${requestId}`,
+        `${import.meta.env.VITE_API_URL}/ba/leave/requests/${requestId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
           data: { cancelled_reason: cancelReason },
@@ -697,25 +697,27 @@ export default function EmployeeLeaveHistory() {
                 Close
               </button>
               {(selectedRequest.status === "pending" ||
-                selectedRequest.status === "approved") && (
-                <button
-                  onClick={() => handleCancelRequest(selectedRequest.id)}
-                  className="btn"
-                  style={{ backgroundColor: "#ef4444", color: "white" }}
-                  disabled={
-                    cancellingId === selectedRequest.id || !cancelReason.trim()
-                  }
-                >
-                  {cancellingId === selectedRequest.id ? (
-                    <>
-                      <div className="spinner spinner-sm"></div>
-                      <span>Cancelling...</span>
-                    </>
-                  ) : (
-                    "Cancel Request"
-                  )}
-                </button>
-              )}
+                selectedRequest.status === "approved") &&
+                new Date(selectedRequest.start_date) > new Date() && (
+                  <button
+                    onClick={() => handleCancelRequest(selectedRequest.id)}
+                    className="btn"
+                    style={{ backgroundColor: "#ef4444", color: "white" }}
+                    disabled={
+                      cancellingId === selectedRequest.id ||
+                      !cancelReason.trim()
+                    }
+                  >
+                    {cancellingId === selectedRequest.id ? (
+                      <>
+                        <div className="spinner spinner-sm"></div>
+                        <span>Cancelling...</span>
+                      </>
+                    ) : (
+                      "Cancel Request"
+                    )}
+                  </button>
+                )}
             </div>
           </div>
         </div>
@@ -729,6 +731,7 @@ export default function EmployeeLeaveHistory() {
             setShowApplyModal(false);
             loadLeaveHistory();
           }}
+          userRole="business_analyst"
         />
       )}
     </Layout>

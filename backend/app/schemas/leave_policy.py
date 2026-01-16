@@ -8,7 +8,7 @@ class RoleAllocationSchema(BaseModel):
     days: int = Field(ge=0)
 
 class RoleBasedAllocationSchema(BaseModel):
-    role: str = Field(..., pattern="^(employee|team_lead|hr)$")
+    role: str = Field(..., pattern="^(employee|team_lead|business_analyst|hr)$")
     allocations: List[RoleAllocationSchema] = []
 
 # Request schemas

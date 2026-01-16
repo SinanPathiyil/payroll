@@ -24,35 +24,57 @@ async def get_pending_approvals(
     db = Depends(get_database)
 ):
     """Get all pending leave requests for HR approval"""
-    leave_service = LeaveService(db)
     
-    requests = await leave_service.get_pending_hr_approvals()
+    # Get pending requests from DB
+    filters = {"status": "pending"}
     
-    # Apply pagination
-    total = len(requests)
-    paginated_requests = requests[skip:skip+limit]
+    # Get total count
+    total = await db.leave_requests.count_documents(filters)
     
-    return LeaveRequestList(
-        total=total,
-        requests=[
+    # Get requests with pagination
+    requests_cursor = db.leave_requests.find(filters).sort("requested_at", 1).skip(skip).limit(limit)
+    raw_requests = await requests_cursor.to_list(length=None)
+    
+    # Enrich with user and leave type details
+    enriched_requests = []
+    for req in raw_requests:
+        # Get user details
+        user = await db.users.find_one({"_id": ObjectId(req["user_id"])})
+        user_name = user["full_name"] if user else "Unknown User"
+        user_email = user.get("email", "") if user else ""
+        user_role = user.get("role", "") if user else ""
+        
+        # Get leave type details
+        leave_type = await db.leave_types.find_one({"code": req["leave_type_code"]})
+        leave_type_name = leave_type["name"] if leave_type else req["leave_type_code"]
+        leave_type_color = leave_type.get("color", "#3b82f6") if leave_type else "#3b82f6"
+        
+        # Get team lead details if exists
+        team_lead_id = user.get("team_lead_id") if user else None
+        team_lead_name = None
+        if team_lead_id:
+            team_lead = await db.users.find_one({"_id": ObjectId(team_lead_id)})
+            team_lead_name = team_lead["full_name"] if team_lead else None
+        
+        enriched_requests.append(
             LeaveRequestResponse(
                 id=str(req["_id"]),
-                request_number=req["request_number"],
+                request_number=req.get("request_number", f"LR-{str(req['_id'])[:8].upper()}"),
                 user_id=req["user_id"],
-                user_name=req["user_name"],
-                user_email=req["user_email"],
-                user_role=req["user_role"],
-                team_lead_id=req.get("team_lead_id"),
-                team_lead_name=req.get("team_lead_name"),
+                user_name=user_name,
+                user_email=user_email,
+                user_role=user_role,
+                team_lead_id=team_lead_id,
+                team_lead_name=team_lead_name,
                 leave_type_code=req["leave_type_code"],
-                leave_type_name=req["leave_type_name"],
-                leave_type_color=req["leave_type_color"],
+                leave_type_name=leave_type_name,
+                leave_type_color=leave_type_color,
                 start_date=req["start_date"],
                 end_date=req["end_date"],
-                is_half_day=req["is_half_day"],
+                is_half_day=req.get("is_half_day", False),
                 half_day_period=req.get("half_day_period"),
                 total_days=req["total_days"],
-                excluded_dates=req["excluded_dates"],
+                excluded_dates=req.get("excluded_dates", []),
                 reason=req["reason"],
                 attachment_url=req.get("attachment_url"),
                 status=req["status"],
@@ -66,8 +88,11 @@ async def get_pending_approvals(
                 cancelled_reason=req.get("cancelled_reason"),
                 requested_at=req["requested_at"]
             )
-            for req in paginated_requests
-        ]
+        )
+    
+    return LeaveRequestList(
+        total=total,
+        requests=enriched_requests
     )
 
 @router.post("/requests/{request_id}/approve", response_model=LeaveRequestResponse)
@@ -202,47 +227,68 @@ async def get_all_leave_requests(
     db = Depends(get_database)
 ):
     """Get all leave requests with filters"""
-    leave_service = LeaveService(db)
     
+    # Build filters
     filters = {}
     if status_filter:
         filters["status"] = status_filter
     if user_id:
         filters["user_id"] = user_id
     if start_date:
-        filters["start_date"] = {"$gte": start_date}
+        filters["start_date"] = {"$gte": datetime.combine(start_date, time.min)}
     if end_date:
         if "start_date" in filters:
-            filters["start_date"]["$lte"] = end_date
+            filters["start_date"]["$lte"] = datetime.combine(end_date, time.max)
         else:
-            filters["start_date"] = {"$lte": end_date}
-    
-    all_requests = await leave_service.get_leave_requests(filters, skip=skip, limit=limit)
+            filters["start_date"] = {"$lte": datetime.combine(end_date, time.max)}
     
     # Get total count
     total = await db.leave_requests.count_documents(filters)
     
-    return LeaveRequestList(
-        total=total,
-        requests=[
+    # Get requests from DB with pagination
+    requests_cursor = db.leave_requests.find(filters).sort("requested_at", -1).skip(skip).limit(limit)
+    raw_requests = await requests_cursor.to_list(length=None)
+    
+    # Enrich with user and leave type details
+    enriched_requests = []
+    for req in raw_requests:
+        # Get user details
+        user = await db.users.find_one({"_id": ObjectId(req["user_id"])})
+        user_name = user["full_name"] if user else "Unknown User"
+        user_email = user.get("email", "") if user else ""
+        user_role = user.get("role", "") if user else ""
+        
+        # Get leave type details
+        leave_type = await db.leave_types.find_one({"code": req["leave_type_code"]})
+        leave_type_name = leave_type["name"] if leave_type else req["leave_type_code"]
+        leave_type_color = leave_type.get("color", "#3b82f6") if leave_type else "#3b82f6"
+        
+        # Get team lead details if exists
+        team_lead_id = user.get("team_lead_id") if user else None
+        team_lead_name = None
+        if team_lead_id:
+            team_lead = await db.users.find_one({"_id": ObjectId(team_lead_id)})
+            team_lead_name = team_lead["full_name"] if team_lead else None
+        
+        enriched_requests.append(
             LeaveRequestResponse(
                 id=str(req["_id"]),
-                request_number=req["request_number"],
+                request_number=req.get("request_number", f"LR-{str(req['_id'])[:8].upper()}"),
                 user_id=req["user_id"],
-                user_name=req["user_name"],
-                user_email=req["user_email"],
-                user_role=req["user_role"],
-                team_lead_id=req.get("team_lead_id"),
-                team_lead_name=req.get("team_lead_name"),
+                user_name=user_name,
+                user_email=user_email,
+                user_role=user_role,
+                team_lead_id=team_lead_id,
+                team_lead_name=team_lead_name,
                 leave_type_code=req["leave_type_code"],
-                leave_type_name=req["leave_type_name"],
-                leave_type_color=req["leave_type_color"],
+                leave_type_name=leave_type_name,
+                leave_type_color=leave_type_color,
                 start_date=req["start_date"],
                 end_date=req["end_date"],
-                is_half_day=req["is_half_day"],
+                is_half_day=req.get("is_half_day", False),
                 half_day_period=req.get("half_day_period"),
                 total_days=req["total_days"],
-                excluded_dates=req["excluded_dates"],
+                excluded_dates=req.get("excluded_dates", []),
                 reason=req["reason"],
                 attachment_url=req.get("attachment_url"),
                 status=req["status"],
@@ -256,10 +302,14 @@ async def get_all_leave_requests(
                 cancelled_reason=req.get("cancelled_reason"),
                 requested_at=req["requested_at"]
             )
-            for req in all_requests
-        ]
+        )
+    
+    return LeaveRequestList(
+        total=total,
+        requests=enriched_requests
     )
-
+    
+    
 @router.get("/requests/{request_id}", response_model=LeaveRequestResponse)
 async def get_leave_request_details(
     request_id: str,

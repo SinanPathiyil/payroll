@@ -24,6 +24,8 @@ import {
   X,
   Clock,
   History,
+  CalendarDays,
+  PieChart,
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -54,12 +56,29 @@ export default function Sidebar() {
   const getMenuItems = () => {
     switch (user?.role) {
       case "business_analyst":
+      case "business_analyst":
         return [
           { path: "/ba-dashboard", icon: LayoutDashboard, label: "Dashboard" },
           { path: "/ba/clients", icon: Users, label: "Clients" },
           { path: "/ba/projects", icon: Briefcase, label: "Projects" },
           { path: "/ba/payments", icon: DollarSign, label: "Payments" },
           { path: "/ba/meetings", icon: Calendar, label: "Meetings" },
+          {
+            label: "My Leaves",
+            icon: CalendarDays,
+            subItems: [
+              {
+                path: "/ba/leave/balance",
+                icon: PieChart,
+                label: "Leave Balance",
+              },
+              {
+                path: "/ba/leave/history",
+                icon: Clock,
+                label: "Leave History",
+              },
+            ],
+          },
         ];
 
       case "team_lead":
@@ -77,7 +96,7 @@ export default function Sidebar() {
             icon: Clock,
             label: "Leave Management",
             subItems: [
-              { path: "/tl/leave/my-leave", label: "Leave Balance" },    
+              { path: "/tl/leave/my-leave", label: "Leave Balance" },
               { path: "/tl/leave/my-history", label: "Leave History" },
               { path: "/tl/leave/team-requests", label: "Team Requests" },
               { path: "/tl/leave/team-calendar", label: "Team Calendar" },
@@ -140,22 +159,30 @@ export default function Sidebar() {
           { path: "/employee/notes", icon: FileText, label: "My Notes" },
         ];
 
-      case 'super_admin':
+      case "super_admin":
         return [
-          { path: '/super-admin-dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-          { path: '/admin/users', icon: Users, label: 'User Management' },
-          { path: '/admin/teams', icon: Users, label: 'Team Management' },
-          { 
-            icon: Calendar, 
-            label: 'Leave Management',
-            subItems: [
-              { path: '/admin/leave/types', label: 'Leave Types' },
-              { path: '/admin/leave/holidays', label: 'Public Holidays' },
-              { path: '/admin/leave/policies', label: 'Leave Policies' }
-            ]
+          {
+            path: "/super-admin-dashboard",
+            icon: LayoutDashboard,
+            label: "Dashboard",
           },
-          { path: '/admin/override-requests', icon: CheckSquare, label: 'Override Requests' },
-          { path: '/admin/audit-logs', icon: FileText, label: 'Audit Logs' },
+          { path: "/admin/users", icon: Users, label: "User Management" },
+          { path: "/admin/teams", icon: Users, label: "Team Management" },
+          {
+            icon: Calendar,
+            label: "Leave Management",
+            subItems: [
+              { path: "/admin/leave/types", label: "Leave Types" },
+              { path: "/admin/leave/holidays", label: "Public Holidays" },
+              { path: "/admin/leave/policies", label: "Leave Policies" },
+            ],
+          },
+          {
+            path: "/admin/override-requests",
+            icon: CheckSquare,
+            label: "Override Requests",
+          },
+          { path: "/admin/audit-logs", icon: FileText, label: "Audit Logs" },
         ];
 
       default:

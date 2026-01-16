@@ -7,7 +7,7 @@ from app.api.routes import auth, hr, employee, tasks, messages, agent, notes
 from app.api.routes import super_admin, teams, projects, clients, ba_projects, team_lead, payments, meetings, ba_dashboard
 
 # ==================== NEW LEAVE MANAGEMENT ROUTES ====================
-from app.api.routes import leave_admin, leave_hr, leave_team_lead, leave_employee
+from app.api.routes import leave_admin, leave_hr, leave_team_lead, leave_employee, leave_ba
 
 app = FastAPI(title="Employee Tracker API")
 
@@ -64,6 +64,7 @@ app.include_router(leave_admin.router, prefix="/api/admin/leave", tags=["Admin -
 app.include_router(leave_hr.router, prefix="/api/hr/leave", tags=["HR - Leave Management"])
 app.include_router(leave_team_lead.router, prefix="/api/team-lead/leave", tags=["Team Lead - Leave Management"])
 app.include_router(leave_employee.router, prefix="/api/employee/leave", tags=["Employee - Leave Management"])
+app.include_router(leave_ba.router, prefix="/api/ba/leave", tags=["Business Analyst - Leave Management"])
 
 @app.get("/")
 async def root():

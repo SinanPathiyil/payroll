@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "../components/common/Layout";
+import AddTeamMemberModal from "../components/tl/AddTeamMemberModal";
 import {
   Users,
   Mail,
@@ -8,6 +9,7 @@ import {
   XCircle,
   Shield,
   FileText,
+  Plus,
 } from "lucide-react";
 import axios from "axios";
 import "../styles/tl-team.css";
@@ -19,6 +21,7 @@ export default function TLTeam() {
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [teamMembers, setTeamMembers] = useState([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
+  const [showAddMemberModal, setShowAddMemberModal] = useState(false);
 
   useEffect(() => {
     loadTeams();
@@ -33,7 +36,7 @@ export default function TLTeam() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setTeams(response.data || []);
-      
+
       // Auto-select first team
       if (response.data && response.data.length > 0) {
         loadTeamMembers(response.data[0].id);
@@ -84,11 +87,8 @@ export default function TLTeam() {
         {/* Header */}
         <div className="tl-team-header">
           <h1 className="tl-team-title">My Team</h1>
-          <p className="tl-team-subtitle">
-            View and manage your team members
-          </p>
+          <p className="tl-team-subtitle">View and manage your team members</p>
         </div>
-
         {teams.length === 0 ? (
           <div className="tl-team-members-card">
             <div className="tl-team-members-body">
@@ -206,17 +206,28 @@ export default function TLTeam() {
                       <Users className="w-5 h-5" />
                       <span>Team Members</span>
                     </div>
+                    <button
+                      className="btn btn-primary btn-sm"
+                      onClick={() => setShowAddMemberModal(true)}
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Add Member</span>
+                    </button>
                   </div>
                   <div className="tl-team-members-body">
                     {loadingMembers ? (
                       <div className="tl-team-loading">
                         <div className="tl-team-loading-spinner"></div>
-                        <p className="tl-team-loading-text">Loading members...</p>
+                        <p className="tl-team-loading-text">
+                          Loading members...
+                        </p>
                       </div>
                     ) : teamMembers.length === 0 ? (
                       <div className="tl-team-empty">
                         <Users className="tl-team-empty-icon" />
-                        <p className="tl-team-empty-text">No team members yet</p>
+                        <p className="tl-team-empty-text">
+                          No team members yet
+                        </p>
                       </div>
                     ) : (
                       <div className="tl-team-table-wrapper">
@@ -288,6 +299,19 @@ export default function TLTeam() {
             )}
           </>
         )}
+        {/* Add Team Member Modal */}
+        <AddTeamMemberModal
+          isOpen={showAddMemberModal}
+          onClose={() => setShowAddMemberModal(false)}
+          onSuccess={() => {
+            loadTeams();
+            if (selectedTeam) {
+              loadTeamMembers(selectedTeam.id);
+            }
+            setShowAddMemberModal(false);
+          }}
+          selectedTeam={selectedTeam}
+        />
       </div>
     </Layout>
   );

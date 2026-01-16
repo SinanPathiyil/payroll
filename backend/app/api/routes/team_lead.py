@@ -1041,3 +1041,151 @@ async def get_team_tasks(
         })
     
     return tasks
+
+# ============= TEAM MANAGEMENT =============
+
+@router.get("/team/available-employees")
+async def get_available_employees(
+    current_user: dict = Depends(get_current_team_lead),
+    db = Depends(get_database)
+):
+    """Get all employees who don't have a team yet (available to add)"""
+    
+    # Find employees without a team
+    employees = await db.users.find({
+        "role": "employee",
+        "team_id": None,
+        "is_active": True
+    }).to_list(length=None)
+    
+    result = []
+    for emp in employees:
+        result.append({
+            "id": str(emp["_id"]),
+            "full_name": emp["full_name"],
+            "email": emp["email"],
+            "designation": emp.get("designation", "Developer")
+        })
+    
+    return result
+
+@router.post("/team/add-member")
+async def add_member_to_team(
+    employee_id: str,
+    team_id: str,  # ← ADD THIS PARAMETER
+    current_user: dict = Depends(get_current_team_lead),
+    db = Depends(get_database)
+):
+    """Add an employee to Team Lead's team"""
+    
+    # Get TL's managed teams
+    managed_teams = current_user.get("managed_teams", [])
+    
+    if not managed_teams:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You don't manage any teams"
+        )
+    
+    # Verify TL manages this team
+    if team_id not in managed_teams:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have permission to add members to this team"
+        )
+    
+    try:
+        team = await db.teams.find_one({"_id": ObjectId(team_id)})
+    except:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid team ID"
+        )
+    
+    if not team:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Team not found"
+        )
+    
+    # Get employee
+    try:
+        employee = await db.users.find_one({"_id": ObjectId(employee_id)})
+    except:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid employee ID"
+        )
+    
+    if not employee:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Employee not found"
+        )
+    
+    # Check if employee already has a team
+    if employee.get("team_id"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Employee is already in a team"
+        )
+    
+    # Check if employee is an actual employee role
+    if employee.get("role") != "employee":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only employees can be added to teams"
+        )
+    
+    # Add employee to team
+    await db.teams.update_one(
+        {"_id": ObjectId(team_id)},
+        {
+            "$addToSet": {"members": employee_id},
+            "$set": {"updated_at": datetime.now()}
+        }
+    )
+    
+    # Update employee's team_id
+    await db.users.update_one(
+        {"_id": ObjectId(employee_id)},
+        {"$set": {"team_id": team_id}}
+    )
+    
+    # Update team member count
+    updated_team = await db.teams.find_one({"_id": ObjectId(team_id)})
+    member_count = len(updated_team.get("members", []))
+    await db.teams.update_one(
+        {"_id": ObjectId(team_id)},
+        {"$set": {"member_count": member_count}}
+    )
+    
+    # Send notification to employee
+    notification = {
+        "from_user": str(current_user["_id"]),
+        "to_user": employee_id,
+        "content": f"You have been added to team '{team['team_name']}' by {current_user['full_name']}",
+        "is_read": False,
+        "created_at": datetime.now()
+    }
+    await db.messages.insert_one(notification)
+    
+    # Create audit log
+    await db.audit_logs.insert_one({
+        "action_type": "team_member_added_by_tl",
+        "performed_by": str(current_user["_id"]),
+        "user_role": current_user["role"],
+        "target_user": employee_id,
+        "details": {
+            "team_id": team_id,
+            "team_name": team["team_name"],
+            "employee_name": employee["full_name"]
+        },
+        "timestamp": datetime.now()
+    })
+    
+    return {
+        "message": f"{employee['full_name']} added to team successfully",
+        "team_id": team_id,
+        "team_name": team["team_name"]
+    }

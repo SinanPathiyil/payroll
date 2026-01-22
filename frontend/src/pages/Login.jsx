@@ -31,11 +31,6 @@ export default function Login() {
       {/* Logo Watermark */}
       <div className="login-watermark"></div>
 
-      {/* Top Right Logo */}
-      <div className="login-logo-corner">
-        <img src={logoImage} alt="Company Logo" />
-      </div>
-
       {/* Main Content */}
       <div className="login-content">
         <div className="login-card">
@@ -135,7 +130,7 @@ export default function Login() {
 
         {/* Footer */}
         <div className="login-footer">
-          <p>© 2024 Payroll Management System. All rights reserved.</p>
+          {/* <p>© 2024 Payroll Management System. All rights reserved.</p> */}
         </div>
       </div>
     </div>
